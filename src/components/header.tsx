@@ -6,6 +6,8 @@ import { createClient } from "@/lib/supabase/client";
 import { useEffect, useState } from "react";
 import { useTheme } from "next-themes";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -14,6 +16,13 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+} from "@/components/ui/dialog";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import {
   Search,
@@ -29,7 +38,11 @@ import {
   Settings,
   User,
   Sparkles,
+  KeyRound,
+  Eye,
+  EyeOff,
 } from "lucide-react";
+import { toast } from "sonner";
 
 const navItems = [
   { href: "/", label: "공고 검색", icon: Search },
@@ -67,6 +80,11 @@ export function Header() {
   const router = useRouter();
   const [user, setUser] = useState<{ email?: string } | null>(null);
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [pwDialogOpen, setPwDialogOpen] = useState(false);
+  const [newPassword, setNewPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [showNewPw, setShowNewPw] = useState(false);
+  const [pwLoading, setPwLoading] = useState(false);
   const supabase = createClient();
 
   useEffect(() => {
@@ -89,9 +107,37 @@ export function Header() {
     router.push("/login");
   };
 
+  const handleChangePassword = async () => {
+    if (newPassword.length < 6) {
+      toast.error("비밀번호는 6자 이상이어야 합니다");
+      return;
+    }
+    if (newPassword !== confirmPassword) {
+      toast.error("비밀번호가 일치하지 않습니다");
+      return;
+    }
+    setPwLoading(true);
+    try {
+      const { error } = await supabase.auth.updateUser({ password: newPassword });
+      if (error) {
+        toast.error(error.message);
+        return;
+      }
+      toast.success("비밀번호가 변경되었습니다");
+      setPwDialogOpen(false);
+      setNewPassword("");
+      setConfirmPassword("");
+    } catch {
+      toast.error("비밀번호 변경 중 오류가 발생했습니다");
+    } finally {
+      setPwLoading(false);
+    }
+  };
+
   const emailInitial = user?.email?.charAt(0).toUpperCase() ?? "?";
 
   return (
+    <>
     <header className="sticky top-0 z-50 glass">
       {/* Gradient top border line */}
       <div className="h-[2px] w-full bg-gradient-to-r from-transparent via-primary/40 to-transparent" />
@@ -160,9 +206,9 @@ export function Header() {
                   <User className="h-4 w-4" />
                   프로필
                 </DropdownMenuItem>
-                <DropdownMenuItem className="gap-2 rounded-lg cursor-pointer">
-                  <Settings className="h-4 w-4" />
-                  설정
+                <DropdownMenuItem className="gap-2 rounded-lg cursor-pointer" onClick={() => setPwDialogOpen(true)}>
+                  <KeyRound className="h-4 w-4" />
+                  비밀번호 변경
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem className="gap-2 text-destructive rounded-lg cursor-pointer" onClick={handleSignOut}>
@@ -219,5 +265,66 @@ export function Header() {
         </nav>
       )}
     </header>
+
+    {/* Password Change Dialog */}
+    <Dialog open={pwDialogOpen} onOpenChange={(open) => { setPwDialogOpen(open); if (!open) { setNewPassword(""); setConfirmPassword(""); setShowNewPw(false); } }}>
+      <DialogContent className="sm:max-w-md">
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2">
+            <KeyRound className="h-5 w-5 text-primary" />
+            비밀번호 변경
+          </DialogTitle>
+          <DialogDescription>
+            새 비밀번호를 입력하세요 (6자 이상)
+          </DialogDescription>
+        </DialogHeader>
+        <div className="space-y-4 pt-2">
+          <div className="space-y-2">
+            <Label htmlFor="new-pw" className="text-xs font-medium text-muted-foreground uppercase tracking-wider">새 비밀번호</Label>
+            <div className="relative">
+              <Input
+                id="new-pw"
+                type={showNewPw ? "text" : "password"}
+                placeholder="6자 이상 입력"
+                value={newPassword}
+                onChange={(e) => setNewPassword(e.target.value)}
+                className="h-11 pr-10"
+              />
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon"
+                className="absolute right-0 top-0 h-11 w-11 text-muted-foreground hover:text-foreground"
+                onClick={() => setShowNewPw(!showNewPw)}
+              >
+                {showNewPw ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+              </Button>
+            </div>
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="confirm-pw" className="text-xs font-medium text-muted-foreground uppercase tracking-wider">비밀번호 확인</Label>
+            <Input
+              id="confirm-pw"
+              type="password"
+              placeholder="비밀번호 재입력"
+              value={confirmPassword}
+              onChange={(e) => setConfirmPassword(e.target.value)}
+              className="h-11"
+            />
+            {confirmPassword && newPassword !== confirmPassword && (
+              <p className="text-xs text-destructive">비밀번호가 일치하지 않습니다</p>
+            )}
+          </div>
+          <Button
+            className="w-full h-11 text-base font-semibold btn-premium text-white rounded-xl"
+            onClick={handleChangePassword}
+            disabled={pwLoading || newPassword.length < 6 || newPassword !== confirmPassword}
+          >
+            {pwLoading ? "변경 중..." : "비밀번호 변경"}
+          </Button>
+        </div>
+      </DialogContent>
+    </Dialog>
+    </>
   );
 }
