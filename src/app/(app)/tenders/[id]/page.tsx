@@ -18,6 +18,8 @@ import {
   Calendar,
   Banknote,
   Trophy,
+  ExternalLink,
+  FileCode,
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -48,18 +50,32 @@ export default function TenderDetailPage({
 
   if (isLoading) {
     return (
-      <div className="space-y-4">
-        <Skeleton className="h-8 w-48" />
-        <Skeleton className="h-64 w-full" />
+      <div className="space-y-6 animate-fade-up">
+        <div className="flex gap-3">
+          <Skeleton className="h-9 w-20 rounded-full" />
+          <Skeleton className="h-9 w-32 rounded-full" />
+        </div>
+        <Skeleton className="h-10 w-3/4" />
+        <div className="grid gap-4 md:grid-cols-2">
+          <Skeleton className="h-64 rounded-xl" />
+          <Skeleton className="h-64 rounded-xl" />
+        </div>
       </div>
     );
   }
 
   if (error || !tender) {
     return (
-      <Card>
-        <CardContent className="py-12 text-center text-muted-foreground">
-          공고를 찾을 수 없습니다
+      <Card className="border-border/60">
+        <CardContent className="py-16 text-center text-muted-foreground">
+          <div className="flex h-16 w-16 items-center justify-center rounded-full bg-muted mx-auto mb-4">
+            <ExternalLink className="h-7 w-7 opacity-50" />
+          </div>
+          <p className="text-lg font-medium">공고를 찾을 수 없습니다</p>
+          <p className="text-sm mt-1">삭제되었거나 잘못된 주소입니다</p>
+          <Button variant="outline" className="mt-4 rounded-full" onClick={() => router.push("/")}>
+            <ArrowLeft className="h-4 w-4 mr-1" /> 목록으로
+          </Button>
         </CardContent>
       </Card>
     );
@@ -74,36 +90,37 @@ export default function TenderDetailPage({
   } | null;
 
   return (
-    <div className="space-y-6">
-      {/* 뒤로 + 즐겨찾기 */}
+    <div className="space-y-6 animate-fade-up">
+      {/* Top Bar */}
       <div className="flex items-center justify-between">
-        <Button variant="ghost" size="sm" onClick={() => router.back()}>
-          <ArrowLeft className="h-4 w-4 mr-1" />
+        <Button variant="ghost" size="sm" className="gap-1 rounded-full" onClick={() => router.back()}>
+          <ArrowLeft className="h-4 w-4" />
           뒤로
         </Button>
         <Button
           variant={tender.is_favorited ? "default" : "outline"}
           size="sm"
+          className="gap-1.5 rounded-full px-4 shadow-sm"
           onClick={handleToggleFavorite}
           disabled={addFavorite.isPending || removeFavorite.isPending}
         >
           {tender.is_favorited ? (
             <>
-              <StarOff className="h-4 w-4 mr-1" />
+              <StarOff className="h-4 w-4" />
               즐겨찾기 해제
             </>
           ) : (
             <>
-              <Star className="h-4 w-4 mr-1" />
-              즐겨찾기
+              <Star className="h-4 w-4" />
+              즐겨찾기 추가
             </>
           )}
         </Button>
       </div>
 
-      {/* 제목 + 상태 */}
+      {/* Title Section */}
       <div>
-        <div className="flex items-center gap-2 mb-2">
+        <div className="flex items-center gap-2 mb-3">
           <Badge
             variant={
               tender.status === "OPEN"
@@ -112,26 +129,32 @@ export default function TenderDetailPage({
                 ? "secondary"
                 : "outline"
             }
+            className="text-xs"
           >
             {tenderStatusLabel(tender.status)}
           </Badge>
           {tender.method_type && (
-            <Badge variant="outline">{tender.method_type}</Badge>
+            <Badge variant="outline" className="text-xs">{tender.method_type}</Badge>
           )}
         </div>
-        <h1 className="text-2xl font-bold">{tender.title}</h1>
-        <p className="text-sm text-muted-foreground mt-1">
-          공고번호: {tender.source_tender_id}
+        <h1 className="text-2xl sm:text-3xl font-bold tracking-tight leading-snug">{tender.title}</h1>
+        <p className="text-sm text-muted-foreground mt-2">
+          공고번호: <span className="font-mono">{tender.source_tender_id}</span>
         </p>
       </div>
 
-      {/* 기본 정보 카드 */}
-      <div className="grid gap-4 md:grid-cols-2">
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-base">공고 정보</CardTitle>
+      {/* Info Cards */}
+      <div className="grid gap-4 md:grid-cols-2 stagger-children">
+        <Card className="border-border/60 card-hover">
+          <CardHeader className="pb-3">
+            <CardTitle className="text-base font-semibold flex items-center gap-2">
+              <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary/10">
+                <Building className="h-4 w-4 text-primary" />
+              </div>
+              공고 정보
+            </CardTitle>
           </CardHeader>
-          <CardContent className="space-y-3">
+          <CardContent className="space-y-4">
             <InfoRow
               icon={<Building className="h-4 w-4" />}
               label="발주기관"
@@ -146,6 +169,7 @@ export default function TenderDetailPage({
               icon={<Banknote className="h-4 w-4" />}
               label="추정가격"
               value={formatKRW(tender.budget_amount)}
+              highlight
             />
             <InfoRow
               icon={<Calendar className="h-4 w-4" />}
@@ -175,17 +199,18 @@ export default function TenderDetailPage({
           </CardContent>
         </Card>
 
-        {/* 낙찰 결과 카드 */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-base flex items-center gap-2">
-              <Trophy className="h-4 w-4" />
+        <Card className="border-border/60 card-hover">
+          <CardHeader className="pb-3">
+            <CardTitle className="text-base font-semibold flex items-center gap-2">
+              <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-amber-500/10">
+                <Trophy className="h-4 w-4 text-amber-600 dark:text-amber-400" />
+              </div>
               낙찰 결과
             </CardTitle>
           </CardHeader>
           <CardContent>
             {award ? (
-              <div className="space-y-3">
+              <div className="space-y-4">
                 <InfoRow
                   icon={<Building className="h-4 w-4" />}
                   label="낙찰업체"
@@ -195,6 +220,7 @@ export default function TenderDetailPage({
                   icon={<Banknote className="h-4 w-4" />}
                   label="낙찰금액"
                   value={formatKRW(award.awarded_amount)}
+                  highlight
                 />
                 {award.awarded_rate != null && (
                   <InfoRow
@@ -214,27 +240,33 @@ export default function TenderDetailPage({
                 />
               </div>
             ) : (
-              <p className="text-muted-foreground text-sm py-4 text-center">
-                아직 낙찰 결과가 없습니다
-              </p>
+              <div className="flex flex-col items-center justify-center py-10 text-muted-foreground">
+                <div className="flex h-12 w-12 items-center justify-center rounded-full bg-muted mb-3">
+                  <Trophy className="h-5 w-5 opacity-50" />
+                </div>
+                <p className="text-sm">아직 낙찰 결과가 없습니다</p>
+              </div>
             )}
           </CardContent>
         </Card>
       </div>
 
-      {/* 원문 데이터 (접힌 상태) */}
+      {/* Raw JSON */}
       {tender.raw_json && (
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-base">원문 데이터 (JSON)</CardTitle>
+        <Card className="border-border/60">
+          <CardHeader className="pb-3">
+            <CardTitle className="text-base font-semibold flex items-center gap-2">
+              <FileCode className="h-4 w-4 text-muted-foreground" />
+              원문 데이터
+            </CardTitle>
           </CardHeader>
           <CardContent>
             <details>
-              <summary className="cursor-pointer text-sm text-muted-foreground hover:text-foreground">
-                펼쳐보기
+              <summary className="cursor-pointer text-sm text-muted-foreground hover:text-foreground transition-colors">
+                JSON 데이터 펼쳐보기
               </summary>
               <Separator className="my-3" />
-              <pre className="text-xs bg-muted p-3 rounded overflow-auto max-h-96">
+              <pre className="text-xs bg-muted/50 p-4 rounded-lg overflow-auto max-h-96 border border-border/60">
                 {JSON.stringify(tender.raw_json, null, 2)}
               </pre>
             </details>
@@ -249,17 +281,19 @@ function InfoRow({
   icon,
   label,
   value,
+  highlight,
 }: {
   icon: React.ReactNode;
   label: string;
   value: string;
+  highlight?: boolean;
 }) {
   return (
-    <div className="flex items-start gap-2">
+    <div className="flex items-start gap-3">
       <span className="text-muted-foreground mt-0.5 shrink-0">{icon}</span>
       <div>
         <p className="text-xs text-muted-foreground">{label}</p>
-        <p className="text-sm font-medium">{value}</p>
+        <p className={`text-sm font-medium ${highlight ? "text-primary font-semibold" : ""}`}>{value}</p>
       </div>
     </div>
   );

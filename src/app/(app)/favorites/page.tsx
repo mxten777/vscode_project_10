@@ -13,6 +13,8 @@ import {
   Building,
   Calendar,
   Search,
+  ArrowUpRight,
+  Heart,
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -30,32 +32,46 @@ export default function FavoritesPage() {
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-8 animate-fade-up">
+      {/* Header */}
       <div>
-        <h1 className="text-2xl font-bold flex items-center gap-2">
-          <Star className="h-6 w-6 text-yellow-500" />
+        <h1 className="text-3xl font-bold tracking-tight flex items-center gap-2.5">
+          <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-yellow-500/10">
+            <Star className="h-5 w-5 text-yellow-600 dark:text-yellow-400" />
+          </div>
           즐겨찾기
         </h1>
-        <p className="text-muted-foreground mt-1">
+        <p className="text-muted-foreground mt-1 ml-[52px]">
           관심 공고를 모아볼 수 있습니다
         </p>
       </div>
 
+      {/* Count */}
+      {favorites && favorites.length > 0 && (
+        <p className="text-sm text-muted-foreground">
+          총 <span className="font-semibold text-foreground">{favorites.length}</span>건의 즐겨찾기
+        </p>
+      )}
+
       {isLoading && (
         <div className="space-y-3">
           {Array.from({ length: 3 }).map((_, i) => (
-            <Skeleton key={i} className="h-24 w-full rounded-lg" />
+            <Skeleton key={i} className="h-24 w-full rounded-xl" />
           ))}
         </div>
       )}
 
       {favorites && favorites.length === 0 && (
-        <Card>
-          <CardContent className="py-12 text-center text-muted-foreground">
-            <Search className="mx-auto h-8 w-8 mb-3 opacity-50" />
-            <p>즐겨찾기한 공고가 없습니다</p>
+        <Card className="border-border/60">
+          <CardContent className="py-16 text-center text-muted-foreground">
+            <div className="flex h-16 w-16 items-center justify-center rounded-full bg-muted mx-auto mb-4">
+              <Heart className="h-7 w-7 opacity-50" />
+            </div>
+            <p className="text-lg font-medium">즐겨찾기한 공고가 없습니다</p>
+            <p className="text-sm mt-1">관심 있는 공고에서 별표를 눌러 추가하세요</p>
             <Link href="/">
-              <Button variant="outline" className="mt-4">
+              <Button variant="outline" className="mt-5 rounded-full gap-1.5 px-5">
+                <Search className="h-4 w-4" />
                 공고 검색하기
               </Button>
             </Link>
@@ -64,18 +80,18 @@ export default function FavoritesPage() {
       )}
 
       {favorites && favorites.length > 0 && (
-        <div className="space-y-3">
+        <div className="space-y-3 stagger-children">
           {favorites.map((fav) => {
             const tender = fav.tender;
             if (!tender) return null;
             const agency = tender.agency as unknown as { name: string } | null;
 
             return (
-              <Card key={fav.id} className="hover:border-primary/50 transition-colors">
-                <CardContent className="py-4">
+              <Card key={fav.id} className="group card-hover border-border/60">
+                <CardContent className="py-5">
                   <div className="flex items-start justify-between gap-3">
                     <Link href={`/tenders/${tender.id}`} className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2 mb-1">
+                      <div className="flex items-center gap-2 mb-1.5">
                         <Badge
                           variant={
                             tender.status === "OPEN"
@@ -86,8 +102,10 @@ export default function FavoritesPage() {
                           {tenderStatusLabel(tender.status)}
                         </Badge>
                       </div>
-                      <h3 className="font-semibold truncate">{tender.title}</h3>
-                      <div className="mt-1 flex flex-wrap gap-x-4 text-sm text-muted-foreground">
+                      <h3 className="font-semibold truncate group-hover:text-primary transition-colors">
+                        {tender.title}
+                      </h3>
+                      <div className="mt-2 flex flex-wrap gap-x-4 text-sm text-muted-foreground">
                         {agency?.name && (
                           <span className="flex items-center gap-1">
                             <Building className="h-3.5 w-3.5" />
@@ -103,17 +121,21 @@ export default function FavoritesPage() {
                       </div>
                     </Link>
                     <div className="flex flex-col items-end gap-2">
-                      <p className="font-semibold">
+                      <p className="font-bold tracking-tight">
                         {formatKRW(tender.budget_amount)}
                       </p>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => handleRemove(tender.id)}
-                        disabled={removeFavorite.isPending}
-                      >
-                        <StarOff className="h-4 w-4 text-yellow-500" />
-                      </Button>
+                      <div className="flex items-center gap-1">
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8 rounded-full"
+                          onClick={() => handleRemove(tender.id)}
+                          disabled={removeFavorite.isPending}
+                        >
+                          <StarOff className="h-4 w-4 text-yellow-500" />
+                        </Button>
+                        <ArrowUpRight className="h-4 w-4 text-muted-foreground opacity-0 group-hover:opacity-100 group-hover:text-primary transition-all" />
+                      </div>
                     </div>
                   </div>
                 </CardContent>

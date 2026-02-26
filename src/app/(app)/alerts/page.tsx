@@ -36,7 +36,7 @@ import {
 } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Bell, Plus, Trash2, Mail, MessageSquare } from "lucide-react";
+import { Bell, Plus, Trash2, Mail, MessageSquare, BellRing, Send, AlertTriangle } from "lucide-react";
 import { toast } from "sonner";
 
 export default function AlertsPage() {
@@ -48,7 +48,6 @@ export default function AlertsPage() {
 
   const [dialogOpen, setDialogOpen] = useState(false);
 
-  // 새 규칙 폼
   const [ruleType, setRuleType] = useState<"KEYWORD" | "FILTER">("KEYWORD");
   const [keyword, setKeyword] = useState("");
   const [budgetMin, setBudgetMin] = useState("");
@@ -102,38 +101,40 @@ export default function AlertsPage() {
   };
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
+    <div className="space-y-8 animate-fade-up">
+      {/* Header */}
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold flex items-center gap-2">
-            <Bell className="h-6 w-6" />
+          <h1 className="text-3xl font-bold tracking-tight flex items-center gap-2.5">
+            <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10">
+              <Bell className="h-5 w-5 text-primary" />
+            </div>
             알림 관리
           </h1>
-          <p className="text-muted-foreground mt-1">
+          <p className="text-muted-foreground mt-1 ml-[52px]">
             키워드/필터 조건에 맞는 새 공고를 알림 받으세요
           </p>
         </div>
 
         <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
           <DialogTrigger asChild>
-            <Button>
-              <Plus className="h-4 w-4 mr-1" />
+            <Button className="gap-1.5 rounded-full px-5 shadow-sm shadow-primary/25">
+              <Plus className="h-4 w-4" />
               규칙 추가
             </Button>
           </DialogTrigger>
-          <DialogContent>
+          <DialogContent className="sm:max-w-md">
             <DialogHeader>
               <DialogTitle>새 알림 규칙</DialogTitle>
             </DialogHeader>
             <div className="space-y-4 pt-2">
-              {/* 유형 */}
               <div className="space-y-2">
-                <Label>유형</Label>
+                <Label className="text-xs font-medium text-muted-foreground uppercase tracking-wider">유형</Label>
                 <Select
                   value={ruleType}
                   onValueChange={(v) => setRuleType(v as "KEYWORD" | "FILTER")}
                 >
-                  <SelectTrigger>
+                  <SelectTrigger className="h-11">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
@@ -143,46 +144,46 @@ export default function AlertsPage() {
                 </Select>
               </div>
 
-              {/* 키워드 */}
               <div className="space-y-2">
-                <Label>키워드</Label>
+                <Label className="text-xs font-medium text-muted-foreground uppercase tracking-wider">키워드</Label>
                 <Input
                   placeholder="예: 소프트웨어, 정보화"
                   value={keyword}
                   onChange={(e) => setKeyword(e.target.value)}
+                  className="h-11"
                 />
               </div>
 
-              {/* 예산 범위 */}
               <div className="grid grid-cols-2 gap-3">
                 <div className="space-y-2">
-                  <Label>최소 예산 (원)</Label>
+                  <Label className="text-xs font-medium text-muted-foreground uppercase tracking-wider">최소 예산 (원)</Label>
                   <Input
                     type="number"
                     placeholder="0"
                     value={budgetMin}
                     onChange={(e) => setBudgetMin(e.target.value)}
+                    className="h-11"
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label>최대 예산 (원)</Label>
+                  <Label className="text-xs font-medium text-muted-foreground uppercase tracking-wider">최대 예산 (원)</Label>
                   <Input
                     type="number"
                     placeholder="무제한"
                     value={budgetMax}
                     onChange={(e) => setBudgetMax(e.target.value)}
+                    className="h-11"
                   />
                 </div>
               </div>
 
-              {/* 채널 */}
               <div className="space-y-2">
-                <Label>알림 채널</Label>
+                <Label className="text-xs font-medium text-muted-foreground uppercase tracking-wider">알림 채널</Label>
                 <Select
                   value={channel}
                   onValueChange={(v) => setChannel(v as "EMAIL" | "KAKAO")}
                 >
-                  <SelectTrigger>
+                  <SelectTrigger className="h-11">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
@@ -193,7 +194,7 @@ export default function AlertsPage() {
               </div>
 
               <Button
-                className="w-full"
+                className="w-full h-11 text-base font-semibold shadow-sm shadow-primary/25 rounded-lg"
                 onClick={handleCreate}
                 disabled={createRule.isPending}
               >
@@ -205,135 +206,158 @@ export default function AlertsPage() {
       </div>
 
       <Tabs defaultValue="rules">
-        <TabsList>
-          <TabsTrigger value="rules">알림 규칙</TabsTrigger>
-          <TabsTrigger value="logs">발송 이력</TabsTrigger>
+        <TabsList className="grid w-full max-w-xs grid-cols-2">
+          <TabsTrigger value="rules" className="gap-1.5">
+            <BellRing className="h-3.5 w-3.5" />
+            알림 규칙
+          </TabsTrigger>
+          <TabsTrigger value="logs" className="gap-1.5">
+            <Send className="h-3.5 w-3.5" />
+            발송 이력
+          </TabsTrigger>
         </TabsList>
 
-        {/* 규칙 목록 */}
-        <TabsContent value="rules" className="space-y-3 mt-4">
+        {/* Rules Tab */}
+        <TabsContent value="rules" className="space-y-3 mt-6">
           {rulesLoading && (
             <div className="space-y-3">
               {Array.from({ length: 3 }).map((_, i) => (
-                <Skeleton key={i} className="h-20 w-full rounded-lg" />
+                <Skeleton key={i} className="h-20 w-full rounded-xl" />
               ))}
             </div>
           )}
 
           {rules && rules.length === 0 && (
-            <Card>
-              <CardContent className="py-12 text-center text-muted-foreground">
-                <Bell className="mx-auto h-8 w-8 mb-3 opacity-50" />
-                <p>설정된 알림 규칙이 없습니다</p>
+            <Card className="border-border/60">
+              <CardContent className="py-16 text-center text-muted-foreground">
+                <div className="flex h-16 w-16 items-center justify-center rounded-full bg-muted mx-auto mb-4">
+                  <Bell className="h-7 w-7 opacity-50" />
+                </div>
+                <p className="text-lg font-medium">설정된 알림 규칙이 없습니다</p>
+                <p className="text-sm mt-1">새 규칙을 추가하여 맞춤 알림을 받아보세요</p>
               </CardContent>
             </Card>
           )}
 
-          {rules?.map((rule) => {
-            const rj = rule.rule_json || {};
-            return (
-              <Card key={rule.id}>
-                <CardContent className="py-4">
-                  <div className="flex items-center justify-between">
-                    <div className="flex-1">
-                      <div className="flex items-center gap-2 mb-1">
-                        <Badge variant={rule.type === "KEYWORD" ? "default" : "secondary"}>
-                          {rule.type === "KEYWORD" ? "키워드" : "필터"}
-                        </Badge>
-                        <Badge variant="outline" className="gap-1">
-                          {rule.channel === "EMAIL" ? (
-                            <Mail className="h-3 w-3" />
-                          ) : (
-                            <MessageSquare className="h-3 w-3" />
-                          )}
-                          {rule.channel}
-                        </Badge>
-                        {!rule.is_enabled && (
-                          <Badge variant="secondary">비활성</Badge>
-                        )}
+          {rules && rules.length > 0 && (
+            <div className="stagger-children space-y-3">
+              {rules.map((rule) => {
+                const rj = rule.rule_json || {};
+                return (
+                  <Card key={rule.id} className={`border-border/60 card-hover ${!rule.is_enabled ? "opacity-60" : ""}`}>
+                    <CardContent className="py-5">
+                      <div className="flex items-center justify-between">
+                        <div className="flex-1">
+                          <div className="flex items-center gap-2 mb-1.5">
+                            <Badge variant={rule.type === "KEYWORD" ? "default" : "secondary"}>
+                              {rule.type === "KEYWORD" ? "키워드" : "필터"}
+                            </Badge>
+                            <Badge variant="outline" className="gap-1">
+                              {rule.channel === "EMAIL" ? (
+                                <Mail className="h-3 w-3" />
+                              ) : (
+                                <MessageSquare className="h-3 w-3" />
+                              )}
+                              {rule.channel}
+                            </Badge>
+                            {!rule.is_enabled && (
+                              <Badge variant="secondary" className="text-xs">비활성</Badge>
+                            )}
+                          </div>
+                          <div className="text-sm text-muted-foreground space-y-0.5 mt-1">
+                            {rj.keyword && <p>키워드: <span className="font-medium text-foreground">{rj.keyword}</span></p>}
+                            {(rj.budgetMin || rj.budgetMax) && (
+                              <p>
+                                예산:{" "}
+                                {rj.budgetMin
+                                  ? `${Number(rj.budgetMin).toLocaleString()}원`
+                                  : "0원"}
+                                {" ~ "}
+                                {rj.budgetMax
+                                  ? `${Number(rj.budgetMax).toLocaleString()}원`
+                                  : "무제한"}
+                              </p>
+                            )}
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <Switch
+                            checked={rule.is_enabled}
+                            onCheckedChange={() =>
+                              handleToggle(rule.id, rule.is_enabled)
+                            }
+                          />
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8 rounded-full hover:bg-destructive/10"
+                            onClick={() => handleDelete(rule.id)}
+                          >
+                            <Trash2 className="h-4 w-4 text-destructive" />
+                          </Button>
+                        </div>
                       </div>
-                      <div className="text-sm text-muted-foreground space-y-0.5">
-                        {rj.keyword && <p>키워드: {rj.keyword}</p>}
-                        {(rj.budgetMin || rj.budgetMax) && (
-                          <p>
-                            예산:{" "}
-                            {rj.budgetMin
-                              ? `${Number(rj.budgetMin).toLocaleString()}원`
-                              : "0원"}
-                            {" ~ "}
-                            {rj.budgetMax
-                              ? `${Number(rj.budgetMax).toLocaleString()}원`
-                              : "무제한"}
-                          </p>
-                        )}
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <Switch
-                        checked={rule.is_enabled}
-                        onCheckedChange={() =>
-                          handleToggle(rule.id, rule.is_enabled)
-                        }
-                      />
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => handleDelete(rule.id)}
-                      >
-                        <Trash2 className="h-4 w-4 text-destructive" />
-                      </Button>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            );
-          })}
+                    </CardContent>
+                  </Card>
+                );
+              })}
+            </div>
+          )}
         </TabsContent>
 
-        {/* 발송 이력 */}
-        <TabsContent value="logs" className="space-y-3 mt-4">
+        {/* Logs Tab */}
+        <TabsContent value="logs" className="space-y-3 mt-6">
           {logsLoading && (
             <div className="space-y-3">
               {Array.from({ length: 3 }).map((_, i) => (
-                <Skeleton key={i} className="h-16 w-full rounded-lg" />
+                <Skeleton key={i} className="h-16 w-full rounded-xl" />
               ))}
             </div>
           )}
 
           {logs && logs.length === 0 && (
-            <Card>
-              <CardContent className="py-12 text-center text-muted-foreground">
-                <p>발송 이력이 없습니다</p>
+            <Card className="border-border/60">
+              <CardContent className="py-16 text-center text-muted-foreground">
+                <div className="flex h-16 w-16 items-center justify-center rounded-full bg-muted mx-auto mb-4">
+                  <Send className="h-7 w-7 opacity-50" />
+                </div>
+                <p className="text-lg font-medium">발송 이력이 없습니다</p>
               </CardContent>
             </Card>
           )}
 
-          {logs?.map((log) => (
-            <Card key={log.id}>
-              <CardContent className="py-3">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-sm font-medium">
-                      {log.tender?.title || log.tender_id}
-                    </p>
-                    <p className="text-xs text-muted-foreground">
-                      {new Date(log.sent_at).toLocaleString("ko-KR")}
-                    </p>
-                  </div>
-                  <Badge
-                    variant={log.status === "SENT" ? "default" : "destructive"}
-                  >
-                    {log.status === "SENT" ? "발송" : "실패"}
-                  </Badge>
-                </div>
-                {log.error_message && (
-                  <p className="text-xs text-destructive mt-1">
-                    {log.error_message}
-                  </p>
-                )}
-              </CardContent>
-            </Card>
-          ))}
+          {logs && logs.length > 0 && (
+            <div className="stagger-children space-y-3">
+              {logs.map((log) => (
+                <Card key={log.id} className="border-border/60 card-hover">
+                  <CardContent className="py-4">
+                    <div className="flex items-center justify-between gap-3">
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium truncate">
+                          {log.tender?.title || log.tender_id}
+                        </p>
+                        <p className="text-xs text-muted-foreground mt-0.5">
+                          {new Date(log.sent_at).toLocaleString("ko-KR")}
+                        </p>
+                      </div>
+                      <Badge
+                        variant={log.status === "SENT" ? "default" : "destructive"}
+                        className="shrink-0"
+                      >
+                        {log.status === "SENT" ? "발송" : "실패"}
+                      </Badge>
+                    </div>
+                    {log.error_message && (
+                      <div className="mt-2 flex items-start gap-1.5 text-xs text-destructive bg-destructive/5 rounded-lg p-2">
+                        <AlertTriangle className="h-3.5 w-3.5 shrink-0 mt-0.5" />
+                        {log.error_message}
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          )}
         </TabsContent>
       </Tabs>
     </div>
