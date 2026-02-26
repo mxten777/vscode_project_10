@@ -56,20 +56,15 @@ export default function ReportsPage() {
   return (
     <div className="space-y-8 animate-fade-up">
       {/* Header */}
-      <div>
-        <h1 className="text-3xl font-bold tracking-tight flex items-center gap-2.5">
-          <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10">
-            <BarChart3 className="h-5 w-5 text-primary" />
-          </div>
-          리포트
-        </h1>
-        <p className="text-muted-foreground mt-1 ml-[52px]">
+      <div className="section-header">
+        <h1 className="text-3xl font-extrabold tracking-tight">리포트</h1>
+        <p className="text-muted-foreground mt-1">
           기간별 입찰 공고 통계를 확인하세요
         </p>
       </div>
 
       {/* Date Picker */}
-      <Card className="border-border/60 shadow-sm">
+      <Card className="premium-card overflow-hidden">
         <CardContent className="pt-5 pb-5">
           <div className="flex flex-col sm:flex-row items-end gap-3">
             <div className="space-y-2 flex-1">
@@ -155,7 +150,7 @@ export default function ReportsPage() {
           {/* Charts Row */}
           <div className="grid gap-6 lg:grid-cols-5">
             {/* Pie Chart - Status Distribution */}
-            <Card className="lg:col-span-2 border-border/60 card-hover">
+            <Card className="lg:col-span-2 premium-card card-hover">
               <CardHeader className="pb-2">
                 <CardTitle className="text-base font-semibold">상태 분포</CardTitle>
                 <CardDescription>공고 상태별 비율</CardDescription>
@@ -214,7 +209,7 @@ export default function ReportsPage() {
             </Card>
 
             {/* Bar Chart - Top Agencies */}
-            <Card className="lg:col-span-3 border-border/60 card-hover">
+            <Card className="lg:col-span-3 premium-card card-hover">
               <CardHeader className="pb-2">
                 <CardTitle className="text-base font-semibold flex items-center gap-2">
                   <Building className="h-4 w-4 text-muted-foreground" />
@@ -269,7 +264,7 @@ export default function ReportsPage() {
           </div>
 
           {/* Industry Rank Card */}
-          <Card className="border-border/60 card-hover">
+          <Card className="premium-card card-hover">
             <CardHeader>
               <CardTitle className="text-base font-semibold flex items-center gap-2">
                 <Briefcase className="h-4 w-4 text-muted-foreground" />
@@ -331,12 +326,12 @@ function SummaryCard({
   suffix?: string;
 }) {
   return (
-    <Card className="card-hover border-border/60">
+    <Card className="stat-card premium-card">
       <CardContent className="pt-5 pb-4">
         <div className="flex items-center justify-between">
           <div>
-            <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">{title}</p>
-            <p className="text-2xl font-bold mt-1">
+            <p className="text-[11px] font-semibold text-muted-foreground uppercase tracking-widest">{title}</p>
+            <p className="text-2xl font-extrabold mt-1.5 tracking-tight">
               {value}
               {suffix && (
                 <span className="text-sm font-normal text-muted-foreground ml-1">

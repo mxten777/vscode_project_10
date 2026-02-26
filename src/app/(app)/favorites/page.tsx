@@ -34,14 +34,9 @@ export default function FavoritesPage() {
   return (
     <div className="space-y-8 animate-fade-up">
       {/* Header */}
-      <div>
-        <h1 className="text-3xl font-bold tracking-tight flex items-center gap-2.5">
-          <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-yellow-500/10">
-            <Star className="h-5 w-5 text-yellow-600 dark:text-yellow-400" />
-          </div>
-          즐겨찾기
-        </h1>
-        <p className="text-muted-foreground mt-1 ml-[52px]">
+      <div className="section-header">
+        <h1 className="text-3xl font-extrabold tracking-tight">즐겨찾기</h1>
+        <p className="text-muted-foreground mt-1">
           관심 공고를 모아볼 수 있습니다
         </p>
       </div>
@@ -62,15 +57,15 @@ export default function FavoritesPage() {
       )}
 
       {favorites && favorites.length === 0 && (
-        <Card className="border-border/60">
-          <CardContent className="py-16 text-center text-muted-foreground">
-            <div className="flex h-16 w-16 items-center justify-center rounded-full bg-muted mx-auto mb-4">
-              <Heart className="h-7 w-7 opacity-50" />
+        <Card className="premium-card">
+          <CardContent className="py-20 text-center text-muted-foreground">
+            <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-gradient-to-br from-amber-500/10 to-amber-500/5 mx-auto mb-5">
+              <Heart className="h-7 w-7 text-amber-500/60" />
             </div>
-            <p className="text-lg font-medium">즐겨찾기한 공고가 없습니다</p>
-            <p className="text-sm mt-1">관심 있는 공고에서 별표를 눌러 추가하세요</p>
+            <p className="text-lg font-semibold text-foreground">즐겨찾기한 공고가 없습니다</p>
+            <p className="text-sm mt-1.5">관심 있는 공고에서 별표를 눌러 추가하세요</p>
             <Link href="/">
-              <Button variant="outline" className="mt-5 rounded-full gap-1.5 px-5">
+              <Button variant="outline" className="mt-6 rounded-xl gap-1.5 px-6 h-10 hover:bg-primary/5 hover:text-primary hover:border-primary/30 transition-all">
                 <Search className="h-4 w-4" />
                 공고 검색하기
               </Button>
@@ -87,7 +82,7 @@ export default function FavoritesPage() {
             const agency = tender.agency as unknown as { name: string } | null;
 
             return (
-              <Card key={fav.id} className="group card-hover border-border/60">
+              <Card key={fav.id} className="group premium-card card-hover">
                 <CardContent className="py-5">
                   <div className="flex items-start justify-between gap-3">
                     <Link href={`/tenders/${tender.id}`} className="flex-1 min-w-0">

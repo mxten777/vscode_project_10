@@ -22,6 +22,8 @@ import {
   Bell,
   Eye,
   EyeOff,
+  ArrowRight,
+  Sparkles,
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -29,23 +31,33 @@ const features = [
   {
     icon: TrendingUp,
     title: "AI 입찰 분석",
-    desc: "공공 입찰 공고를 AI로 자동 분석하여 최적의 기회를 발견합니다",
+    desc: "공공 입찰 공고를 AI로 자동 분석하여 최적의 입찰 기회를 발견합니다",
+    color: "from-indigo-500/20 to-blue-500/20",
   },
   {
     icon: Bell,
     title: "실시간 알림",
-    desc: "관심 키워드에 맞는 새 공고가 올라오면 즉시 알려드립니다",
+    desc: "관심 키워드에 맞는 새 공고가 올라오면 즉시 알림을 보내드립니다",
+    color: "from-violet-500/20 to-purple-500/20",
   },
   {
     icon: Shield,
     title: "안전한 데이터",
     desc: "Supabase RLS 기반의 철저한 데이터 보안을 제공합니다",
+    color: "from-emerald-500/20 to-teal-500/20",
   },
   {
     icon: Zap,
     title: "빠른 검색",
     desc: "나라장터 전체 공고를 빠르고 정확하게 검색합니다",
+    color: "from-amber-500/20 to-orange-500/20",
   },
+];
+
+const stats = [
+  { value: "10K+", label: "공공 입찰 공고" },
+  { value: "99.9%", label: "서비스 가동률" },
+  { value: "실시간", label: "데이터 수집" },
 ];
 
 export default function LoginPage() {
@@ -138,81 +150,111 @@ function LoginContent() {
 
   return (
     <div className="flex min-h-screen">
-      {/* Left Hero Panel */}
-      <div className="hidden lg:flex lg:w-1/2 relative overflow-hidden bg-gradient-to-br from-primary via-primary/90 to-primary/70">
-        {/* Background decorative elements */}
-        <div className="absolute inset-0">
-          <div className="absolute top-20 left-10 h-72 w-72 rounded-full bg-white/10 blur-3xl" />
-          <div className="absolute bottom-20 right-10 h-96 w-96 rounded-full bg-white/5 blur-3xl" />
-          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 h-64 w-64 rounded-full bg-white/5 blur-2xl" />
+      {/* Left Hero Panel — Animated Mesh Gradient */}
+      <div className="hidden lg:flex lg:w-[55%] relative overflow-hidden">
+        {/* Multi-layer gradient background */}
+        <div className="absolute inset-0 bg-gradient-to-br from-indigo-950 via-indigo-900 to-violet-950" />
+
+        {/* Animated mesh orbs */}
+        <div className="absolute inset-0 overflow-hidden">
+          <div className="absolute top-[-10%] left-[-5%] h-[500px] w-[500px] rounded-full bg-indigo-600/30 blur-[100px] animate-mesh" />
+          <div className="absolute bottom-[-15%] right-[-10%] h-[600px] w-[600px] rounded-full bg-violet-600/25 blur-[120px] animate-mesh" style={{ animationDelay: "-7s" }} />
+          <div className="absolute top-[50%] left-[40%] h-[350px] w-[350px] rounded-full bg-blue-500/20 blur-[80px] animate-mesh" style={{ animationDelay: "-13s" }} />
+          <div className="absolute top-[20%] right-[10%] h-[200px] w-[200px] rounded-full bg-cyan-400/15 blur-[60px] animate-mesh" style={{ animationDelay: "-5s" }} />
         </div>
 
-        <div className="relative z-10 flex flex-col justify-between p-12 text-primary-foreground">
+        {/* Dot pattern overlay */}
+        <div className="absolute inset-0 opacity-[0.03]" style={{ backgroundImage: "radial-gradient(white 1px, transparent 1px)", backgroundSize: "28px 28px" }} />
+
+        <div className="relative z-10 flex flex-col justify-between p-12 xl:p-16 text-white w-full">
           {/* Logo */}
           <div className="flex items-center gap-3">
-            <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-white/20 backdrop-blur-sm">
+            <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-white/10 backdrop-blur-xl border border-white/10 shadow-lg shadow-indigo-900/30">
               <BarChart3 className="h-6 w-6" />
             </div>
             <div>
-              <p className="text-lg font-bold leading-tight">입찰분석</p>
-              <p className="text-xs opacity-80">AI Procurement Platform</p>
+              <p className="text-lg font-bold leading-tight tracking-tight">입찰분석</p>
+              <p className="text-xs text-white/50 font-medium">AI Procurement Platform</p>
             </div>
           </div>
 
           {/* Hero Content */}
-          <div className="space-y-8">
-            <div className="space-y-4">
-              <h1 className="text-4xl font-bold leading-tight">
-                공공 입찰의 새로운
+          <div className="space-y-10 max-w-lg">
+            <div className="space-y-5">
+              <div className="inline-flex items-center gap-2 rounded-full bg-white/10 backdrop-blur-sm border border-white/10 px-4 py-1.5 text-sm font-medium">
+                <Sparkles className="h-3.5 w-3.5 text-amber-300" />
+                AI 기반 자동 분석 시스템
+              </div>
+              <h1 className="text-5xl xl:text-6xl font-extrabold leading-[1.1] tracking-tight">
+                공공 입찰의
                 <br />
-                패러다임
+                <span className="bg-gradient-to-r from-indigo-300 via-blue-200 to-violet-300 bg-clip-text text-transparent">새로운 패러다임</span>
               </h1>
-              <p className="text-lg opacity-90 max-w-md leading-relaxed">
-                AI 기반 실시간 분석으로 최적의 입찰 기회를 
-                놓치지 마세요
+              <p className="text-lg text-white/60 leading-relaxed max-w-md">
+                AI 기반 실시간 분석으로 최적의 입찰 기회를
+                놓치지 마세요. 데이터가 말해주는 인사이트.
               </p>
             </div>
 
-            <div className="grid grid-cols-2 gap-4">
+            {/* Stats Row */}
+            <div className="flex gap-8">
+              {stats.map((s) => (
+                <div key={s.label}>
+                  <p className="text-2xl font-bold">{s.value}</p>
+                  <p className="text-xs text-white/40 mt-0.5">{s.label}</p>
+                </div>
+              ))}
+            </div>
+
+            {/* Feature cards */}
+            <div className="grid grid-cols-2 gap-3">
               {features.map((f) => (
                 <div
                   key={f.title}
-                  className="flex flex-col gap-2 rounded-xl bg-white/10 backdrop-blur-sm p-4 transition-colors hover:bg-white/15"
+                  className="group flex flex-col gap-2.5 rounded-2xl bg-white/[0.06] backdrop-blur-sm border border-white/[0.08] p-4 transition-all duration-300 hover:bg-white/[0.10] hover:border-white/[0.15] hover:scale-[1.02]"
                 >
-                  <f.icon className="h-5 w-5" />
+                  <div className={`flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br ${f.color}`}>
+                    <f.icon className="h-4.5 w-4.5 text-white" />
+                  </div>
                   <p className="text-sm font-semibold">{f.title}</p>
-                  <p className="text-xs opacity-75 leading-relaxed">{f.desc}</p>
+                  <p className="text-xs text-white/45 leading-relaxed">{f.desc}</p>
                 </div>
               ))}
             </div>
           </div>
 
           {/* Footer */}
-          <p className="text-xs opacity-60">
+          <p className="text-xs text-white/30">
             &copy; 2025 입찰분석 — AI 입찰·조달 분석 플랫폼
           </p>
         </div>
       </div>
 
       {/* Right Form Panel */}
-      <div className="flex w-full lg:w-1/2 items-center justify-center bg-background px-4 py-12">
-        <div className="w-full max-w-[420px] animate-fade-up">
+      <div className="flex w-full lg:w-[45%] items-center justify-center bg-background px-6 py-12 relative">
+        {/* Subtle background gradient */}
+        <div className="absolute inset-0 hero-gradient opacity-50" />
+
+        <div className="relative z-10 w-full max-w-[440px] animate-fade-up">
           {/* Mobile Logo */}
-          <div className="lg:hidden flex items-center justify-center gap-2.5 mb-8">
-            <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary text-primary-foreground">
+          <div className="lg:hidden flex items-center justify-center gap-3 mb-10">
+            <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-primary text-primary-foreground shadow-lg shadow-primary/25">
               <BarChart3 className="h-5 w-5" />
             </div>
-            <span className="text-xl font-bold">입찰분석</span>
+            <span className="text-xl font-bold tracking-tight">입찰분석</span>
           </div>
 
-          <Card className="border-0 shadow-xl shadow-primary/5 lg:border">
-            <CardHeader className="text-center pb-2">
-              <CardTitle className="text-2xl font-bold">환영합니다</CardTitle>
+          <Card className="premium-card border-0 shadow-2xl shadow-primary/5 overflow-hidden">
+            {/* Card shimmer top border */}
+            <div className="h-[2px] w-full bg-gradient-to-r from-transparent via-primary/40 to-transparent" />
+
+            <CardHeader className="text-center pb-2 pt-8">
+              <CardTitle className="text-2xl font-bold tracking-tight">환영합니다</CardTitle>
               <CardDescription className="text-base">
                 계정에 로그인하거나 새로 가입하세요
               </CardDescription>
             </CardHeader>
-            <CardContent>
+            <CardContent className="px-8 pb-8">
               <Tabs defaultValue="signin">
                 <TabsList className="grid w-full grid-cols-2 mb-2">
                   <TabsTrigger value="signin">로그인</TabsTrigger>
@@ -265,11 +307,11 @@ function LoginContent() {
                       </div>
                     </div>
                     <Button
-                      className="w-full h-11 text-base font-semibold shadow-sm shadow-primary/25"
+                      className="w-full h-12 text-base font-semibold btn-premium text-white rounded-xl gap-2"
                       type="submit"
                       disabled={loading}
                     >
-                      {loading ? "로그인 중..." : "로그인"}
+                      {loading ? "로그인 중..." : <><span>로그인</span><ArrowRight className="h-4 w-4" /></>}
                     </Button>
                   </form>
                 </TabsContent>
@@ -317,11 +359,11 @@ function LoginContent() {
                       />
                     </div>
                     <Button
-                      className="w-full h-11 text-base font-semibold shadow-sm shadow-primary/25"
+                      className="w-full h-12 text-base font-semibold btn-premium text-white rounded-xl gap-2"
                       type="submit"
                       disabled={loading}
                     >
-                      {loading ? "가입 중..." : "회원가입"}
+                      {loading ? "가입 중..." : <><span>회원가입</span><ArrowRight className="h-4 w-4" /></>}
                     </Button>
                   </form>
                 </TabsContent>
@@ -329,7 +371,7 @@ function LoginContent() {
             </CardContent>
           </Card>
 
-          <p className="mt-6 text-center text-xs text-muted-foreground">
+          <p className="mt-8 text-center text-xs text-muted-foreground/70">
             로그인함으로써 서비스 이용약관 및 개인정보 처리방침에 동의합니다
           </p>
         </div>

@@ -66,14 +66,14 @@ export default function TenderDetailPage({
 
   if (error || !tender) {
     return (
-      <Card className="border-border/60">
-        <CardContent className="py-16 text-center text-muted-foreground">
-          <div className="flex h-16 w-16 items-center justify-center rounded-full bg-muted mx-auto mb-4">
-            <ExternalLink className="h-7 w-7 opacity-50" />
+      <Card className="premium-card">
+        <CardContent className="py-20 text-center text-muted-foreground">
+          <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-gradient-to-br from-primary/10 to-primary/5 mx-auto mb-5">
+            <ExternalLink className="h-7 w-7 text-primary/50" />
           </div>
-          <p className="text-lg font-medium">공고를 찾을 수 없습니다</p>
-          <p className="text-sm mt-1">삭제되었거나 잘못된 주소입니다</p>
-          <Button variant="outline" className="mt-4 rounded-full" onClick={() => router.push("/")}>
+          <p className="text-lg font-semibold text-foreground">공고를 찾을 수 없습니다</p>
+          <p className="text-sm mt-1.5">삭제되었거나 잘못된 주소입니다</p>
+          <Button variant="outline" className="mt-6 rounded-xl h-10 hover:bg-primary/5 hover:text-primary hover:border-primary/30 transition-all" onClick={() => router.push("/")}>
             <ArrowLeft className="h-4 w-4 mr-1" /> 목록으로
           </Button>
         </CardContent>
@@ -93,14 +93,14 @@ export default function TenderDetailPage({
     <div className="space-y-6 animate-fade-up">
       {/* Top Bar */}
       <div className="flex items-center justify-between">
-        <Button variant="ghost" size="sm" className="gap-1 rounded-full" onClick={() => router.back()}>
+        <Button variant="ghost" size="sm" className="gap-1 rounded-xl hover:bg-primary/5 hover:text-primary" onClick={() => router.back()}>
           <ArrowLeft className="h-4 w-4" />
           뒤로
         </Button>
         <Button
           variant={tender.is_favorited ? "default" : "outline"}
           size="sm"
-          className="gap-1.5 rounded-full px-4 shadow-sm"
+          className="gap-1.5 rounded-xl px-4 shadow-sm transition-all hover:shadow-md"
           onClick={handleToggleFavorite}
           disabled={addFavorite.isPending || removeFavorite.isPending}
         >
@@ -137,7 +137,7 @@ export default function TenderDetailPage({
             <Badge variant="outline" className="text-xs">{tender.method_type}</Badge>
           )}
         </div>
-        <h1 className="text-2xl sm:text-3xl font-bold tracking-tight leading-snug">{tender.title}</h1>
+        <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight leading-snug">{tender.title}</h1>
         <p className="text-sm text-muted-foreground mt-2">
           공고번호: <span className="font-mono">{tender.source_tender_id}</span>
         </p>
@@ -145,10 +145,10 @@ export default function TenderDetailPage({
 
       {/* Info Cards */}
       <div className="grid gap-4 md:grid-cols-2 stagger-children">
-        <Card className="border-border/60 card-hover">
+        <Card className="premium-card card-hover">
           <CardHeader className="pb-3">
             <CardTitle className="text-base font-semibold flex items-center gap-2">
-              <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary/10">
+              <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-gradient-to-br from-primary/15 to-primary/5">
                 <Building className="h-4 w-4 text-primary" />
               </div>
               공고 정보
@@ -199,10 +199,10 @@ export default function TenderDetailPage({
           </CardContent>
         </Card>
 
-        <Card className="border-border/60 card-hover">
+        <Card className="premium-card card-hover">
           <CardHeader className="pb-3">
             <CardTitle className="text-base font-semibold flex items-center gap-2">
-              <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-amber-500/10">
+              <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-gradient-to-br from-amber-500/15 to-amber-500/5">
                 <Trophy className="h-4 w-4 text-amber-600 dark:text-amber-400" />
               </div>
               낙찰 결과
@@ -241,7 +241,7 @@ export default function TenderDetailPage({
               </div>
             ) : (
               <div className="flex flex-col items-center justify-center py-10 text-muted-foreground">
-                <div className="flex h-12 w-12 items-center justify-center rounded-full bg-muted mb-3">
+                <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-br from-amber-500/10 to-amber-500/5 mb-3">
                   <Trophy className="h-5 w-5 opacity-50" />
                 </div>
                 <p className="text-sm">아직 낙찰 결과가 없습니다</p>
@@ -253,7 +253,7 @@ export default function TenderDetailPage({
 
       {/* Raw JSON */}
       {tender.raw_json && (
-        <Card className="border-border/60">
+        <Card className="premium-card">
           <CardHeader className="pb-3">
             <CardTitle className="text-base font-semibold flex items-center gap-2">
               <FileCode className="h-4 w-4 text-muted-foreground" />

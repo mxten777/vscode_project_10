@@ -103,22 +103,20 @@ export default function AlertsPage() {
   return (
     <div className="space-y-8 animate-fade-up">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+      <div className="section-header">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight flex items-center gap-2.5">
-            <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10">
-              <Bell className="h-5 w-5 text-primary" />
-            </div>
+          <h1 className="text-3xl font-extrabold tracking-tight">
             알림 관리
           </h1>
-          <p className="text-muted-foreground mt-1 ml-[52px]">
+          <p className="text-muted-foreground mt-1">
             키워드/필터 조건에 맞는 새 공고를 알림 받으세요
           </p>
         </div>
 
         <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
           <DialogTrigger asChild>
-            <Button className="gap-1.5 rounded-full px-5 shadow-sm shadow-primary/25">
+            <Button className="gap-1.5 rounded-xl px-5 h-10 btn-premium text-white font-semibold">
               <Plus className="h-4 w-4" />
               규칙 추가
             </Button>
@@ -194,7 +192,7 @@ export default function AlertsPage() {
               </div>
 
               <Button
-                className="w-full h-11 text-base font-semibold shadow-sm shadow-primary/25 rounded-lg"
+                className="w-full h-11 text-base font-semibold btn-premium text-white rounded-xl"
                 onClick={handleCreate}
                 disabled={createRule.isPending}
               >
@@ -203,6 +201,7 @@ export default function AlertsPage() {
             </div>
           </DialogContent>
         </Dialog>
+        </div>
       </div>
 
       <Tabs defaultValue="rules">
@@ -228,13 +227,13 @@ export default function AlertsPage() {
           )}
 
           {rules && rules.length === 0 && (
-            <Card className="border-border/60">
-              <CardContent className="py-16 text-center text-muted-foreground">
-                <div className="flex h-16 w-16 items-center justify-center rounded-full bg-muted mx-auto mb-4">
-                  <Bell className="h-7 w-7 opacity-50" />
+            <Card className="premium-card">
+              <CardContent className="py-20 text-center text-muted-foreground">
+                <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-gradient-to-br from-primary/10 to-primary/5 mx-auto mb-5">
+                  <Bell className="h-7 w-7 text-primary/50" />
                 </div>
-                <p className="text-lg font-medium">설정된 알림 규칙이 없습니다</p>
-                <p className="text-sm mt-1">새 규칙을 추가하여 맞춤 알림을 받아보세요</p>
+                <p className="text-lg font-semibold text-foreground">설정된 알림 규칙이 없습니다</p>
+                <p className="text-sm mt-1.5">새 규칙을 추가하여 맞춤 알림을 받아보세요</p>
               </CardContent>
             </Card>
           )}
@@ -244,7 +243,7 @@ export default function AlertsPage() {
               {rules.map((rule) => {
                 const rj = rule.rule_json || {};
                 return (
-                  <Card key={rule.id} className={`border-border/60 card-hover ${!rule.is_enabled ? "opacity-60" : ""}`}>
+                  <Card key={rule.id} className={`premium-card card-hover ${!rule.is_enabled ? "opacity-60" : ""}`}>
                     <CardContent className="py-5">
                       <div className="flex items-center justify-between">
                         <div className="flex-1">
@@ -316,12 +315,12 @@ export default function AlertsPage() {
           )}
 
           {logs && logs.length === 0 && (
-            <Card className="border-border/60">
-              <CardContent className="py-16 text-center text-muted-foreground">
-                <div className="flex h-16 w-16 items-center justify-center rounded-full bg-muted mx-auto mb-4">
-                  <Send className="h-7 w-7 opacity-50" />
+            <Card className="premium-card">
+              <CardContent className="py-20 text-center text-muted-foreground">
+                <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-gradient-to-br from-primary/10 to-primary/5 mx-auto mb-5">
+                  <Send className="h-7 w-7 text-primary/50" />
                 </div>
-                <p className="text-lg font-medium">발송 이력이 없습니다</p>
+                <p className="text-lg font-semibold text-foreground">발송 이력이 없습니다</p>
               </CardContent>
             </Card>
           )}
@@ -329,7 +328,7 @@ export default function AlertsPage() {
           {logs && logs.length > 0 && (
             <div className="stagger-children space-y-3">
               {logs.map((log) => (
-                <Card key={log.id} className="border-border/60 card-hover">
+                <Card key={log.id} className="premium-card card-hover">
                   <CardContent className="py-4">
                     <div className="flex items-center justify-between gap-3">
                       <div className="flex-1 min-w-0">
