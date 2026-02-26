@@ -104,7 +104,8 @@ export function Header() {
   const handleSignOut = async () => {
     await supabase.auth.signOut();
     setUser(null);
-    router.push("/login");
+    // 전체 새로고침으로 모든 캐시/상태 초기화
+    window.location.href = "/login";
   };
 
   const handleChangePassword = async () => {
