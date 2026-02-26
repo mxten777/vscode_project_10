@@ -1,0 +1,42 @@
+import { NextRequest, NextResponse } from "next/server";
+import { createClient } from "@/lib/supabase/server";
+
+/**
+ * POST /api/auth/signin
+ */
+export async function POST(request: NextRequest) {
+  try {
+    const { email, password } = await request.json();
+
+    if (!email || !password) {
+      return NextResponse.json(
+        { code: "VALIDATION_ERROR", message: "email, password 필수" },
+        { status: 400 }
+      );
+    }
+
+    const supabase = await createClient();
+    const { data, error } = await supabase.auth.signInWithPassword({
+      email,
+      password,
+    });
+
+    if (error) {
+      return NextResponse.json(
+        { code: "AUTH_ERROR", message: error.message },
+        { status: 401 }
+      );
+    }
+
+    return NextResponse.json({
+      message: "로그인 성공",
+      user: { id: data.user.id, email: data.user.email },
+    });
+  } catch (err) {
+    console.error("signin error:", err);
+    return NextResponse.json(
+      { code: "INTERNAL_ERROR", message: "서버 오류" },
+      { status: 500 }
+    );
+  }
+}
