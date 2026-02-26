@@ -2,17 +2,29 @@ import { Resend } from "resend";
 import type { NotificationProvider, NotificationPayload } from "./types";
 
 export class EmailProvider implements NotificationProvider {
-  private resend: Resend;
+  private resend: Resend | null = null;
   private from: string;
 
   constructor() {
-    this.resend = new Resend(process.env.RESEND_API_KEY);
     this.from = process.env.ALERT_FROM_EMAIL || "noreply@bidplatform.com";
+  }
+
+  private getClient(): Resend | null {
+    if (!this.resend) {
+      const apiKey = process.env.RESEND_API_KEY;
+      if (!apiKey || apiKey === "YOUR_RESEND_API_KEY") return null;
+      this.resend = new Resend(apiKey);
+    }
+    return this.resend;
   }
 
   async send(payload: NotificationPayload) {
     try {
-      const { error } = await this.resend.emails.send({
+      const client = this.getClient();
+      if (!client) {
+        return { success: false, error: "RESEND_API_KEY is not configured" };
+      }
+      const { error } = await client.emails.send({
         from: this.from,
         to: payload.to,
         subject: payload.subject,
