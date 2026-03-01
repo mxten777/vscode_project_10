@@ -156,7 +156,7 @@ export function Header() {
         </Link>
 
         {/* Desktop Nav — Pill style */}
-        <nav className="hidden md:flex items-center gap-1 rounded-2xl bg-muted/40 p-1 border border-border/40">
+        <nav className="hidden md:flex items-center gap-1 rounded-2xl bg-muted/70 p-1 border border-border/60">
           {navItems.map((item) => {
             const active = pathname === item.href;
             return (

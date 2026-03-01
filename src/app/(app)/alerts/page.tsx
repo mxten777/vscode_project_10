@@ -103,104 +103,106 @@ export default function AlertsPage() {
   return (
     <div className="space-y-8 animate-fade-up">
       {/* Header */}
-      <div className="section-header">
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-        <div>
-          <h1 className="text-3xl font-extrabold tracking-tight">
-            알림 관리
-          </h1>
-          <p className="text-muted-foreground mt-1">
-            키워드/필터 조건에 맞는 새 공고를 알림 받으세요
-          </p>
-        </div>
-
-        <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-          <DialogTrigger asChild>
-            <Button className="gap-1.5 rounded-xl px-5 h-10 btn-premium text-white font-semibold">
-              <Plus className="h-4 w-4" />
-              규칙 추가
-            </Button>
-          </DialogTrigger>
-          <DialogContent className="sm:max-w-md">
-            <DialogHeader>
-              <DialogTitle>새 알림 규칙</DialogTitle>
-            </DialogHeader>
-            <div className="space-y-4 pt-2">
-              <div className="space-y-2">
-                <Label className="text-xs font-medium text-muted-foreground uppercase tracking-wider">유형</Label>
-                <Select
-                  value={ruleType}
-                  onValueChange={(v) => setRuleType(v as "KEYWORD" | "FILTER")}
-                >
-                  <SelectTrigger className="h-11">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="KEYWORD">키워드</SelectItem>
-                    <SelectItem value="FILTER">필터</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div className="space-y-2">
-                <Label className="text-xs font-medium text-muted-foreground uppercase tracking-wider">키워드</Label>
-                <Input
-                  placeholder="예: 소프트웨어, 정보화"
-                  value={keyword}
-                  onChange={(e) => setKeyword(e.target.value)}
-                  className="h-11"
-                />
-              </div>
-
-              <div className="grid grid-cols-2 gap-3">
-                <div className="space-y-2">
-                  <Label className="text-xs font-medium text-muted-foreground uppercase tracking-wider">최소 예산 (원)</Label>
-                  <Input
-                    type="number"
-                    placeholder="0"
-                    value={budgetMin}
-                    onChange={(e) => setBudgetMin(e.target.value)}
-                    className="h-11"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label className="text-xs font-medium text-muted-foreground uppercase tracking-wider">최대 예산 (원)</Label>
-                  <Input
-                    type="number"
-                    placeholder="무제한"
-                    value={budgetMax}
-                    onChange={(e) => setBudgetMax(e.target.value)}
-                    className="h-11"
-                  />
-                </div>
-              </div>
-
-              <div className="space-y-2">
-                <Label className="text-xs font-medium text-muted-foreground uppercase tracking-wider">알림 채널</Label>
-                <Select
-                  value={channel}
-                  onValueChange={(v) => setChannel(v as "EMAIL" | "KAKAO")}
-                >
-                  <SelectTrigger className="h-11">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="EMAIL">이메일</SelectItem>
-                    <SelectItem value="KAKAO">카카오톡 (준비중)</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <Button
-                className="w-full h-11 text-base font-semibold btn-premium text-white rounded-xl"
-                onClick={handleCreate}
-                disabled={createRule.isPending}
-              >
-                {createRule.isPending ? "생성 중..." : "규칙 생성"}
-              </Button>
+      <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-rose-950 via-indigo-950 to-indigo-900 px-8 py-8 sm:px-10">
+        <div className="noise-overlay" />
+        <div className="absolute top-[-10%] right-[-5%] h-[220px] w-[220px] rounded-full bg-rose-500/20 blur-[80px] animate-mesh pointer-events-none" />
+        <div className="absolute bottom-[-10%] left-[10%] h-[180px] w-[180px] rounded-full bg-indigo-500/20 blur-[70px] animate-mesh pointer-events-none" style={{ animationDelay: "-5s" }} />
+        <div className="relative z-10 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+          <div>
+            <div className="inline-flex items-center gap-2 rounded-full bg-white/10 border border-white/15 px-3 py-1 text-xs font-semibold text-white/80 mb-3">
+              <Bell className="h-3 w-3 text-rose-300" />
+              매치 알림 시스템
             </div>
-          </DialogContent>
-        </Dialog>
+            <h1 className="text-3xl font-extrabold tracking-tight text-white">알림 관리</h1>
+            <p className="text-white/50 mt-1">키워드/필터 조건에 맞는 새 공고를 알림 받으세요</p>
+          </div>
+          <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+            <DialogTrigger asChild>
+              <Button className="gap-1.5 rounded-xl px-5 h-10 bg-white text-indigo-900 hover:bg-white/90 font-semibold shadow-lg">
+                <Plus className="h-4 w-4" />
+                규칙 추가
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="sm:max-w-md">
+              <DialogHeader>
+                <DialogTitle>새 알림 규칙</DialogTitle>
+              </DialogHeader>
+              <div className="space-y-4 pt-2">
+                <div className="space-y-2">
+                  <Label className="text-xs font-medium text-muted-foreground uppercase tracking-wider">유형</Label>
+                  <Select
+                    value={ruleType}
+                    onValueChange={(v) => setRuleType(v as "KEYWORD" | "FILTER")}
+                  >
+                    <SelectTrigger className="h-11">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="KEYWORD">키워드</SelectItem>
+                      <SelectItem value="FILTER">필터</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="space-y-2">
+                  <Label className="text-xs font-medium text-muted-foreground uppercase tracking-wider">키워드</Label>
+                  <Input
+                    placeholder="예: 소프트웨어, 정보화"
+                    value={keyword}
+                    onChange={(e) => setKeyword(e.target.value)}
+                    className="h-11"
+                  />
+                </div>
+
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="space-y-2">
+                    <Label className="text-xs font-medium text-muted-foreground uppercase tracking-wider">최소 예산 (원)</Label>
+                    <Input
+                      type="number"
+                      placeholder="0"
+                      value={budgetMin}
+                      onChange={(e) => setBudgetMin(e.target.value)}
+                      className="h-11"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label className="text-xs font-medium text-muted-foreground uppercase tracking-wider">최대 예산 (원)</Label>
+                    <Input
+                      type="number"
+                      placeholder="무제한"
+                      value={budgetMax}
+                      onChange={(e) => setBudgetMax(e.target.value)}
+                      className="h-11"
+                    />
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <Label className="text-xs font-medium text-muted-foreground uppercase tracking-wider">알림 채널</Label>
+                  <Select
+                    value={channel}
+                    onValueChange={(v) => setChannel(v as "EMAIL" | "KAKAO")}
+                  >
+                    <SelectTrigger className="h-11">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="EMAIL">이메일</SelectItem>
+                      <SelectItem value="KAKAO">카카오톡 (준비중)</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <Button
+                  className="w-full h-11 text-base font-semibold btn-premium text-white rounded-xl"
+                  onClick={handleCreate}
+                  disabled={createRule.isPending}
+                >
+                  {createRule.isPending ? "생성 중..." : "규칙 생성"}
+                </Button>
+              </div>
+            </DialogContent>
+          </Dialog>
         </div>
       </div>
 
@@ -251,7 +253,7 @@ export default function AlertsPage() {
                             <Badge variant={rule.type === "KEYWORD" ? "default" : "secondary"}>
                               {rule.type === "KEYWORD" ? "키워드" : "필터"}
                             </Badge>
-                            <Badge variant="outline" className="gap-1">
+                            <Badge variant="outline" className="gap-1 bg-indigo-500/10 border-indigo-500/30 text-indigo-600 dark:text-indigo-400">
                               {rule.channel === "EMAIL" ? (
                                 <Mail className="h-3 w-3" />
                               ) : (

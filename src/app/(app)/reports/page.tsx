@@ -56,11 +56,29 @@ export default function ReportsPage() {
   return (
     <div className="space-y-8 animate-fade-up">
       {/* Header */}
-      <div className="section-header">
-        <h1 className="text-3xl font-extrabold tracking-tight">리포트</h1>
-        <p className="text-muted-foreground mt-1">
-          기간별 입찰 공고 통계를 확인하세요
-        </p>
+      <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-violet-950 via-indigo-900 to-indigo-950 px-8 py-8 sm:px-10">
+        <div className="noise-overlay" />
+        <div className="absolute top-[-20%] right-[-5%] h-[240px] w-[240px] rounded-full bg-violet-500/25 blur-[90px] animate-mesh pointer-events-none" />
+        <div className="relative z-10 flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4">
+          <div>
+            <div className="inline-flex items-center gap-2 rounded-full bg-white/10 border border-white/15 px-3 py-1 text-xs font-semibold text-white/80 mb-3">
+              <BarChart3 className="h-3 w-3 text-violet-300" />
+              통계 분석 리포트
+            </div>
+            <h1 className="text-3xl font-extrabold tracking-tight text-white">리포트</h1>
+            <p className="text-white/50 mt-1">기간별 입찰 공고 통계를 확인하세요</p>
+          </div>
+          {data && (
+            <div className="flex gap-3 flex-wrap">
+              {[{label: "총 공고", val: data.totalTenders.toLocaleString() + "건"}, {label: "기관 수", val: data.topAgencies.length + "개"}, {label: "업종 수", val: data.topIndustries.length + "개"}].map(({label, val}) => (
+                <div key={label} className="text-center">
+                  <p className="text-white/40 text-[10px] uppercase tracking-widest">{label}</p>
+                  <p className="text-white font-bold text-sm">{val}</p>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
       </div>
 
       {/* Date Picker */}

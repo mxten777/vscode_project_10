@@ -9,7 +9,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
       </main>
       <footer className="border-t border-border/40 py-8">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-muted-foreground/60">
-          <p>&copy; 2025 입찰분석 — AI 입찰·조달 분석 플랫폼</p>
+          <p>&copy; 2026 BidSight — AI 입찰·조달 분석 플랫폼</p>
           <div className="flex items-center gap-6">
             <span className="hover:text-foreground transition-colors cursor-pointer">이용약관</span>
             <span className="hover:text-foreground transition-colors cursor-pointer">개인정보처리방침</span>

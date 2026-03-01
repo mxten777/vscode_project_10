@@ -29,11 +29,41 @@ import {
   FileText,
   ArrowUpRight,
   Sparkles,
-  Filter,
   SlidersHorizontal,
+  Zap,
+  BarChart3,
+  Layers,
+  Star,
+  Bell,
+  X,
 } from "lucide-react";
 
 const PAGE_SIZE = 20;
+
+// Category chips mapping keyword → display
+const CATEGORY_CHIPS = [
+  { label: "전체", value: "", icon: Layers },
+  { label: "소프트웨어", value: "소프트웨어", icon: Zap },
+  { label: "건설·공사", value: "건설", icon: Building },
+  { label: "용역·서비스", value: "용역", icon: Star },
+  { label: "물품·장비", value: "물품", icon: BarChart3 },
+  { label: "시설관리", value: "시설", icon: Bell },
+];
+
+// Trending keywords (swap with real analytics later)
+const TRENDING = ["AI 플랫폼", "정보화시스템", "시설유지보수", "SW개발", "디지털전환", "클라우드"];
+
+function getDday(deadline: string | null): { label: string; cls: string } | null {
+  if (!deadline) return null;
+  const diff = Math.ceil(
+    (new Date(deadline).getTime() - Date.now()) / (1000 * 60 * 60 * 24)
+  );
+  if (diff < 0) return null;
+  if (diff === 0) return { label: "D-DAY", cls: "dday-urgent" };
+  if (diff <= 3) return { label: `D-${diff}`, cls: "dday-urgent" };
+  if (diff <= 7) return { label: `D-${diff}`, cls: "dday-warning" };
+  return null;
+}
 
 export default function HomePage() {
   return (
@@ -46,14 +76,16 @@ export default function HomePage() {
 function DashboardSkeleton() {
   return (
     <div className="space-y-6">
+      <Skeleton className="h-[220px] rounded-2xl" />
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         {Array.from({ length: 4 }).map((_, i) => (
           <Skeleton key={i} className="h-24 rounded-xl" />
         ))}
       </div>
-      <Skeleton className="h-16 rounded-xl" />
+      <Skeleton className="h-14 rounded-xl" />
+      <Skeleton className="h-14 rounded-xl" />
       {Array.from({ length: 5 }).map((_, i) => (
-        <Skeleton key={i} className="h-28 rounded-xl" />
+        <Skeleton key={i} className="h-[108px] rounded-xl" />
       ))}
     </div>
   );
@@ -71,8 +103,8 @@ function HomeContent() {
   const [page, setPage] = useState(
     parseInt(searchParams.get("page") || "1", 10)
   );
-
   const [debouncedQ, setDebouncedQ] = useState(q);
+  const [activeCategory, setActiveCategory] = useState("");
 
   useEffect(() => {
     const timer = setTimeout(() => setDebouncedQ(q), 300);
@@ -94,6 +126,12 @@ function HomeContent() {
     syncUrl({ q: debouncedQ, status, sortBy, page });
   }, [debouncedQ, status, sortBy, page, syncUrl]);
 
+  const handleCategoryChip = (val: string) => {
+    setActiveCategory(val);
+    setQ(val);
+    setPage(1);
+  };
+
   const { data, isLoading, error } = useTenders({
     q: debouncedQ || undefined,
     status: (status as "OPEN" | "CLOSED" | "RESULT") || undefined,
@@ -105,21 +143,21 @@ function HomeContent() {
 
   const totalPages = data ? Math.ceil(data.total / PAGE_SIZE) : 0;
 
-  const statusColor = (s: string) => {
+  const statusColor = (s: string): "default" | "secondary" | "outline" => {
     switch (s) {
-      case "OPEN":
-        return "default";
-      case "CLOSED":
-        return "secondary";
-      case "RESULT":
-        return "outline";
-      default:
-        return "secondary";
+      case "OPEN": return "default";
+      case "CLOSED": return "secondary";
+      case "RESULT": return "outline";
+      default: return "secondary";
     }
   };
 
-  // Quick stats from data
   const openCount = data?.data.filter((t) => t.status === "OPEN").length ?? 0;
+  const urgentCount = data?.data.filter((t) => {
+    if (!t.deadline_at || t.status !== "OPEN") return false;
+    const diff = Math.ceil((new Date(t.deadline_at).getTime() - Date.now()) / (1000 * 60 * 60 * 24));
+    return diff >= 0 && diff <= 3;
+  }).length ?? 0;
   const closingToday = data?.data.filter((t) => {
     if (!t.deadline_at) return false;
     const d = new Date(t.deadline_at);
@@ -127,135 +165,213 @@ function HomeContent() {
     return d.toDateString() === now.toDateString();
   }).length ?? 0;
 
+  const hasFilters = debouncedQ || status;
+
   return (
-    <div className="space-y-8 animate-fade-up">
+    <div className="space-y-6 animate-fade-up">
+
       {/* ─── Hero Banner ─── */}
-      <div className="relative overflow-hidden rounded-2xl">
+      <div className="relative overflow-hidden rounded-2xl hero-grid">
         <div className="absolute inset-0 bg-gradient-to-br from-indigo-950 via-indigo-900 to-violet-950" />
+        <div className="noise-overlay" />
         <div className="absolute inset-0 overflow-hidden">
-          <div className="absolute top-[-30%] left-[-10%] h-[300px] w-[300px] rounded-full bg-indigo-600/25 blur-[80px] animate-mesh" />
-          <div className="absolute bottom-[-30%] right-[-10%] h-[350px] w-[350px] rounded-full bg-violet-600/20 blur-[100px] animate-mesh" style={{ animationDelay: "-8s" }} />
+          <div className="absolute top-[-20%] left-[-5%] h-[280px] w-[280px] rounded-full bg-indigo-500/30 blur-[90px] animate-mesh" />
+          <div className="absolute bottom-[-20%] right-[-5%] h-[320px] w-[320px] rounded-full bg-violet-500/25 blur-[100px] animate-mesh" style={{ animationDelay: "-8s" }} />
+          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 h-[200px] w-[200px] rounded-full bg-cyan-500/10 blur-[80px] animate-mesh" style={{ animationDelay: "-4s" }} />
         </div>
-        <div className="relative z-10 px-8 py-10 sm:px-10 sm:py-12">
-          <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-6">
-            <div className="space-y-3">
-              <div className="inline-flex items-center gap-2 rounded-full bg-white/10 backdrop-blur-sm border border-white/10 px-3.5 py-1 text-xs font-medium text-white/80">
+        {/* Floating keyword pills */}
+        <span className="float-slow absolute top-6 right-[12%] hidden lg:inline-flex items-center gap-1.5 rounded-full bg-white/10 backdrop-blur-sm border border-white/15 px-3 py-1 text-xs text-white/70 font-medium">
+          <Zap className="h-3 w-3 text-amber-300" /> AI분석
+        </span>
+        <span className="float-slow-rev absolute top-14 right-[28%] hidden lg:inline-flex items-center gap-1.5 rounded-full bg-white/10 backdrop-blur-sm border border-white/15 px-3 py-1 text-xs text-white/70 font-medium">
+          <TrendingUp className="h-3 w-3 text-emerald-300" /> 실시간
+        </span>
+        <span className="float-slow-2 absolute bottom-10 right-[8%] hidden lg:inline-flex items-center gap-1.5 rounded-full bg-white/10 backdrop-blur-sm border border-white/15 px-3 py-1 text-xs text-white/70 font-medium">
+          <BarChart3 className="h-3 w-3 text-cyan-300" /> 빅데이터
+        </span>
+        <span className="float-slow-3 absolute bottom-16 right-[24%] hidden xl:inline-flex items-center gap-1.5 rounded-full bg-white/10 backdrop-blur-sm border border-white/15 px-3 py-1 text-xs text-white/70 font-medium">
+          <Star className="h-3 w-3 text-rose-300" /> 낙찰예측
+        </span>
+
+        <div className="relative z-10 px-8 py-10 sm:px-12 sm:py-12">
+          <div className="flex flex-col gap-5 max-w-2xl">
+            <div className="flex items-center gap-2.5">
+              <span className="live-dot" />
+              <span className="inline-flex items-center gap-2 rounded-full bg-white/10 backdrop-blur-sm border border-white/15 px-3.5 py-1 text-xs font-semibold text-white/85">
                 <Sparkles className="h-3 w-3 text-amber-300" />
-                AI 실시간 입찰 분석
-              </div>
-              <h1 className="text-3xl sm:text-4xl font-extrabold text-white tracking-tight">입찰 공고 검색</h1>
-              <p className="text-white/50 max-w-md">나라장터 공공 입찰 공고를 검색하고 AI로 분석하세요</p>
+                AI 실시간 입찰 분석 플랫폼
+              </span>
             </div>
-            {data && (
-              <p className="text-sm text-white/40 shrink-0">
-                총 <span className="font-bold text-white/80">{data.total.toLocaleString()}</span>건
-                {debouncedQ && (
-                  <span className="ml-1.5">
-                    · &ldquo;{debouncedQ}&rdquo; 검색
-                  </span>
-                )}
+            <div>
+              <h1 className="text-3xl sm:text-[2.6rem] font-extrabold text-white tracking-tight leading-[1.15]">
+                공공 입찰 공고를<br />
+                <span className="bg-gradient-to-r from-cyan-300 via-violet-300 to-pink-300 bg-clip-text text-transparent">
+                  스마트하게 검색
+                </span>
+              </h1>
+              <p className="mt-3 text-white/55 text-base max-w-md">
+                나라장터 실시간 공고 수집 · AI 분석 · 마감 알림까지 한 곳에서
               </p>
-            )}
+            </div>
+            <div className="flex flex-wrap gap-2 mt-1">
+              {[
+                { icon: FileText, label: `공고 ${data ? data.total.toLocaleString() : "—"}건` },
+                { icon: TrendingUp, label: `진행중 ${openCount}건` },
+                { icon: Clock, label: `마감임박 ${urgentCount}건` },
+              ].map(({ icon: Icon, label }) => (
+                <span key={label} className="inline-flex items-center gap-1.5 rounded-full bg-white/10 border border-white/10 px-3 py-1 text-xs font-medium text-white/75">
+                  <Icon className="h-3 w-3" />
+                  {label}
+                </span>
+              ))}
+            </div>
           </div>
         </div>
       </div>
 
-      {/* ─── Stats Cards ─── */}
+      {/* ─── Stat Cards ─── */}
       {data && (
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 stagger-children">
-          <Card className="stat-card premium-card" style={{ "--stat-color": "oklch(0.500 0.220 264)", "--stat-glow": "oklch(0.500 0.220 264 / 15%)" } as React.CSSProperties}>
-            <CardContent className="pt-5 pb-4">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-[11px] font-semibold text-muted-foreground uppercase tracking-widest">전체 공고</p>
-                  <p className="text-2xl font-extrabold mt-1.5 tracking-tight">{data.total.toLocaleString()}</p>
+          {[
+            {
+              label: "전체 공고",
+              sub: "수집된 공고 수",
+              value: data.total.toLocaleString(),
+              icon: FileText,
+              color: "oklch(0.500 0.220 264)",
+              glow: "oklch(0.500 0.220 264 / 15%)",
+              textCls: "",
+              accent: "border-accent-top",
+            },
+            {
+              label: "진행중",
+              sub: "현재 응찰 가능",
+              value: String(openCount),
+              icon: TrendingUp,
+              color: "oklch(0.600 0.180 165)",
+              glow: "oklch(0.600 0.180 165 / 15%)",
+              textCls: "text-emerald-600 dark:text-emerald-400",
+              accent: "border-accent-emerald",
+            },
+            {
+              label: "마감 임박",
+              sub: "D-3 이내",
+              value: String(urgentCount),
+              icon: Clock,
+              color: "oklch(0.700 0.160 55)",
+              glow: "oklch(0.700 0.160 55 / 15%)",
+              textCls: "text-amber-600 dark:text-amber-400",
+              accent: "border-accent-amber",
+            },
+            {
+              label: "오늘 마감",
+              sub: "D-DAY 공고",
+              value: String(closingToday),
+              icon: Bell,
+              color: "oklch(0.550 0.200 25)",
+              glow: "oklch(0.550 0.200 25 / 15%)",
+              textCls: "text-rose-600 dark:text-rose-400",
+              accent: "border-accent-rose",
+            },
+          ].map(({ label, sub, value, icon: Icon, color, glow, textCls, accent }) => (
+            <Card
+              key={label}
+              className={`stat-card premium-card ${accent}`}
+              style={{ "--stat-color": color, "--stat-glow": glow } as React.CSSProperties}
+            >
+              <CardContent className="pt-5 pb-4">
+                <div className="flex items-start justify-between gap-2">
+                  <div>
+                    <p className="text-[11px] font-semibold text-muted-foreground uppercase tracking-widest">{label}</p>
+                    <p className={`text-2xl font-extrabold mt-1.5 tabular-nums tracking-tight ${textCls}`}>{value}</p>
+                    <p className="text-[11px] text-muted-foreground/60 mt-1">{sub}</p>
+                  </div>
+                  <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-current/15 to-current/5 opacity-80">
+                    <Icon className="h-4.5 w-4.5" />
+                  </div>
                 </div>
-                <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-gradient-to-br from-primary/15 to-primary/5">
-                  <FileText className="h-5 w-5 text-primary" />
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-          <Card className="stat-card premium-card" style={{ "--stat-color": "oklch(0.600 0.180 165)", "--stat-glow": "oklch(0.600 0.180 165 / 15%)" } as React.CSSProperties}>
-            <CardContent className="pt-5 pb-4">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-[11px] font-semibold text-muted-foreground uppercase tracking-widest">진행중</p>
-                  <p className="text-2xl font-extrabold mt-1.5 tracking-tight text-emerald-600 dark:text-emerald-400">{openCount}</p>
-                </div>
-                <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-gradient-to-br from-emerald-500/15 to-emerald-500/5">
-                  <TrendingUp className="h-5 w-5 text-emerald-600 dark:text-emerald-400" />
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-          <Card className="stat-card premium-card" style={{ "--stat-color": "oklch(0.700 0.160 55)", "--stat-glow": "oklch(0.700 0.160 55 / 15%)" } as React.CSSProperties}>
-            <CardContent className="pt-5 pb-4">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-[11px] font-semibold text-muted-foreground uppercase tracking-widest">오늘 마감</p>
-                  <p className="text-2xl font-extrabold mt-1.5 tracking-tight text-amber-600 dark:text-amber-400">{closingToday}</p>
-                </div>
-                <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-gradient-to-br from-amber-500/15 to-amber-500/5">
-                  <Clock className="h-5 w-5 text-amber-600 dark:text-amber-400" />
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-          <Card className="stat-card premium-card" style={{ "--stat-color": "oklch(0.550 0.200 320)", "--stat-glow": "oklch(0.550 0.200 320 / 15%)" } as React.CSSProperties}>
-            <CardContent className="pt-5 pb-4">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-[11px] font-semibold text-muted-foreground uppercase tracking-widest">현재 페이지</p>
-                  <p className="text-2xl font-extrabold mt-1.5 tracking-tight">{page} <span className="text-sm font-normal text-muted-foreground">/ {totalPages || 1}</span></p>
-                </div>
-                <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-gradient-to-br from-violet-500/15 to-violet-500/5">
-                  <Search className="h-5 w-5 text-violet-600 dark:text-violet-400" />
-                </div>
-              </div>
-            </CardContent>
-          </Card>
+              </CardContent>
+            </Card>
+          ))}
         </div>
       )}
+
+      {/* ─── Category Chips ─── */}
+      <div className="flex items-center gap-2 flex-wrap">
+        <span className="text-xs font-semibold text-muted-foreground mr-1 shrink-0">카테고리</span>
+        {CATEGORY_CHIPS.map(({ label, value, icon: Icon }) => (
+          <button
+            key={value}
+            onClick={() => handleCategoryChip(value)}
+            className={`category-chip ${activeCategory === value ? "active" : ""}`}
+          >
+            <Icon className="h-3 w-3" />
+            {label}
+          </button>
+        ))}
+      </div>
+
+      {/* ─── Trending Keywords ─── */}
+      <div className="flex items-center gap-2 flex-wrap">
+        <span className="text-xs font-semibold text-muted-foreground shrink-0 flex items-center gap-1">
+          <TrendingUp className="h-3 w-3 text-primary" />
+          인기 검색
+        </span>
+        {TRENDING.map((kw) => (
+          <button
+            key={kw}
+            onClick={() => { setQ(kw); setPage(1); setActiveCategory(""); }}
+            className="inline-flex items-center gap-1 rounded-full border border-border/60 bg-muted/40 hover:bg-primary/8 hover:border-primary/30 hover:text-primary px-2.5 py-1 text-xs font-medium text-muted-foreground transition-all duration-150"
+          >
+            {kw}
+          </button>
+        ))}
+      </div>
 
       {/* ─── Filter Panel ─── */}
       <Card className="premium-card overflow-hidden">
         <CardContent className="pt-5 pb-5">
-          <div className="flex items-center gap-2 mb-4">
-            <SlidersHorizontal className="h-4 w-4 text-muted-foreground" />
-            <span className="text-xs font-semibold text-muted-foreground uppercase tracking-widest">검색 필터</span>
+          <div className="flex items-center justify-between gap-2 mb-4">
+            <div className="flex items-center gap-2">
+              <SlidersHorizontal className="h-4 w-4 text-muted-foreground" />
+              <span className="text-xs font-semibold text-muted-foreground uppercase tracking-widest">검색 필터</span>
+              {hasFilters && (
+                <span className="inline-flex items-center gap-1 rounded-full bg-primary/10 border border-primary/20 px-2 py-0.5 text-[10px] font-semibold text-primary">
+                  필터 적용됨
+                </span>
+              )}
+            </div>
+            {hasFilters && (
+              <button
+                onClick={() => { setQ(""); setStatus(""); setActiveCategory(""); setPage(1); }}
+                className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-destructive transition-colors"
+              >
+                <X className="h-3.5 w-3.5" /> 초기화
+              </button>
+            )}
           </div>
           <div className="flex flex-col md:flex-row gap-3">
             <div className="relative flex-1">
-              <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
               <Input
-                placeholder="공고명, 기관명으로 검색..."
+                placeholder="공고명, 기관명, 키워드로 검색..."
                 value={q}
-                onChange={(e) => {
-                  setQ(e.target.value);
-                  setPage(1);
-                }}
+                onChange={(e) => { setQ(e.target.value); setPage(1); }}
                 className="pl-10 h-11 rounded-xl bg-muted/30 border-border/60 focus:bg-background transition-colors"
               />
             </div>
-            <Select
-              value={status}
-              onValueChange={(v) => {
-                setStatus(v === "ALL" ? "" : v);
-                setPage(1);
-              }}
-            >
+            <Select value={status || "ALL"} onValueChange={(v) => { setStatus(v === "ALL" ? "" : v); setPage(1); }}>
               <SelectTrigger className="w-full md:w-40 h-11 rounded-xl">
                 <SelectValue placeholder="상태 전체" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="ALL">전체</SelectItem>
+                <SelectItem value="ALL">전체 상태</SelectItem>
                 <SelectItem value="OPEN">진행중</SelectItem>
                 <SelectItem value="CLOSED">마감</SelectItem>
                 <SelectItem value="RESULT">결과발표</SelectItem>
               </SelectContent>
             </Select>
-            <Select value={sortBy} onValueChange={setSortBy}>
+            <Select value={sortBy} onValueChange={(v) => { setSortBy(v); setPage(1); }}>
               <SelectTrigger className="w-full md:w-44 h-11 rounded-xl">
                 <SelectValue />
               </SelectTrigger>
@@ -267,147 +383,250 @@ function HomeContent() {
               </SelectContent>
             </Select>
           </div>
+          {/* Active filter chips */}
+          {hasFilters && (
+            <div className="flex flex-wrap gap-1.5 mt-3">
+              {debouncedQ && (
+                <span className="inline-flex items-center gap-1 rounded-full bg-primary/10 border border-primary/20 px-2.5 py-0.5 text-xs text-primary font-medium">
+                  검색: {debouncedQ}
+                  <button onClick={() => { setQ(""); setActiveCategory(""); }} className="ml-0.5 hover:text-destructive">
+                    <X className="h-3 w-3" />
+                  </button>
+                </span>
+              )}
+              {status && (
+                <span className="inline-flex items-center gap-1 rounded-full bg-emerald-500/10 border border-emerald-500/20 px-2.5 py-0.5 text-xs text-emerald-600 dark:text-emerald-400 font-medium">
+                  상태: {status === "OPEN" ? "진행중" : status === "CLOSED" ? "마감" : "결과발표"}
+                  <button onClick={() => setStatus("")} className="ml-0.5 hover:text-destructive">
+                    <X className="h-3 w-3" />
+                  </button>
+                </span>
+              )}
+            </div>
+          )}
         </CardContent>
       </Card>
 
-      {/* Loading */}
+      {/* ─── Loading ─── */}
       {isLoading && (
         <div className="space-y-3">
           {Array.from({ length: 5 }).map((_, i) => (
-            <Skeleton key={i} className="h-28 w-full rounded-xl" />
+            <Skeleton key={i} className="h-[108px] w-full rounded-xl" />
           ))}
         </div>
       )}
 
-      {/* Error */}
+      {/* ─── Error ─── */}
       {error && (
         <Card className="border-destructive/30 bg-destructive/5">
           <CardContent className="py-8 text-center text-destructive">
-            데이터를 불러오는 중 오류가 발생했습니다. 다시 시도해주세요.
+            데이터를 불러오는 중 오류가 발생했습니다. 잠시 후 다시 시도해주세요.
           </CardContent>
         </Card>
       )}
 
-      {/* Result List */}
-      {data && data.data.length > 0 && (
-        <div className="space-y-3 stagger-children">
-          {data.data.map((tender) => (
-            <Link key={tender.id} href={`/tenders/${tender.id}`}>
-              <Card className="group premium-card card-hover cursor-pointer overflow-hidden">
-                <CardContent className="py-5 px-6">
-                  <div className="flex items-start justify-between gap-4">
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2 mb-2">
-                        <Badge variant={statusColor(tender.status) as "default" | "secondary" | "outline"} className="rounded-md font-semibold text-[11px]">
-                          {tenderStatusLabel(tender.status)}
-                        </Badge>
-                        {tender.method_type && (
-                          <Badge variant="outline" className="text-[11px] rounded-md">
-                            {tender.method_type}
-                          </Badge>
-                        )}
-                      </div>
-                      <h3 className="font-semibold text-[15px] truncate group-hover:text-primary transition-colors duration-200">
-                        {tender.title}
-                      </h3>
-                      <div className="mt-2.5 flex flex-wrap gap-x-5 gap-y-1.5 text-sm text-muted-foreground">
-                        {(tender.agency as unknown as { name: string } | null)?.name && (
-                          <span className="flex items-center gap-1.5">
-                            <Building className="h-3.5 w-3.5 opacity-60" />
-                            {(tender.agency as unknown as { name: string }).name}
-                          </span>
-                        )}
-                        {tender.region_name && (
-                          <span className="flex items-center gap-1.5">
-                            <MapPin className="h-3.5 w-3.5 opacity-60" />
-                            {tender.region_name}
-                          </span>
-                        )}
-                        {tender.deadline_at && (
-                          <span className="flex items-center gap-1.5">
-                            <Calendar className="h-3.5 w-3.5 opacity-60" />
-                            마감: {new Date(tender.deadline_at).toLocaleDateString("ko-KR")}
-                          </span>
-                        )}
-                      </div>
-                    </div>
-                    <div className="text-right shrink-0">
-                      <p className="font-extrabold text-lg tracking-tight text-primary">
-                        {formatKRW(tender.budget_amount)}
-                      </p>
-                      {tender.published_at && (
-                        <p className="text-xs text-muted-foreground mt-1">
-                          {new Date(tender.published_at).toLocaleDateString("ko-KR")}
-                        </p>
-                      )}
-                      <div className="flex items-center justify-end mt-2">
-                        <div className="flex h-7 w-7 items-center justify-center rounded-full bg-primary/0 group-hover:bg-primary/10 transition-all">
-                          <ArrowUpRight className="h-4 w-4 text-muted-foreground/50 group-hover:text-primary transition-all" />
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            </Link>
-          ))}
+      {/* ─── Result Meta ─── */}
+      {data && !isLoading && (
+        <div className="flex items-center justify-between px-1">
+          <p className="text-sm text-muted-foreground">
+            총 <span className="font-semibold text-foreground">{data.total.toLocaleString()}</span>건
+            {debouncedQ && <span className="ml-1">· &ldquo;<span className="text-primary font-medium">{debouncedQ}</span>&rdquo; 검색결과</span>}
+          </p>
+          <p className="text-xs text-muted-foreground">
+            {page} / {totalPages || 1} 페이지
+          </p>
         </div>
       )}
 
-      {/* Empty state */}
+      {/* ─── Tender List ─── */}
+      {data && data.data.length > 0 && (
+        <div className="space-y-3 stagger-children">
+          {data.data.map((tender) => {
+            const dday = getDday(tender.deadline_at ?? null);
+            const isUrgent = dday?.cls === "dday-urgent";
+            return (
+              <Link key={tender.id} href={`/tenders/${tender.id}`}>
+                <Card className={`group premium-card card-hover cursor-pointer overflow-hidden ${isUrgent ? "border-rose-500/20" : ""}`}>
+                  {isUrgent && <div className="h-[2px] w-full bg-gradient-to-r from-rose-500/60 via-orange-400/60 to-rose-500/40" />}
+                  <CardContent className="py-4 px-6">
+                    <div className="flex items-start justify-between gap-4">
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-1.5 mb-2 flex-wrap">
+                          <Badge
+                            variant={statusColor(tender.status)}
+                            className="rounded-md font-semibold text-[11px] h-5"
+                          >
+                            {tenderStatusLabel(tender.status)}
+                          </Badge>
+                          {tender.method_type && (
+                            <Badge variant="outline" className="text-[11px] rounded-md h-5">
+                              {tender.method_type}
+                            </Badge>
+                          )}
+                          {tender.industry_name && (
+                            <span className="inline-flex items-center rounded-full bg-muted/70 border border-border/50 px-2 py-0.5 text-[10px] font-medium text-muted-foreground">
+                              {tender.industry_name}
+                            </span>
+                          )}
+                          {dday && (
+                            <span className={dday.cls}>{dday.label}</span>
+                          )}
+                        </div>
+                        <h3 className="font-semibold text-[15px] line-clamp-2 group-hover:text-primary transition-colors duration-200 leading-snug">
+                          {tender.title}
+                        </h3>
+                        <div className="mt-2.5 flex flex-wrap gap-x-4 gap-y-1 text-sm text-muted-foreground">
+                          {(tender.agency as unknown as { name: string } | null)?.name && (
+                            <span className="flex items-center gap-1.5">
+                              <Building className="h-3.5 w-3.5 opacity-55" />
+                              {(tender.agency as unknown as { name: string }).name}
+                            </span>
+                          )}
+                          {tender.region_name && (
+                            <span className="flex items-center gap-1.5">
+                              <MapPin className="h-3.5 w-3.5 opacity-55" />
+                              {tender.region_name}
+                            </span>
+                          )}
+                          {tender.deadline_at && (
+                            <span className={`flex items-center gap-1.5 ${isUrgent ? "text-rose-500 dark:text-rose-400 font-medium" : ""}`}>
+                              <Clock className="h-3.5 w-3.5 opacity-55" />
+                              마감: {new Date(tender.deadline_at).toLocaleDateString("ko-KR")}
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                      <div className="text-right shrink-0 flex flex-col items-end gap-1">
+                        <p className="font-extrabold text-lg tracking-tight text-primary tabular-nums">
+                          {formatKRW(tender.budget_amount)}
+                        </p>
+                        {tender.published_at && (
+                          <p className="text-xs text-muted-foreground">
+                            공고: {new Date(tender.published_at).toLocaleDateString("ko-KR")}
+                          </p>
+                        )}
+                        <div className="flex h-7 w-7 items-center justify-center rounded-full bg-primary/0 group-hover:bg-primary/10 transition-all mt-1">
+                          <ArrowUpRight className="h-4 w-4 text-muted-foreground/40 group-hover:text-primary transition-all" />
+                        </div>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              </Link>
+            );
+          })}
+        </div>
+      )}
+
+      {/* ─── Empty State ─── */}
       {data && data.data.length === 0 && (
-        <Card className="border-border/60">
-          <CardContent className="py-16 text-center text-muted-foreground">
-            <div className="flex h-16 w-16 items-center justify-center rounded-full bg-muted mx-auto mb-4">
-              <Search className="h-7 w-7 opacity-50" />
+        <Card className="border-border/50 bg-muted/20">
+          <CardContent className="py-16 flex flex-col items-center text-center text-muted-foreground">
+            <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-muted mb-5">
+              <Search className="h-7 w-7 opacity-40" />
             </div>
-            <p className="text-lg font-medium">검색 결과가 없습니다</p>
-            <p className="mt-1 text-sm">다른 키워드로 검색해보세요</p>
+            <p className="text-lg font-semibold text-foreground">검색 결과가 없습니다</p>
+            <p className="mt-1 text-sm max-w-xs">다른 키워드로 검색하거나 필터를 초기화해보세요</p>
+            <div className="flex gap-2 mt-5">
+              <Button size="sm" variant="outline" className="rounded-xl" onClick={() => { setQ(""); setStatus(""); setActiveCategory(""); setPage(1); }}>
+                <X className="h-3.5 w-3.5 mr-1" /> 필터 초기화
+              </Button>
+              <Button size="sm" className="rounded-xl" onClick={() => { setQ("AI"); setPage(1); }}>
+                <Sparkles className="h-3.5 w-3.5 mr-1" /> AI 공고 검색
+              </Button>
+            </div>
+            <div className="mt-6 flex flex-wrap justify-center gap-2">
+              <p className="w-full text-xs text-muted-foreground mb-1">추천 검색어</p>
+              {TRENDING.map((kw) => (
+                <button
+                  key={kw}
+                  onClick={() => { setQ(kw); setPage(1); }}
+                  className="rounded-full border border-border/60 bg-background hover:bg-primary/8 hover:border-primary/30 hover:text-primary px-3 py-1 text-xs font-medium text-muted-foreground transition-all"
+                >
+                  {kw}
+                </button>
+              ))}
+            </div>
           </CardContent>
         </Card>
       )}
 
-      {/* Pagination */}
+      {/* ─── Pagination ─── */}
       {totalPages > 1 && (
-        <div className="flex items-center justify-center gap-2 pt-4">
+        <div className="flex items-center justify-center gap-1.5 pt-4 flex-wrap">
           <Button
             variant="outline"
             size="sm"
             disabled={page <= 1}
-            className="gap-1 rounded-xl px-4 h-10 border-border/60 hover:bg-primary/5 hover:text-primary hover:border-primary/30 transition-all"
+            className="gap-1 rounded-xl px-3 h-10 border-border/60 hover:bg-primary/5 hover:text-primary hover:border-primary/30 transition-all"
+            onClick={() => setPage(1)}
+          >
+            <ChevronLeft className="h-3.5 w-3.5" />
+            <ChevronLeft className="h-3.5 w-3.5 -ml-2.5" />
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            disabled={page <= 1}
+            className="gap-1 rounded-xl px-3 h-10 border-border/60 hover:bg-primary/5 hover:text-primary hover:border-primary/30 transition-all"
             onClick={() => setPage((p) => p - 1)}
           >
             <ChevronLeft className="h-4 w-4" />
             이전
           </Button>
+
           <div className="flex items-center gap-1">
-            {[...Array(Math.min(totalPages, 5))].map((_, i) => {
-              const pageNum = page <= 3 ? i + 1 : page + i - 2;
-              if (pageNum < 1 || pageNum > totalPages) return null;
-              return (
-                <Button
-                  key={pageNum}
-                  variant={pageNum === page ? "default" : "ghost"}
-                  size="icon"
-                  className={`h-10 w-10 rounded-xl text-sm font-semibold ${
-                    pageNum === page ? "btn-premium text-white shadow-md" : "hover:bg-primary/5 hover:text-primary"
-                  }`}
-                  onClick={() => setPage(pageNum)}
-                >
-                  {pageNum}
-                </Button>
+            {(() => {
+              const half = 3;
+              let start = Math.max(1, page - half);
+              let end = Math.min(totalPages, page + half);
+              if (end - start < half * 2) {
+                start = Math.max(1, end - half * 2);
+                end = Math.min(totalPages, start + half * 2);
+              }
+              const pages: (number | "…")[] = [];
+              if (start > 1) { pages.push(1); if (start > 2) pages.push("…"); }
+              for (let n = start; n <= end; n++) pages.push(n);
+              if (end < totalPages) { if (end < totalPages - 1) pages.push("…"); pages.push(totalPages); }
+              return pages.map((item, i) =>
+                item === "…" ? (
+                  <span key={`e${i}`} className="px-1 text-muted-foreground text-sm select-none">…</span>
+                ) : (
+                  <Button
+                    key={item}
+                    variant={item === page ? "default" : "ghost"}
+                    size="icon"
+                    className={`h-10 w-10 rounded-xl text-sm font-semibold ${
+                      item === page ? "btn-premium text-white shadow-md" : "hover:bg-primary/5 hover:text-primary"
+                    }`}
+                    onClick={() => setPage(item)}
+                  >
+                    {item}
+                  </Button>
+                )
               );
-            })}
+            })()}
           </div>
+
           <Button
             variant="outline"
             size="sm"
             disabled={page >= totalPages}
-            className="gap-1 rounded-xl px-4 h-10 border-border/60 hover:bg-primary/5 hover:text-primary hover:border-primary/30 transition-all"
+            className="gap-1 rounded-xl px-3 h-10 border-border/60 hover:bg-primary/5 hover:text-primary hover:border-primary/30 transition-all"
             onClick={() => setPage((p) => p + 1)}
           >
             다음
             <ChevronRight className="h-4 w-4" />
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            disabled={page >= totalPages}
+            className="gap-1 rounded-xl px-3 h-10 border-border/60 hover:bg-primary/5 hover:text-primary hover:border-primary/30 transition-all"
+            onClick={() => setPage(totalPages)}
+          >
+            <ChevronRight className="h-3.5 w-3.5" />
+            <ChevronRight className="h-3.5 w-3.5 -ml-2.5" />
           </Button>
         </div>
       )}

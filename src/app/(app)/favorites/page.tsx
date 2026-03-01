@@ -34,19 +34,19 @@ export default function FavoritesPage() {
   return (
     <div className="space-y-8 animate-fade-up">
       {/* Header */}
-      <div className="section-header">
-        <h1 className="text-3xl font-extrabold tracking-tight">즐겨찾기</h1>
-        <p className="text-muted-foreground mt-1">
-          관심 공고를 모아볼 수 있습니다
-        </p>
+      <div className="flex items-start justify-between">
+        <div className="section-header">
+          <div className="flex items-center gap-3">
+            <h1 className="text-3xl font-extrabold tracking-tight">즐겨찾기</h1>
+            {favorites && favorites.length > 0 && (
+              <span className="inline-flex items-center justify-center h-7 min-w-7 rounded-full bg-primary/10 border border-primary/20 px-2 text-xs font-bold text-primary">
+                {favorites.length}
+              </span>
+            )}
+          </div>
+          <p className="text-muted-foreground mt-1">관심 공고를 모아볼 수 있습니다</p>
+        </div>
       </div>
-
-      {/* Count */}
-      {favorites && favorites.length > 0 && (
-        <p className="text-sm text-muted-foreground">
-          총 <span className="font-semibold text-foreground">{favorites.length}</span>건의 즐겨찾기
-        </p>
-      )}
 
       {isLoading && (
         <div className="space-y-3">
