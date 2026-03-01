@@ -4,6 +4,10 @@ import { NextRequest } from "next/server";
  * Vercel Cron / 내부 Job 호출 시 시크릿 키 검증
  */
 export function verifyCronSecret(request: NextRequest): boolean {
+  if (!process.env.CRON_SECRET) {
+    console.error("[security] CRON_SECRET 환경변수가 설정되지 않았습니다 — Job 접근을 차단합니다");
+    return false;
+  }
   const authHeader = request.headers.get("authorization");
   const expected = `Bearer ${process.env.CRON_SECRET}`;
   return authHeader === expected;
