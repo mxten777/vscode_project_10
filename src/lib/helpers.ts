@@ -16,7 +16,7 @@ export function verifyCronSecret(request: NextRequest): boolean {
 /**
  * 간단 지수 백오프 sleep
  */
-export async function sleep(ms: number) {
+async function sleep(ms: number) {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
