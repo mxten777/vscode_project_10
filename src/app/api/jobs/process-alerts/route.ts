@@ -55,15 +55,20 @@ export async function POST(request: NextRequest) {
       const provider = getNotificationProvider(rule.channel);
 
       for (const tender of matched) {
-        // 중복 발송 방지
-        const { data: existing } = await supabase
+        // 중복 발송 방지: INSERT ON CONFLICT DO NOTHING (UNIQUE 제약 활용, TOCTOU 제거)
+        const { error: logInsertErr } = await supabase
           .from("alert_logs")
-          .select("id")
-          .eq("alert_rule_id", rule.id)
-          .eq("tender_id", tender.id)
-          .maybeSingle();
+          .insert({
+            alert_rule_id: rule.id,
+            tender_id: tender.id,
+            status: "SENT",
+            error_message: null,
+          })
+          .select()
+          .single();
 
-        if (existing) continue;
+        // 이미 처리된 (rule, tender) 쌍이면 DB가 UNIQUE 위반으로 skip
+        if (logInsertErr?.code === "23505") continue;
 
         const result = await provider.send({
           to: userEmail,
@@ -71,22 +76,24 @@ export async function POST(request: NextRequest) {
           body: buildAlertBody(tender),
         });
 
-        await supabase.from("alert_logs").insert({
-          alert_rule_id: rule.id,
-          tender_id: tender.id,
-          status: result.success ? "SENT" : "FAIL",
-          error_message: result.error || null,
-        });
-
-        if (result.success) stats.sent++;
-        else stats.failed++;
+        // 발송 실패 시 로그 상태 업데이트
+        if (!result.success) {
+          await supabase
+            .from("alert_logs")
+            .update({ status: "FAIL", error_message: result.error || null })
+            .eq("alert_rule_id", rule.id)
+            .eq("tender_id", tender.id);
+          stats.failed++;
+        } else {
+          stats.sent++;
+        }
       }
     }
 
     return successResponse({ message: "알림 처리 완료", ...stats });
   } catch (err) {
     console.error("process-alerts 오류:", err);
-    return internalErrorResponse(`알림 처리 실패: ${String(err)}`);
+    return internalErrorResponse();
   }
 }
 

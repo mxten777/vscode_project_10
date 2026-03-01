@@ -42,10 +42,16 @@ export async function GET(request: NextRequest) {
       .from("tenders")
       .select("*", { count: "exact", head: true });
 
-    // Data query
+    // Data query — raw_json 제외 (보안: G2B 원본 필드 클라이언트 노출 차단)
     let dataQuery = supabase
       .from("tenders")
-      .select("*, agency:agencies(*), award:awards(*)");
+      .select(`
+        id, source_tender_id, title, demand_agency_name,
+        budget_amount, region_code, region_name, industry_code, industry_name,
+        method_type, published_at, deadline_at, status, created_at, updated_at,
+        agency:agencies(id, code, name),
+        award:awards(id, winner_company_name, awarded_amount, awarded_rate, opened_at)
+      `);
 
     // 필터 적용 (count + data 동시)
     const applyFilters = (query: typeof countQuery | typeof dataQuery) => {
@@ -73,7 +79,8 @@ export async function GET(request: NextRequest) {
     const [countResult, dataResult] = await Promise.all([countQuery, dataQuery]);
 
     if (dataResult.error) {
-      return internalErrorResponse(dataResult.error.message);
+      console.error("GET /api/tenders DB error:", dataResult.error);
+      return internalErrorResponse();
     }
 
     return successResponse({

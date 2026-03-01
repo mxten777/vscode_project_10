@@ -48,64 +48,62 @@ export async function POST(request: NextRequest) {
       return Array.isArray(items) ? items : [];
     }, 3);
 
-    // 각 공고를 upsert
-    for (const item of rawItems) {
-      try {
+    // ─── 1단계: 기관 배치 upsert (1회 쿼리) ───────────────────
+    const agencyMap = new Map<string, string>(); // code → id
+
+    const uniqueAgencies = [
+      ...new Map(
+        rawItems
+          .map((item) => {
+            const code = (item.dminsttCd || item.ntceInsttCd || "") as string;
+            const name = (item.dminsttNm || item.ntceInsttNm || "알수없음") as string;
+            return [code, { code, name }] as [string, { code: string; name: string }];
+          })
+          .filter(([code]) => !!code)
+      ).values(),
+    ];
+
+    if (uniqueAgencies.length) {
+      const { data: agencies } = await supabase
+        .from("agencies")
+        .upsert(uniqueAgencies, { onConflict: "code" })
+        .select("id, code");
+      agencies?.forEach((a: { id: string; code: string }) => agencyMap.set(a.code, a.id));
+    }
+
+    // ─── 2단계: 공고 배치 upsert (1회 쿼리) ───────────────────
+    const tenderPayloads = rawItems
+      .map((item) => {
         const sourceTenderId = extractSourceId(item);
-        if (!sourceTenderId) continue;
-
-        // 기관 upsert
-        const agencyCode = item.dminsttCd || item.ntceInsttCd || "";
-        const agencyName = item.dminsttNm || item.ntceInsttNm || "알수없음";
-        let agencyId: string | null = null;
-
-        if (agencyCode) {
-          const { data: agency } = await supabase
-            .from("agencies")
-            .upsert(
-              { code: agencyCode, name: agencyName, raw_json: item },
-              { onConflict: "code" }
-            )
-            .select("id")
-            .single();
-          agencyId = agency?.id ?? null;
-        }
-
-        // 공고 upsert
-        const tenderPayload = {
+        if (!sourceTenderId) return null;
+        const agencyCode = (item.dminsttCd || item.ntceInsttCd || "") as string;
+        return {
           source_tender_id: sourceTenderId,
-          title: item.bidNtceNm || item.prdctClsfcNoNm || "제목 없음",
-          agency_id: agencyId,
-          demand_agency_name: item.dminsttNm || null,
-          budget_amount: parseFloat(item.presmptPrce) || null,
-          region_code: item.bidNtceAreaCd || null,
-          region_name: item.bidNtceAreaNm || null,
-          industry_code: item.prdctClsfcNo || null,
-          industry_name: item.prdctClsfcNoNm || null,
-          method_type: item.cntrctMthdCd || null,
-          published_at: parseDate(item.bidNtceDt || item.rgstDt),
-          deadline_at: parseDate(item.bidClseDt),
+          title: (item.bidNtceNm || item.prdctClsfcNoNm || "제목 없음") as string,
+          agency_id: agencyMap.get(agencyCode) ?? null,
+          demand_agency_name: (item.dminsttNm as string) || null,
+          budget_amount: parseFloat(item.presmptPrce as string) || null,
+          region_code: (item.bidNtceAreaCd as string) || null,
+          region_name: (item.bidNtceAreaNm as string) || null,
+          industry_code: (item.prdctClsfcNo as string) || null,
+          industry_name: (item.prdctClsfcNoNm as string) || null,
+          method_type: (item.cntrctMthdCd as string) || null,
+          published_at: parseDate((item.bidNtceDt || item.rgstDt) as string),
+          deadline_at: parseDate(item.bidClseDt as string),
           status: determineTenderStatus(item),
           raw_json: item,
         };
+      })
+      .filter((p): p is NonNullable<typeof p> => p !== null);
 
-        const { data: existing } = await supabase
-          .from("tenders")
-          .select("id")
-          .eq("source_tender_id", sourceTenderId)
-          .maybeSingle();
+    if (tenderPayloads.length) {
+      const { data: upserted, error: upsertErr } = await supabase
+        .from("tenders")
+        .upsert(tenderPayloads, { onConflict: "source_tender_id" })
+        .select("id");
 
-        if (existing) {
-          await supabase.from("tenders").update(tenderPayload).eq("id", existing.id);
-          results.updated++;
-        } else {
-          await supabase.from("tenders").insert(tenderPayload);
-          results.inserted++;
-        }
-      } catch (itemErr) {
-        console.error("공고 처리 오류:", itemErr);
-        results.errors++;
-      }
+      if (upsertErr) throw upsertErr;
+      results.inserted = upserted?.length ?? 0;
     }
 
     return successResponse({
@@ -115,18 +113,7 @@ export async function POST(request: NextRequest) {
     });
   } catch (err) {
     console.error("poll-tenders 전체 오류:", err);
-
-    // 실패 로그 기록 (간단)
-    try {
-      await supabase.from("alert_logs").insert({
-        alert_rule_id: null as unknown as string,
-        tender_id: null as unknown as string,
-        status: "FAIL",
-        error_message: `poll-tenders 실패: ${String(err)}`,
-      });
-    } catch { /* ignore log failure */ }
-
-    return internalErrorResponse(`수집 실패: ${String(err)}`);
+    return internalErrorResponse();
   }
 }
 
