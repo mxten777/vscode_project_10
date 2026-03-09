@@ -18,6 +18,31 @@ const NARA_API_KEY = process.env.NARA_API_KEY || "";
  * - 응답 형식은 JSON (serviceKey, pageNo, numOfRows 파라미터 사용)
  * - 실제 API 스펙이 달라질 수 있으므로, 핵심은 upsert 로직임
  */
+// ─── 임시 GET: 나라장터 API 원시 응답 확인 (디버깅) ────────────────
+export async function GET() {
+  const raw = NARA_API_KEY;
+  const decoded = decodeURIComponent(raw);
+  const params = new URLSearchParams();
+  params.set("serviceKey", decoded);
+  params.set("pageNo", "1");
+  params.set("numOfRows", "3");
+  const url = `${NARA_API_BASE}/getBidPblancListInfoServc/getBidPblancListInfoServc01?${params.toString()}`;
+  try {
+    const res = await fetch(url, { cache: "no-store" });
+    const body = await res.text();
+    return Response.json({
+      region: process.env.VERCEL_REGION,
+      keyLen: decoded.length,
+      httpStatus: res.status,
+      contentType: res.headers.get("content-type"),
+      body: body.slice(0, 800),
+    });
+  } catch (e) {
+    return Response.json({ error: String(e) }, { status: 500 });
+  }
+}
+// ────────────────────────────────────────────────────────────────────
+
 export async function POST(request: NextRequest) {
   // 시크릿 키 검증
   if (!verifyCronSecret(request)) {
