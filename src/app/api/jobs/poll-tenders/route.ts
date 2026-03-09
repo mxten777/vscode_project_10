@@ -103,10 +103,15 @@ export async function POST(request: NextRequest) {
       })
       .filter((p): p is NonNullable<typeof p> => p !== null);
 
-    if (tenderPayloads.length) {
+    // 배치 내 source_tender_id 중복 제거 (동일 배치 내 중복 시 PostgreSQL upsert 오류 방지)
+    const uniqueTenderPayloads = [
+      ...new Map(tenderPayloads.map((p) => [p.source_tender_id, p])).values(),
+    ];
+
+    if (uniqueTenderPayloads.length) {
       const { data: upserted, error: upsertErr } = await supabase
         .from("tenders")
-        .upsert(tenderPayloads, { onConflict: "source_tender_id" })
+        .upsert(uniqueTenderPayloads, { onConflict: "source_tender_id" })
         .select("id");
 
       if (upsertErr) throw upsertErr;
