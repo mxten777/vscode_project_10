@@ -118,7 +118,8 @@ export async function POST(request: NextRequest) {
     });
   } catch (err) {
     console.error("poll-tenders 전체 오류:", err);
-    return internalErrorResponse();
+    // 임시: 디버깅용 실제 오류 노출
+    return errorResponse("INTERNAL_ERROR", String(err), 500);
   }
 }
 
