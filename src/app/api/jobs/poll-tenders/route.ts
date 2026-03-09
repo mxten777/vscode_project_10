@@ -47,9 +47,10 @@ export async function POST(request: NextRequest) {
       const url = `${baseUrl}?${params.toString()}`;
 
       const res = await fetch(url, { cache: "no-store" });
-      if (!res.ok) throw new Error(`나라장터 API 오류: ${res.status}`);
+      const rawText = await res.text();
+      if (!res.ok) throw new Error(`나라장터 API ${res.status} | ${rawText.slice(0,200)} | URL: ${url.replace(/(serviceKey=)[^&]+/,'$1***')}`);
 
-      const json = await res.json();
+      const json = await JSON.parse(rawText);
       // 실제 응답 구조에 따라 파싱 경로 조정 필요
       const items =
         json?.response?.body?.items ?? json?.items ?? json?.data ?? [];
@@ -121,7 +122,7 @@ export async function POST(request: NextRequest) {
     });
   } catch (err) {
     console.error("poll-tenders 전체 오류:", err);
-    return internalErrorResponse();
+    return errorResponse("INTERNAL_ERROR", String(err), 500);
   }
 }
 
@@ -155,11 +156,11 @@ function parseDate(dateStr?: string): string | null {
 
 function getTodayStr(): string {
   const d = new Date();
-  return `${d.getFullYear()}${String(d.getMonth() + 1).padStart(2, "0")}${String(d.getDate()).padStart(2, "0")}`;
+  return `${d.getFullYear()}${String(d.getMonth() + 1).padStart(2, "0")}${String(d.getDate()).padStart(2, "0")}235959`;
 }
 
 function getRecentDateStr(): string {
   const d = new Date();
-  d.setDate(d.getDate() - 1);
-  return `${d.getFullYear()}${String(d.getMonth() + 1).padStart(2, "0")}${String(d.getDate()).padStart(2, "0")}`;
+  d.setDate(d.getDate() - 7);
+  return `${d.getFullYear()}${String(d.getMonth() + 1).padStart(2, "0")}${String(d.getDate()).padStart(2, "0")}000000`;
 }
