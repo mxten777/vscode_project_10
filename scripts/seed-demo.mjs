@@ -3,12 +3,41 @@
  * 실행: node scripts/seed-demo.mjs
  *
  * Supabase에 현실적인 한국 공공입찰 데모 데이터를 삽입합니다.
+ * 환경 변수 설정 필요: NEXT_PUBLIC_SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY
+ * (또는 .env.local 파일)
  */
 
 import { createClient } from "@supabase/supabase-js";
+import { readFileSync } from "fs";
+import { resolve, dirname } from "path";
+import { fileURLToPath } from "url";
 
-const SUPABASE_URL = "https://pdxjwpskwiinustgzhmb.supabase.co";
+// .env.local 파일에서 환경 변수 로드
+const __dirname = dirname(fileURLToPath(import.meta.url));
+try {
+  const envContent = readFileSync(resolve(__dirname, "../.env.local"), "utf8");
+  for (const line of envContent.split("\n")) {
+    const trimmed = line.trim();
+    if (trimmed && !trimmed.startsWith("#")) {
+      const eqIdx = trimmed.indexOf("=");
+      if (eqIdx > 0) {
+        const key = trimmed.slice(0, eqIdx).trim();
+        const value = trimmed.slice(eqIdx + 1).trim();
+        if (!process.env[key]) process.env[key] = value;
+      }
+    }
+  }
+} catch {
+  // .env.local 없으면 기존 환경 변수 사용
+}
+
+const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL;
 const SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
+
+if (!SUPABASE_URL || !SERVICE_ROLE_KEY) {
+  console.error("오류: NEXT_PUBLIC_SUPABASE_URL 또는 SUPABASE_SERVICE_ROLE_KEY 환경 변수가 없습니다.");
+  process.exit(1);
+}
 
 const supabase = createClient(SUPABASE_URL, SERVICE_ROLE_KEY, {
   auth: { persistSession: false },
