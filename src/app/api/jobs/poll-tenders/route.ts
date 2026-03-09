@@ -3,6 +3,9 @@ import { createServiceClient } from "@/lib/supabase/service";
 import { verifyCronSecret, retryWithBackoff } from "@/lib/helpers";
 import { errorResponse, successResponse, internalErrorResponse } from "@/lib/api-response";
 
+// 나라장터 API는 한국 IP만 허용 → 서울 리전에서 실행
+export const preferredRegion = "icn1";
+
 const NARA_API_BASE = process.env.NARA_API_BASE_URL || "https://apis.data.go.kr/1230000";
 const NARA_API_KEY = process.env.NARA_API_KEY || "";
 
