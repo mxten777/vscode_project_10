@@ -12,36 +12,7 @@ const NARA_API_KEY = process.env.NARA_API_KEY || "";
 /**
  * POST /api/jobs/poll-tenders
  * Vercel Cron에서 호출 — 나라장터 API로 신규 공고 수집
- *
- * 가정:
- * - 나라장터 입찰공고목록 API: /getBidPblancListInfoServc/getBidPblancListInfoServc01
- * - 응답 형식은 JSON (serviceKey, pageNo, numOfRows 파라미터 사용)
- * - 실제 API 스펙이 달라질 수 있으므로, 핵심은 upsert 로직임
  */
-// ─── 임시 GET: 나라장터 API 원시 응답 확인 (디버깅) ────────────────
-export async function GET() {
-  const raw = NARA_API_KEY;
-  const decoded = decodeURIComponent(raw);
-  const params = new URLSearchParams();
-  params.set("serviceKey", decoded);
-  params.set("pageNo", "1");
-  params.set("numOfRows", "3");
-  const url = `${NARA_API_BASE}/getBidPblancListInfoServc/getBidPblancListInfoServc01?${params.toString()}`;
-  try {
-    const res = await fetch(url, { cache: "no-store" });
-    const body = await res.text();
-    return Response.json({
-      region: process.env.VERCEL_REGION,
-      keyLen: decoded.length,
-      httpStatus: res.status,
-      contentType: res.headers.get("content-type"),
-      body: body.slice(0, 800),
-    });
-  } catch (e) {
-    return Response.json({ error: String(e) }, { status: 500 });
-  }
-}
-// ────────────────────────────────────────────────────────────────────
 
 export async function POST(request: NextRequest) {
   // 시크릿 키 검증
@@ -64,17 +35,17 @@ export async function POST(request: NextRequest) {
       const decodedKey = decodeURIComponent(NARA_API_KEY);
       params.set("serviceKey", decodedKey);
       params.set("pageNo", "1");
-      params.set("numOfRows", "10");
-      // type 제거 → XML 기본 응답으로 더 상세한 오류 코드 확인
+      params.set("numOfRows", "100");
+      params.set("type", "json");
+      params.set("inqryDiv", "1");
+      params.set("inqryBgnDt", getRecentDateStr());
+      params.set("inqryEndDt", getTodayStr());
       const url = `${baseUrl}?${params.toString()}`;
 
       const res = await fetch(url, { cache: "no-store" });
-      const rawText = await res.text();
-      const region = process.env.VERCEL_REGION || "unknown";
-      const keyLen = decodedKey.length;
-      if (!res.ok) throw new Error(`[region:${region}][keyLen:${keyLen}] HTTP ${res.status} contentType:${res.headers.get('content-type')} | ${rawText.slice(0,400)}`);
+      if (!res.ok) throw new Error(`나라장터 API 오류: ${res.status}`);
 
-      const json = await JSON.parse(rawText);
+      const json = await res.json();
       // 실제 응답 구조에 따라 파싱 경로 조정 필요
       const items =
         json?.response?.body?.items ?? json?.items ?? json?.data ?? [];
@@ -146,7 +117,7 @@ export async function POST(request: NextRequest) {
     });
   } catch (err) {
     console.error("poll-tenders 전체 오류:", err);
-    return errorResponse("INTERNAL_ERROR", String(err), 500);
+    return internalErrorResponse();
   }
 }
 
