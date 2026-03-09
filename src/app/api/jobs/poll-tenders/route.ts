@@ -7,7 +7,7 @@ import { errorResponse, successResponse, internalErrorResponse } from "@/lib/api
 export const preferredRegion = "icn1";
 
 const NARA_API_BASE = process.env.NARA_API_BASE_URL || "https://apis.data.go.kr/1230000";
-const NARA_API_KEY = process.env.NARA_API_KEY || "";
+const NARA_API_KEY = (process.env.NARA_API_KEY || "").trim(); // trim(): Vercel env 줄바꿈 방지
 // 운영계정 endpoint (개발계정과 다름)
 const NARA_API_ENDPOINT = `${NARA_API_BASE}/ad/BidPublicInfoService/getBidPblancListInfoServc`;
 
