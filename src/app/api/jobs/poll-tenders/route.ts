@@ -40,14 +40,14 @@ export async function POST(request: NextRequest) {
       params.set("serviceKey", decodedKey);
       params.set("pageNo", "1");
       params.set("numOfRows", "10");
-      params.set("type", "json");
-      // inqryDiv, inqryBgnDt, inqryEndDt 제거해서 최소 파라미터로 테스트
+      // type 제거 → XML 기본 응답으로 더 상세한 오류 코드 확인
       const url = `${baseUrl}?${params.toString()}`;
 
       const res = await fetch(url, { cache: "no-store" });
       const rawText = await res.text();
       const region = process.env.VERCEL_REGION || "unknown";
-      if (!res.ok) throw new Error(`[region:${region}] 나라장터 API ${res.status} | ${rawText.slice(0,200)} | URL: ${url.replace(/(serviceKey=)[^&]+/,'$1***')}`);
+      const keyLen = decodedKey.length;
+      if (!res.ok) throw new Error(`[region:${region}][keyLen:${keyLen}] HTTP ${res.status} contentType:${res.headers.get('content-type')} | ${rawText.slice(0,400)}`);
 
       const json = await JSON.parse(rawText);
       // 실제 응답 구조에 따라 파싱 경로 조정 필요
