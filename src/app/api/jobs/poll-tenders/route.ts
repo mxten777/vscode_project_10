@@ -12,6 +12,17 @@ const NARA_API_KEY = (process.env.NARA_API_KEY || "").trim(); // trim(): Vercel 
 const NARA_API_ENDPOINT = `${NARA_API_BASE}/ad/BidPublicInfoService/getBidPblancListInfoServc`;
 
 /**
+ * GET /api/jobs/poll-tenders (임시 디버그)
+ */
+export async function GET() {
+  const keyLen = NARA_API_KEY.length;
+  const url = `${NARA_API_ENDPOINT}?serviceKey=${NARA_API_KEY}&pageNo=1&numOfRows=3&type=json&inqryDiv=1&inqryBgnDt=${getRecentDateStr()}&inqryEndDt=${getTodayStr()}`;
+  const res = await fetch(url, { cache: "no-store" });
+  const body = await res.text();
+  return successResponse({ keyLen, endpoint: NARA_API_ENDPOINT, httpStatus: res.status, dates: { from: getRecentDateStr(), to: getTodayStr() }, body: body.substring(0, 300) });
+}
+
+/**
  * POST /api/jobs/poll-tenders
  * Vercel Cron에서 호출 — 나라장터 API로 신규 공고 수집
  */
