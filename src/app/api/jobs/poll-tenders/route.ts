@@ -8,6 +8,8 @@ export const preferredRegion = "icn1";
 
 const NARA_API_BASE = process.env.NARA_API_BASE_URL || "https://apis.data.go.kr/1230000";
 const NARA_API_KEY = process.env.NARA_API_KEY || "";
+// 운영계정 endpoint (개발계정과 다름)
+const NARA_API_ENDPOINT = `${NARA_API_BASE}/ad/BidPublicInfoService/getBidPblancListInfoServc`;
 
 /**
  * POST /api/jobs/poll-tenders
@@ -29,18 +31,8 @@ export async function POST(request: NextRequest) {
     // searchParams.set()은 자동으로 인코딩하므로 이중 인코딩 방지를 위해
     // 디코딩 후 set() 하거나, 직접 문자열로 붙임
     const rawItems = await retryWithBackoff(async () => {
-      const baseUrl = `${NARA_API_BASE}/getBidPblancListInfoServc/getBidPblancListInfoServc01`;
-      const params = new URLSearchParams();
-      // NARA_API_KEY가 이미 URL 인코딩된 경우 decode 후 set (searchParams.set이 재인코딩)
-      const decodedKey = decodeURIComponent(NARA_API_KEY);
-      params.set("serviceKey", decodedKey);
-      params.set("pageNo", "1");
-      params.set("numOfRows", "100");
-      params.set("type", "json");
-      params.set("inqryDiv", "1");
-      params.set("inqryBgnDt", getRecentDateStr());
-      params.set("inqryEndDt", getTodayStr());
-      const url = `${baseUrl}?${params.toString()}`;
+      // 운영계정 키는 plain hex — URL 인코딩 없이 직접 사용
+      const url = `${NARA_API_ENDPOINT}?serviceKey=${NARA_API_KEY}&pageNo=1&numOfRows=100&type=json&inqryDiv=1&inqryBgnDt=${getRecentDateStr()}&inqryEndDt=${getTodayStr()}`;
 
       const res = await fetch(url, { cache: "no-store" });
       if (!res.ok) throw new Error(`나라장터 API 오류: ${res.status}`);
@@ -150,12 +142,14 @@ function parseDate(dateStr?: string): string | null {
 }
 
 function getTodayStr(): string {
+  // 운영계정 날짜 형식: YYYYMMDDHHMM (12자리)
   const d = new Date();
-  return `${d.getFullYear()}${String(d.getMonth() + 1).padStart(2, "0")}${String(d.getDate()).padStart(2, "0")}235959`;
+  return `${d.getFullYear()}${String(d.getMonth() + 1).padStart(2, "0")}${String(d.getDate()).padStart(2, "0")}2359`;
 }
 
 function getRecentDateStr(): string {
+  // 운영계정 날짜 형식: YYYYMMDDHHMM (12자리)
   const d = new Date();
   d.setDate(d.getDate() - 7);
-  return `${d.getFullYear()}${String(d.getMonth() + 1).padStart(2, "0")}${String(d.getDate()).padStart(2, "0")}000000`;
+  return `${d.getFullYear()}${String(d.getMonth() + 1).padStart(2, "0")}${String(d.getDate()).padStart(2, "0")}0000`;
 }
