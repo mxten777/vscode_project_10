@@ -91,7 +91,7 @@ Dashboard → **Database** → **Extensions**:
 | 항목 | 값 |
 |---|---|
 | Base URL | `https://apis.data.go.kr/1230000` |
-| 엔드포인트 | `/getBidPblancListInfoServc/getBidPblancListInfoServc01` |
+| 엔드포인트 | `/ad/BidPublicInfoService/getBidPblancListInfoServc` (운영계정) |
 | 인증 | `serviceKey` 쿼리 파라미터 |
 | 응답 형식 | JSON (`type=json`) |
 
@@ -205,22 +205,20 @@ Vercel → Project → **Settings** → **Environment Variables**:
   "crons": [
     {
       "path": "/api/jobs/poll-tenders",
-      "schedule": "*/10 * * * *"
+      "schedule": "0 9 * * 1-5"
     },
     {
       "path": "/api/jobs/process-alerts",
-      "schedule": "*/10 * * * *"
+      "schedule": "30 9 * * 1-5"
     }
   ]
 }
 ```
 
-- **Hobby plan**: 1일 1회 Cron (무료)
-- **Pro plan**: 분 단위 Cron (유료, `*/10` 가능)
+- **현재 스케줄**: 평일 09:00 UTC (poll) / 09:30 UTC (alerts)
+- **Hobby plan 제한**: 24시간당 1회 (Cron 표현식과 무관하게)
+- **Pro plan 업그레이드 시**: `*/10 * * * *` (medium미늹 수집)\ub85c 변경 가능
 - Vercel이 자동으로 `Authorization: Bearer <CRON_SECRET>` 헤더 추가
-
-> ⚠️ Hobby plan에서는 `schedule` 값과 관계없이 1일 1회만 실행됩니다.
-> Pro plan이 필요하면 `*/10 * * * *` (10분 간격) 유지, 아니면 수동 호출도 가능합니다.
 
 ### 6.4 배포 실행
 

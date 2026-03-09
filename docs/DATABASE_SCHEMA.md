@@ -214,6 +214,7 @@ CREATE EXTENSION IF NOT EXISTS "pg_trgm";
 | `type` | text | NOT NULL | - | 유형 (`KEYWORD`, `FILTER`) |
 | `rule_json` | jsonb | NOT NULL | `'{}'` | 규칙 상세 JSON |
 | `channel` | text | NOT NULL | `'EMAIL'` | 알림 채널 (`EMAIL`, `KAKAO`) |
+| `name` | text | NULL | - | 규칙 이름 (사용자 정의, Migration 001에서 추가) |
 | `is_enabled` | boolean | NOT NULL | `true` | 활성 여부 |
 | `created_at` | timestamptz | NOT NULL | `now()` | 생성 시각 |
 | `updated_at` | timestamptz | NOT NULL | `now()` | 수정 시각 (트리거 자동) |
@@ -254,6 +255,7 @@ CREATE EXTENSION IF NOT EXISTS "pg_trgm";
 
 **제약조건**:
 - `CHECK (status IN ('SENT', 'FAIL'))`
+- `UNIQUE (alert_rule_id, tender_id)` (`uq_alert_logs_rule_tender`) — 중복 발송 DB 수준 차단 (Migration 001에서 추가)
 - `ON DELETE CASCADE` (alert_rules, tenders)
 
 ---
@@ -275,6 +277,14 @@ CREATE EXTENSION IF NOT EXISTS "pg_trgm";
 | `idx_favorites_org` | favorites | `org_id` | 조직별 즐겨찾기 |
 | `idx_alert_rules_user` | alert_rules | `user_id` | 사용자별 알림 규칙 |
 | `idx_alert_logs_rule` | alert_logs | `alert_rule_id` | 규칙별 로그 조회 |
+
+> 하단 3개 인덱스는 `supabase/migrations/001_stabilize.sql`에서 추가됨 — Supabase SQL Editor에서 실행 필요
+
+| 인덱스명 | 테이블 | 콜럼 | 용도 |
+|---|---|---|---|
+| `idx_tenders_created_at` | tenders | `created_at DESC` | process-alerts 신규 공고 쿼리 최적화 |
+| `idx_alert_logs_rule_tender` | alert_logs | `(alert_rule_id, tender_id)` | UNIQUE 제약 인덱스 (중복 체크) |
+| `idx_tenders_open_deadline` | tenders | `deadline_at WHERE status='OPEN'` | 대시보드 진행중+마감일 필터 쿼리 |
 
 ### 4.2 GIN 인덱스 (트리그램 검색)
 

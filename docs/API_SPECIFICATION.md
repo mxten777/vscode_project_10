@@ -1,7 +1,7 @@
 # API 명세서 (API Specification)
 
-> AI 입찰·조달 분석 플랫폼 — REST API Reference
-> Base URL: `https://<your-domain>/api`
+> AI 입찰·조달 분석 플랫폼 — REST API Reference  
+> Base URL: `https://bid-platform.vercel.app/api`
 
 ---
 
@@ -594,7 +594,8 @@ GET /api/reports/summary
 
 ## 6. 배치 작업 (Jobs)
 
-> Vercel Cron에서 10분 간격으로 호출되는 내부 API
+> Vercel Cron에서 **평일 09:00 UTC**(poll) / **09:30 UTC**(alerts) 에 호출되는 내부 API  
+> (Vercel Hobby 플랜 제한 — 일 1회 한도)
 
 ### 6.1 공고 수집 (Poll Tenders)
 
@@ -607,7 +608,7 @@ POST /api/jobs/poll-tenders
 **처리 로직**:
 1. `verifyCronSecret()` 검증
 2. 나라장터 API 호출 (`retryWithBackoff`, 최대 3회, 지수 백오프)
-   - endpoint: `/getBidPblancListInfoServc/getBidPblancListInfoServc01`
+   - endpoint: `/ad/BidPublicInfoService/getBidPblancListInfoServc` (운영계정)
    - params: `serviceKey`, `pageNo=1`, `numOfRows=100`, `type=json`, `inqryDiv=1`
    - 조회 기간: 전일 ~ 당일
 3. 각 공고에 대해:

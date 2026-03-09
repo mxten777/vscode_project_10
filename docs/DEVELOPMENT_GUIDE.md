@@ -71,7 +71,7 @@ src/
 │   ├── supabase/           # Supabase 클라이언트
 │   └── notifications/      # 알림 프로바이더
 │
-└── middleware.ts            # Next.js 미들웨어
+└── proxy.ts             # Next.js 인증 프록시 (Next.js 16 컨벤션)
 ```
 
 ### 2.2 네이밍 규칙
@@ -370,7 +370,7 @@ src/app/(app)/new-feature/
 ```
 
 - `(app)` 라우트 그룹 안에 생성 (공통 레이아웃 & 네비게이션 공유)
-- 인증이 필요하면 `src/middleware.ts`의 `protectedPaths`에 추가
+- 인증이 필요하면 `src/proxy.ts`의 `protectedPaths`에 추가
 - 네비게이션에 링크 추가: `src/components/header.tsx`
 
 ---

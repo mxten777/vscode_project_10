@@ -64,6 +64,11 @@ function getDday(deadline: string | null): { label: string; cls: string } | null
   return null;
 }
 
+function isNew(publishedAt: string | null): boolean {
+  if (!publishedAt) return false;
+  return Date.now() - new Date(publishedAt).getTime() < 48 * 60 * 60 * 1000;
+}
+
 export default function HomePage() {
   return (
     <Suspense fallback={<DashboardSkeleton />}>
@@ -446,6 +451,7 @@ function HomeContent() {
               <Link key={tender.id} href={`/tenders/${tender.id}`}>
                 <Card className={`group premium-card card-hover cursor-pointer overflow-hidden ${isUrgent ? "border-rose-500/20" : ""}`}>
                   {isUrgent && <div className="h-0.5 w-full bg-linear-to-r from-rose-500/60 via-orange-400/60 to-rose-500/40" />}
+                  {!isUrgent && tender.status === "OPEN" && <div className="h-0.5 w-full bg-linear-to-r from-emerald-500/50 via-emerald-400/30 to-transparent" />}
                   <CardContent className="py-4 px-6">
                     <div className="flex items-start justify-between gap-4">
                       <div className="flex-1 min-w-0">
@@ -468,6 +474,9 @@ function HomeContent() {
                           )}
                           {dday && (
                             <span className={dday.cls}>{dday.label}</span>
+                          )}
+                          {isNew(tender.published_at ?? null) && !dday && (
+                            <span className="badge-new">신규</span>
                           )}
                         </div>
                         <h3 className="font-semibold text-[15px] line-clamp-2 group-hover:text-primary transition-colors duration-200 leading-snug">

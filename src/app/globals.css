@@ -122,8 +122,23 @@
   * {
     @apply border-border outline-ring/50;
   }
+  html {
+    scrollbar-gutter: stable;
+  }
   body {
     @apply bg-background text-foreground;
+  }
+  h1, h2, h3, h4 {
+    letter-spacing: -0.018em;
+    text-wrap: balance;
+  }
+  ::selection {
+    background: oklch(0.500 0.220 264 / 22%);
+    color: inherit;
+  }
+  .dark ::selection {
+    background: oklch(0.620 0.230 264 / 28%);
+    color: inherit;
   }
 }
 
@@ -245,13 +260,13 @@
 
 /* ─── Gradient text ─── */
 .gradient-text {
-  background: linear-gradient(135deg, oklch(0.500 0.220 264), oklch(0.580 0.200 230), oklch(0.550 0.210 300));
+  background: linear-gradient(135deg, oklch(0.470 0.260 264), oklch(0.540 0.230 232), oklch(0.510 0.250 298));
   background-clip: text;
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
 }
 .dark .gradient-text {
-  background: linear-gradient(135deg, oklch(0.700 0.200 264), oklch(0.720 0.180 230), oklch(0.680 0.190 300));
+  background: linear-gradient(135deg, oklch(0.720 0.215 264), oklch(0.740 0.195 232), oklch(0.700 0.205 298));
   background-clip: text;
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
@@ -418,6 +433,14 @@
     inset 0 1px 0 oklch(1 0 0 / 15%);
   transform: translateY(-1px);
 }
+.btn-premium:active {
+  transform: scale(0.97) translateY(0);
+  box-shadow:
+    0 1px 2px oklch(0 0 0 / 10%),
+    0 3px 10px oklch(0.500 0.220 264 / 20%),
+    inset 0 1px 0 oklch(1 0 0 / 15%);
+  transition-duration: 0.06s;
+}
 
 /* ─── Glow ring ─── */
 .glow-ring {
@@ -502,7 +525,7 @@
 
 /* ─── D-day chips ─── */
 .dday-urgent {
-  background: linear-gradient(135deg, oklch(0.577 0.245 27) / 15%, oklch(0.704 0.191 22) / 10%);
+  background: linear-gradient(135deg, oklch(0.577 0.245 27 / 15%), oklch(0.704 0.191 22 / 10%));
   color: oklch(0.577 0.245 27);
   border: 1px solid oklch(0.577 0.245 27 / 20%);
   border-radius: 6px;
@@ -685,3 +708,97 @@
 .border-accent-emerald { border-top-color: oklch(0.600 0.180 165 / 40%); }
 .border-accent-amber   { border-top-color: oklch(0.700 0.160 55 / 40%); }
 .border-accent-rose    { border-top-color: oklch(0.577 0.245 27 / 40%); }
+
+/* ─── Input focus glow wrapper ─── */
+.focus-glow:focus-within {
+  box-shadow:
+    0 0 0 1px oklch(0.500 0.220 264 / 25%),
+    0 0 0 4px oklch(0.500 0.220 264 / 8%);
+  border-radius: inherit;
+}
+.dark .focus-glow:focus-within {
+  box-shadow:
+    0 0 0 1px oklch(0.620 0.230 264 / 30%),
+    0 0 0 4px oklch(0.620 0.230 264 / 10%);
+}
+
+/* ─── NEW badge for recent tenders ─── */
+.badge-new {
+  display: inline-flex;
+  align-items: center;
+  padding: 1px 6px;
+  border-radius: 4px;
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  background: oklch(0.600 0.180 165 / 16%);
+  color: oklch(0.440 0.175 165);
+  border: 1px solid oklch(0.600 0.180 165 / 28%);
+}
+.dark .badge-new {
+  color: oklch(0.700 0.170 165);
+  background: oklch(0.600 0.180 165 / 12%);
+  border-color: oklch(0.600 0.180 165 / 22%);
+}
+
+/* ─── Scale-in for modals / dialogs ─── */
+@keyframes scale-in {
+  from { opacity: 0; transform: scale(0.96) translateY(6px); }
+  to   { opacity: 1; transform: scale(1)    translateY(0); }
+}
+.animate-scale-in {
+  animation: scale-in 0.22s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+/* ─── Horizontal divider gradient ─── */
+.divider-gradient {
+  height: 1px;
+  border: none;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    oklch(0.500 0.220 264 / 20%) 30%,
+    oklch(0.550 0.210 300 / 15%) 70%,
+    transparent
+  );
+}
+.dark .divider-gradient {
+  background: linear-gradient(
+    90deg,
+    transparent,
+    oklch(0.620 0.230 264 / 15%) 30%,
+    oklch(0.580 0.210 300 / 12%) 70%,
+    transparent
+  );
+}
+
+/* ─── Card lift with colored glow (use on featured elements) ─── */
+.card-lift {
+  transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.card-lift:hover {
+  transform: translateY(-4px);
+  box-shadow:
+    0 2px 8px oklch(0 0 0 / 6%),
+    0 16px 48px -8px oklch(0.500 0.220 264 / 18%),
+    0 0 0 1px oklch(0.500 0.220 264 / 10%);
+}
+.dark .card-lift:hover {
+  box-shadow:
+    0 2px 8px oklch(0 0 0 / 25%),
+    0 16px 48px -8px oklch(0.620 0.230 264 / 20%),
+    0 0 0 1px oklch(0.620 0.230 264 / 20%);
+}
+
+/* ─── Frosted panel (lighter than glass) ─── */
+.frosted-panel {
+  background: oklch(1 0 0 / 82%);
+  backdrop-filter: blur(12px) saturate(160%);
+  -webkit-backdrop-filter: blur(12px) saturate(160%);
+  border: 1px solid oklch(0.910 0.018 264 / 70%);
+}
+.dark .frosted-panel {
+  background: oklch(0.165 0.022 264 / 88%);
+  border-color: oklch(0.270 0.025 264 / 65%);
+}

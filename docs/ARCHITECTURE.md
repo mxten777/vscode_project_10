@@ -120,7 +120,7 @@
 
 #### 2.3.3 Cron: 공고 수집
 ```
-Vercel Cron (10분 간격)
+Vercel Cron (평일 09:00 UTC — Hobby 플랜 1일 1회)
   → POST /api/jobs/poll-tenders (Authorization: Bearer CRON_SECRET)
   → verifyCronSecret 검증
   → 나라장터 API 호출 (retryWithBackoff, 3회 재시도)
@@ -130,7 +130,7 @@ Vercel Cron (10분 간격)
 
 #### 2.3.4 Cron: 알림 처리
 ```
-Vercel Cron (10분 간격)
+Vercel Cron (평일 09:30 UTC — Hobby 플랜 1일 1회)
   → POST /api/jobs/process-alerts
   → 활성 alert_rules 전체 조회
   → 최근 15분 내 신규 공고 조회
@@ -194,7 +194,9 @@ bid-platform/
 │   └── ENHANCEMENT_ROADMAP.md     # 확장 로드맵
 │
 ├── supabase/
-│   └── schema.sql                 # 전체 DB 스키마 (DDL)
+│   ├── schema.sql                 # 전체 DB 스키마 (DDL)
+│   └── migrations/
+│       └── 001_stabilize.sql      # 안정화 패치 (alert_logs UNIQUE, alert_rules.name, 인덱스)
 │
 ├── src/
 │   ├── app/
@@ -241,9 +243,17 @@ bid-platform/
 │   │   ├── api-response.ts        # API 응답 형식 헬퍼
 │   │   └── auth-context.ts        # 인증 컨텍스트 헬퍼
 │   │
-│   └── middleware.ts              # 인증 미들웨어
+│   └── proxy.ts                   # Next.js 인증 프록시 (Next.js 16 컨벤션)
 │
-├── vercel.json                    # Vercel 크론 설정
+├── supabase/
+│   ├── schema.sql                 # 전체 DB 스키마 (DDL)
+│   └── migrations/
+│       └── 001_stabilize.sql      # 안정화 패치 (alert_logs UNIQUE, alert_rules.name, 인덱스)
+│
+├── scripts/
+│   └── seed-demo.mjs              # 데모 데이터 시드 스크립트
+│
+├── vercel.json                    # Vercel 크론 설정 (평일 09:00/09:30 UTC)
 ├── .env.example                   # 환경 변수 템플릿
 ├── .env.local                     # 로컬 환경 변수 (gitignore)
 ├── package.json
