@@ -39,16 +39,15 @@ export async function POST(request: NextRequest) {
       const decodedKey = decodeURIComponent(NARA_API_KEY);
       params.set("serviceKey", decodedKey);
       params.set("pageNo", "1");
-      params.set("numOfRows", "100");
+      params.set("numOfRows", "10");
       params.set("type", "json");
-      params.set("inqryDiv", "1"); // 최신순
-      params.set("inqryBgnDt", getRecentDateStr());
-      params.set("inqryEndDt", getTodayStr());
+      // inqryDiv, inqryBgnDt, inqryEndDt 제거해서 최소 파라미터로 테스트
       const url = `${baseUrl}?${params.toString()}`;
 
       const res = await fetch(url, { cache: "no-store" });
       const rawText = await res.text();
-      if (!res.ok) throw new Error(`나라장터 API ${res.status} | ${rawText.slice(0,200)} | URL: ${url.replace(/(serviceKey=)[^&]+/,'$1***')}`);
+      const region = process.env.VERCEL_REGION || "unknown";
+      if (!res.ok) throw new Error(`[region:${region}] 나라장터 API ${res.status} | ${rawText.slice(0,200)} | URL: ${url.replace(/(serviceKey=)[^&]+/,'$1***')}`);
 
       const json = await JSON.parse(rawText);
       // 실제 응답 구조에 따라 파싱 경로 조정 필요
