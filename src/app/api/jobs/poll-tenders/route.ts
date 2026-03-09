@@ -26,19 +26,24 @@ export async function POST(request: NextRequest) {
 
   try {
     // 나라장터 API 호출 (재시도 포함)
+    // 주의: NARA_API_KEY는 .env.local에 이미 URL 인코딩된 상태로 저장됨
+    // searchParams.set()은 자동으로 인코딩하므로 이중 인코딩 방지를 위해
+    // 디코딩 후 set() 하거나, 직접 문자열로 붙임
     const rawItems = await retryWithBackoff(async () => {
-      const url = new URL(
-        `${NARA_API_BASE}/getBidPblancListInfoServc/getBidPblancListInfoServc01`
-      );
-      url.searchParams.set("serviceKey", NARA_API_KEY);
-      url.searchParams.set("pageNo", "1");
-      url.searchParams.set("numOfRows", "100");
-      url.searchParams.set("type", "json");
-      url.searchParams.set("inqryDiv", "1"); // 최신순
-      url.searchParams.set("inqryBgnDt", getRecentDateStr());
-      url.searchParams.set("inqryEndDt", getTodayStr());
+      const baseUrl = `${NARA_API_BASE}/getBidPblancListInfoServc/getBidPblancListInfoServc01`;
+      const params = new URLSearchParams();
+      // NARA_API_KEY가 이미 URL 인코딩된 경우 decode 후 set (searchParams.set이 재인코딩)
+      const decodedKey = decodeURIComponent(NARA_API_KEY);
+      params.set("serviceKey", decodedKey);
+      params.set("pageNo", "1");
+      params.set("numOfRows", "100");
+      params.set("type", "json");
+      params.set("inqryDiv", "1"); // 최신순
+      params.set("inqryBgnDt", getRecentDateStr());
+      params.set("inqryEndDt", getTodayStr());
+      const url = `${baseUrl}?${params.toString()}`;
 
-      const res = await fetch(url.toString(), { cache: "no-store" });
+      const res = await fetch(url, { cache: "no-store" });
       if (!res.ok) throw new Error(`나라장터 API 오류: ${res.status}`);
 
       const json = await res.json();

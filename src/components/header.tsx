@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname, useRouter } from "next/navigation";
+import { usePathname } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { useEffect, useState } from "react";
 import { useTheme } from "next-themes";
@@ -35,9 +35,7 @@ import {
   X,
   Moon,
   Sun,
-  Settings,
   User,
-  Sparkles,
   KeyRound,
   Eye,
   EyeOff,
@@ -52,24 +50,18 @@ const navItems = [
 ];
 
 function ThemeToggle() {
-  const { theme, setTheme } = useTheme();
-  const [mounted, setMounted] = useState(false);
-
-  useEffect(() => setMounted(true), []);
-  if (!mounted) return <div className="h-9 w-9" />;
+  const { resolvedTheme, setTheme } = useTheme();
 
   return (
     <Button
       variant="ghost"
       size="icon"
       className="h-9 w-9 rounded-xl hover:bg-primary/5 transition-colors"
-      onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
+      suppressHydrationWarning
+      onClick={() => setTheme(resolvedTheme === "dark" ? "light" : "dark")}
     >
-      {theme === "dark" ? (
-        <Sun className="h-4 w-4 text-amber-400" />
-      ) : (
-        <Moon className="h-4 w-4 text-muted-foreground" />
-      )}
+      <Sun className="h-4 w-4 text-amber-400 hidden dark:block" suppressHydrationWarning />
+      <Moon className="h-4 w-4 text-muted-foreground dark:hidden" suppressHydrationWarning />
       <span className="sr-only">테마 전환</span>
     </Button>
   );
@@ -77,7 +69,6 @@ function ThemeToggle() {
 
 export function Header() {
   const pathname = usePathname();
-  const router = useRouter();
   const [user, setUser] = useState<{ email?: string } | null>(null);
   const [mobileOpen, setMobileOpen] = useState(false);
   const [pwDialogOpen, setPwDialogOpen] = useState(false);
@@ -99,6 +90,7 @@ export function Header() {
     });
 
     return () => subscription.unsubscribe();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const handleSignOut = async () => {
@@ -141,12 +133,12 @@ export function Header() {
     <>
     <header className="sticky top-0 z-50 glass">
       {/* Gradient top border line */}
-      <div className="h-[2px] w-full bg-gradient-to-r from-transparent via-primary/40 to-transparent" />
+      <div className="h-0.5 w-full bg-linear-to-r from-transparent via-primary/40 to-transparent" />
 
       <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-4 sm:px-6">
         {/* Logo */}
         <Link href="/" className="flex items-center gap-2.5 group">
-          <div className="relative flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br from-primary to-primary/80 text-primary-foreground shadow-lg shadow-primary/20 transition-all group-hover:scale-105 group-hover:shadow-primary/30">
+          <div className="relative flex h-9 w-9 items-center justify-center rounded-xl bg-linear-to-br from-primary to-primary/80 text-primary-foreground shadow-lg shadow-primary/20 transition-all group-hover:scale-105 group-hover:shadow-primary/30">
             <BarChart3 className="h-4.5 w-4.5" />
           </div>
           <div className="hidden sm:flex flex-col">
@@ -187,7 +179,7 @@ export function Header() {
               <DropdownMenuTrigger asChild>
                 <Button variant="ghost" className="relative h-9 w-9 rounded-xl">
                   <Avatar className="h-9 w-9 border-2 border-primary/15 shadow-sm">
-                    <AvatarFallback className="bg-gradient-to-br from-primary/15 to-violet-500/10 text-primary font-bold text-sm">
+                    <AvatarFallback className="bg-linear-to-br from-primary/15 to-violet-500/10 text-primary font-bold text-sm">
                       {emailInitial}
                     </AvatarFallback>
                   </Avatar>

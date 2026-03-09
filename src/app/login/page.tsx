@@ -153,14 +153,14 @@ function LoginContent() {
       {/* Left Hero Panel — Animated Mesh Gradient */}
       <div className="hidden lg:flex lg:w-[55%] relative overflow-hidden">
         {/* Multi-layer gradient background */}
-        <div className="absolute inset-0 bg-gradient-to-br from-indigo-950 via-indigo-900 to-violet-950" />
+        <div className="absolute inset-0 bg-linear-to-br from-indigo-950 via-indigo-900 to-violet-950" />
 
         {/* Animated mesh orbs */}
         <div className="absolute inset-0 overflow-hidden">
-          <div className="absolute top-[-10%] left-[-5%] h-[500px] w-[500px] rounded-full bg-indigo-600/30 blur-[100px] animate-mesh" />
-          <div className="absolute bottom-[-15%] right-[-10%] h-[600px] w-[600px] rounded-full bg-violet-600/25 blur-[120px] animate-mesh" style={{ animationDelay: "-7s" }} />
-          <div className="absolute top-[50%] left-[40%] h-[350px] w-[350px] rounded-full bg-blue-500/20 blur-[80px] animate-mesh" style={{ animationDelay: "-13s" }} />
-          <div className="absolute top-[20%] right-[10%] h-[200px] w-[200px] rounded-full bg-cyan-400/15 blur-[60px] animate-mesh" style={{ animationDelay: "-5s" }} />
+          <div className="absolute top-[-10%] left-[-5%] h-125 w-125 rounded-full bg-indigo-600/30 blur-[100px] animate-mesh" />
+          <div className="absolute bottom-[-15%] right-[-10%] h-150 w-150 rounded-full bg-violet-600/25 blur-[120px] animate-mesh" style={{ animationDelay: "-7s" }} />
+          <div className="absolute top-[50%] left-[40%] h-87.5 w-87.5 rounded-full bg-blue-500/20 blur-[80px] animate-mesh" style={{ animationDelay: "-13s" }} />
+          <div className="absolute top-[20%] right-[10%] h-50 w-50 rounded-full bg-cyan-400/15 blur-[60px] animate-mesh" style={{ animationDelay: "-5s" }} />
         </div>
 
         {/* Dot pattern overlay */}
@@ -188,7 +188,7 @@ function LoginContent() {
               <h1 className="text-5xl xl:text-6xl font-extrabold leading-[1.1] tracking-tight">
                 공공 입찰의
                 <br />
-                <span className="bg-gradient-to-r from-indigo-300 via-blue-200 to-violet-300 bg-clip-text text-transparent">새로운 패러다임</span>
+                <span className="bg-linear-to-r from-indigo-300 via-blue-200 to-violet-300 bg-clip-text text-transparent">새로운 패러다임</span>
               </h1>
               <p className="text-lg text-white/60 leading-relaxed max-w-md">
                 AI 기반 실시간 분석으로 최적의 입찰 기회를
@@ -211,9 +211,9 @@ function LoginContent() {
               {features.map((f) => (
                 <div
                   key={f.title}
-                  className="group flex flex-col gap-2.5 rounded-2xl bg-white/[0.06] backdrop-blur-sm border border-white/[0.08] p-4 transition-all duration-300 hover:bg-white/[0.10] hover:border-white/[0.15] hover:scale-[1.02]"
+                  className="group flex flex-col gap-2.5 rounded-2xl bg-white/6 backdrop-blur-sm border border-white/8 p-4 transition-all duration-300 hover:bg-white/10 hover:border-white/15 hover:scale-[1.02]"
                 >
-                  <div className={`flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br ${f.color}`}>
+                  <div className={`flex h-9 w-9 items-center justify-center rounded-xl bg-linear-to-br ${f.color}`}>
                     <f.icon className="h-4.5 w-4.5 text-white" />
                   </div>
                   <p className="text-sm font-semibold">{f.title}</p>
@@ -235,7 +235,7 @@ function LoginContent() {
         {/* Subtle background gradient */}
         <div className="absolute inset-0 hero-gradient opacity-50" />
 
-        <div className="relative z-10 w-full max-w-[440px] animate-fade-up">
+        <div className="relative z-10 w-full max-w-110 animate-fade-up">
           {/* Mobile Logo */}
           <div className="lg:hidden flex items-center justify-center gap-3 mb-10">
             <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-primary text-primary-foreground shadow-lg shadow-primary/25">
@@ -246,7 +246,7 @@ function LoginContent() {
 
           <Card className="premium-card border-0 shadow-2xl shadow-primary/5 overflow-hidden">
             {/* Card shimmer top border */}
-            <div className="h-[2px] w-full bg-gradient-to-r from-transparent via-primary/40 to-transparent" />
+            <div className="h-0.5 w-full bg-linear-to-r from-transparent via-primary/40 to-transparent" />
 
             <CardHeader className="text-center pb-2 pt-8">
               <CardTitle className="text-2xl font-bold tracking-tight">환영합니다</CardTitle>

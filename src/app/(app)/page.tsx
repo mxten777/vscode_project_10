@@ -1,6 +1,6 @@
 "use client";
 
-import { Suspense, useCallback, useEffect, useState } from "react";
+import { Suspense, useCallback, useEffect, useMemo, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { useTenders } from "@/hooks/use-api";
@@ -21,7 +21,6 @@ import {
   Search,
   ChevronLeft,
   ChevronRight,
-  Calendar,
   Building,
   MapPin,
   TrendingUp,
@@ -76,7 +75,7 @@ export default function HomePage() {
 function DashboardSkeleton() {
   return (
     <div className="space-y-6">
-      <Skeleton className="h-[220px] rounded-2xl" />
+      <Skeleton className="h-55 rounded-2xl" />
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         {Array.from({ length: 4 }).map((_, i) => (
           <Skeleton key={i} className="h-24 rounded-xl" />
@@ -85,7 +84,7 @@ function DashboardSkeleton() {
       <Skeleton className="h-14 rounded-xl" />
       <Skeleton className="h-14 rounded-xl" />
       {Array.from({ length: 5 }).map((_, i) => (
-        <Skeleton key={i} className="h-[108px] rounded-xl" />
+        <Skeleton key={i} className="h-27 rounded-xl" />
       ))}
     </div>
   );
@@ -152,17 +151,16 @@ function HomeContent() {
     }
   };
 
+  const now = useMemo(() => new Date(), []);
   const openCount = data?.data.filter((t) => t.status === "OPEN").length ?? 0;
   const urgentCount = data?.data.filter((t) => {
     if (!t.deadline_at || t.status !== "OPEN") return false;
-    const diff = Math.ceil((new Date(t.deadline_at).getTime() - Date.now()) / (1000 * 60 * 60 * 24));
+    const diff = Math.ceil((new Date(t.deadline_at).getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
     return diff >= 0 && diff <= 3;
   }).length ?? 0;
   const closingToday = data?.data.filter((t) => {
     if (!t.deadline_at) return false;
-    const d = new Date(t.deadline_at);
-    const now = new Date();
-    return d.toDateString() === now.toDateString();
+    return new Date(t.deadline_at).toDateString() === now.toDateString();
   }).length ?? 0;
 
   const hasFilters = debouncedQ || status;
@@ -172,12 +170,12 @@ function HomeContent() {
 
       {/* ─── Hero Banner ─── */}
       <div className="relative overflow-hidden rounded-2xl hero-grid">
-        <div className="absolute inset-0 bg-gradient-to-br from-indigo-950 via-indigo-900 to-violet-950" />
+        <div className="absolute inset-0 bg-linear-to-br from-indigo-950 via-indigo-900 to-violet-950" />
         <div className="noise-overlay" />
         <div className="absolute inset-0 overflow-hidden">
-          <div className="absolute top-[-20%] left-[-5%] h-[280px] w-[280px] rounded-full bg-indigo-500/30 blur-[90px] animate-mesh" />
-          <div className="absolute bottom-[-20%] right-[-5%] h-[320px] w-[320px] rounded-full bg-violet-500/25 blur-[100px] animate-mesh" style={{ animationDelay: "-8s" }} />
-          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 h-[200px] w-[200px] rounded-full bg-cyan-500/10 blur-[80px] animate-mesh" style={{ animationDelay: "-4s" }} />
+          <div className="absolute top-[-20%] left-[-5%] h-70 w-70 rounded-full bg-indigo-500/30 blur-[90px] animate-mesh" />
+          <div className="absolute bottom-[-20%] right-[-5%] h-80 w-80 rounded-full bg-violet-500/25 blur-[100px] animate-mesh" style={{ animationDelay: "-8s" }} />
+          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 h-50 w-50 rounded-full bg-cyan-500/10 blur-[80px] animate-mesh" style={{ animationDelay: "-4s" }} />
         </div>
         {/* Floating keyword pills */}
         <span className="float-slow absolute top-6 right-[12%] hidden lg:inline-flex items-center gap-1.5 rounded-full bg-white/10 backdrop-blur-sm border border-white/15 px-3 py-1 text-xs text-white/70 font-medium">
@@ -205,7 +203,7 @@ function HomeContent() {
             <div>
               <h1 className="text-3xl sm:text-[2.6rem] font-extrabold text-white tracking-tight leading-[1.15]">
                 공공 입찰 공고를<br />
-                <span className="bg-gradient-to-r from-cyan-300 via-violet-300 to-pink-300 bg-clip-text text-transparent">
+                <span className="bg-linear-to-r from-cyan-300 via-violet-300 to-pink-300 bg-clip-text text-transparent">
                   스마트하게 검색
                 </span>
               </h1>
@@ -286,7 +284,7 @@ function HomeContent() {
                     <p className={`text-2xl font-extrabold mt-1.5 tabular-nums tracking-tight ${textCls}`}>{value}</p>
                     <p className="text-[11px] text-muted-foreground/60 mt-1">{sub}</p>
                   </div>
-                  <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-current/15 to-current/5 opacity-80">
+                  <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-linear-to-br from-current/15 to-current/5 opacity-80">
                     <Icon className="h-4.5 w-4.5" />
                   </div>
                 </div>
@@ -411,7 +409,7 @@ function HomeContent() {
       {isLoading && (
         <div className="space-y-3">
           {Array.from({ length: 5 }).map((_, i) => (
-            <Skeleton key={i} className="h-[108px] w-full rounded-xl" />
+            <Skeleton key={i} className="h-27 w-full rounded-xl" />
           ))}
         </div>
       )}
@@ -447,7 +445,7 @@ function HomeContent() {
             return (
               <Link key={tender.id} href={`/tenders/${tender.id}`}>
                 <Card className={`group premium-card card-hover cursor-pointer overflow-hidden ${isUrgent ? "border-rose-500/20" : ""}`}>
-                  {isUrgent && <div className="h-[2px] w-full bg-gradient-to-r from-rose-500/60 via-orange-400/60 to-rose-500/40" />}
+                  {isUrgent && <div className="h-0.5 w-full bg-linear-to-r from-rose-500/60 via-orange-400/60 to-rose-500/40" />}
                   <CardContent className="py-4 px-6">
                     <div className="flex items-start justify-between gap-4">
                       <div className="flex-1 min-w-0">
