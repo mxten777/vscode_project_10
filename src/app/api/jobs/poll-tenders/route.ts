@@ -120,7 +120,7 @@ export async function POST(request: NextRequest) {
     });
   } catch (err) {
     console.error("poll-tenders 전체 오류:", err);
-    return internalErrorResponse();
+    return errorResponse("INTERNAL_ERROR", String(err), 500);
   }
 }
 
