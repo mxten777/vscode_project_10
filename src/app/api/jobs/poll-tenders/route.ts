@@ -12,17 +12,6 @@ const NARA_API_KEY = (process.env.NARA_API_KEY || "").trim(); // trim(): Vercel 
 const NARA_API_ENDPOINT = `${NARA_API_BASE}/ad/BidPublicInfoService/getBidPblancListInfoServc`;
 
 /**
- * GET /api/jobs/poll-tenders (임시 디버그)
- */
-export async function GET() {
-  const keyLen = NARA_API_KEY.length;
-  const url = `${NARA_API_ENDPOINT}?serviceKey=${NARA_API_KEY}&pageNo=1&numOfRows=3&type=json&inqryDiv=1&inqryBgnDt=${getRecentDateStr()}&inqryEndDt=${getTodayStr()}`;
-  const res = await fetch(url, { cache: "no-store" });
-  const body = await res.text();
-  return successResponse({ keyLen, endpoint: NARA_API_ENDPOINT, httpStatus: res.status, dates: { from: getRecentDateStr(), to: getTodayStr() }, body: body.substring(0, 300) });
-}
-
-/**
  * POST /api/jobs/poll-tenders
  * Vercel Cron에서 호출 — 나라장터 API로 신규 공고 수집
  */
@@ -38,11 +27,7 @@ export async function POST(request: NextRequest) {
 
   try {
     // 나라장터 API 호출 (재시도 포함)
-    // 주의: NARA_API_KEY는 .env.local에 이미 URL 인코딩된 상태로 저장됨
-    // searchParams.set()은 자동으로 인코딩하므로 이중 인코딩 방지를 위해
-    // 디코딩 후 set() 하거나, 직접 문자열로 붙임
     const rawItems = await retryWithBackoff(async () => {
-      // 운영계정 키는 plain hex — URL 인코딩 없이 직접 사용
       const url = `${NARA_API_ENDPOINT}?serviceKey=${NARA_API_KEY}&pageNo=1&numOfRows=100&type=json&inqryDiv=1&inqryBgnDt=${getRecentDateStr()}&inqryEndDt=${getTodayStr()}`;
 
       const res = await fetch(url, { cache: "no-store" });
@@ -125,8 +110,7 @@ export async function POST(request: NextRequest) {
     });
   } catch (err) {
     console.error("poll-tenders 전체 오류:", err);
-    const msg = err instanceof Error ? err.message : JSON.stringify(err);
-    return errorResponse("INTERNAL_ERROR", msg, 500);
+    return internalErrorResponse();
   }
 }
 
