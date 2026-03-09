@@ -44,9 +44,10 @@ export async function POST(request: NextRequest) {
       const url = `${baseUrl}?${params.toString()}`;
 
       const res = await fetch(url, { cache: "no-store" });
-      if (!res.ok) throw new Error(`나라장터 API 오류: ${res.status}`);
+      const rawText = await res.text();
+      if (!res.ok) throw new Error(`나라장터 API 오류: ${res.status} | body: ${rawText.slice(0, 300)} | url(key masked): ${url.replace(/(serviceKey=)[^&]+/, '$1***')}`);
 
-      const json = await res.json();
+      const json = await JSON.parse(rawText);
       // 실제 응답 구조에 따라 파싱 경로 조정 필요
       const items =
         json?.response?.body?.items ?? json?.items ?? json?.data ?? [];
