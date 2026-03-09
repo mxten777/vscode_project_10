@@ -44,10 +44,9 @@ export async function POST(request: NextRequest) {
       const url = `${baseUrl}?${params.toString()}`;
 
       const res = await fetch(url, { cache: "no-store" });
-      const rawText = await res.text();
-      if (!res.ok) throw new Error(`나라장터 API 오류: ${res.status} | body: ${rawText.slice(0, 300)} | url(key masked): ${url.replace(/(serviceKey=)[^&]+/, '$1***')}`);
+      if (!res.ok) throw new Error(`나라장터 API 오류: ${res.status}`);
 
-      const json = await JSON.parse(rawText);
+      const json = await res.json();
       // 실제 응답 구조에 따라 파싱 경로 조정 필요
       const items =
         json?.response?.body?.items ?? json?.items ?? json?.data ?? [];
@@ -119,8 +118,7 @@ export async function POST(request: NextRequest) {
     });
   } catch (err) {
     console.error("poll-tenders 전체 오류:", err);
-    // 임시: 디버깅용 실제 오류 노출
-    return errorResponse("INTERNAL_ERROR", String(err), 500);
+    return internalErrorResponse();
   }
 }
 
