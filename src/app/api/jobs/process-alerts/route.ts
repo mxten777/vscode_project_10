@@ -35,24 +35,43 @@ export async function POST(request: NextRequest) {
       .select("*")
       .gte("created_at", since);
 
-    if (!recentTenders?.length) {
-      return successResponse({ message: "신규 공고 없음", ...stats });
-    }
-
     // 3) 각 규칙에 대해 매칭 + 발송
     for (const rule of rules) {
       stats.evaluated++;
       const ruleJson = rule.rule_json as AlertRuleJson;
-      const matched = recentTenders.filter((t) => matchesRule(t, ruleJson, rule.type));
 
-      if (!matched.length) continue;
-
-      // 사용자 이메일 조회
+      // 사용자 이메일 조회 (결과 없음 안내에도 필요)
       const { data: userData } = await supabase.auth.admin.getUserById(rule.user_id);
       const userEmail = userData?.user?.email;
       if (!userEmail) continue;
 
       const provider = getNotificationProvider(rule.channel);
+
+      // 신규 공고 자체가 없는 경우
+      if (!recentTenders?.length) {
+        await new Promise((r) => setTimeout(r, 600));
+        await provider.send({
+          to: userEmail,
+          subject: `[입찰알림] 오늘 신규 공고 없음`,
+          body: buildNoTendersBody(ruleJson),
+        });
+        stats.sent++;
+        continue;
+      }
+
+      const matched = recentTenders.filter((t) => matchesRule(t, ruleJson, rule.type));
+
+      // 매칭 공고 없는 경우 → 결과 없음 안내 이메일
+      if (!matched.length) {
+        await new Promise((r) => setTimeout(r, 600));
+        await provider.send({
+          to: userEmail,
+          subject: `[입찰알림] 오늘 조건에 맞는 공고 없음`,
+          body: buildNoMatchBody(ruleJson),
+        });
+        stats.sent++;
+        continue;
+      }
 
       for (const tender of matched) {
         // 중복 발송 방지: INSERT ON CONFLICT DO NOTHING (UNIQUE 제약 활용, TOCTOU 제거)
@@ -129,6 +148,30 @@ function matchesRule(
   if (ruleJson.budgetMax != null && budget > ruleJson.budgetMax) return false;
 
   return true;
+}
+
+function buildNoTendersBody(ruleJson: AlertRuleJson): string {
+  return `
+    <div style="font-family: sans-serif; padding: 20px;">
+      <h2 style="color: #6b7280;">오늘 신규 입찰 공고 없음</h2>
+      <hr />
+      <p>오늘은 나라장터에서 수집된 신규 공고가 없습니다.</p>
+      <p><strong>알림 키워드:</strong> ${ruleJson.keyword || "(없음)"}</p>
+      <p style="color: #9ca3af; font-size: 12px;">다음 평일 오전 9시 30분에 다시 확인합니다.</p>
+    </div>
+  `;
+}
+
+function buildNoMatchBody(ruleJson: AlertRuleJson): string {
+  return `
+    <div style="font-family: sans-serif; padding: 20px;">
+      <h2 style="color: #6b7280;">오늘 조건에 맞는 공고 없음</h2>
+      <hr />
+      <p>오늘 수집된 공고 중 설정하신 조건에 맞는 공고가 없습니다.</p>
+      <p><strong>알림 키워드:</strong> ${ruleJson.keyword || "(없음)"}</p>
+      <p style="color: #9ca3af; font-size: 12px;">다음 평일 오전 9시 30분에 다시 확인합니다.</p>
+    </div>
+  `;
 }
 
 function buildAlertBody(tender: Record<string, unknown>): string {
