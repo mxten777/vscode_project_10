@@ -16,9 +16,6 @@ import { Switch } from "@/components/ui/switch";
 import {
   Card,
   CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
 } from "@/components/ui/card";
 import {
   Dialog,
@@ -36,6 +33,16 @@ import {
 } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Skeleton } from "@/components/ui/skeleton";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Bell, Plus, Trash2, Mail, MessageSquare, BellRing, Send, AlertTriangle } from "lucide-react";
 import { toast } from "sonner";
 
@@ -47,17 +54,24 @@ export default function AlertsPage() {
   const deleteRule = useDeleteAlertRule();
 
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [deleteTargetId, setDeleteTargetId] = useState<string | null>(null);
 
   const [ruleType, setRuleType] = useState<"KEYWORD" | "FILTER">("KEYWORD");
+  const [ruleName, setRuleName] = useState("");
   const [keyword, setKeyword] = useState("");
   const [budgetMin, setBudgetMin] = useState("");
   const [budgetMax, setBudgetMax] = useState("");
   const [channel, setChannel] = useState<"EMAIL" | "KAKAO">("EMAIL");
 
   const handleCreate = async () => {
+    if (!keyword.trim() && ruleType === "KEYWORD") {
+      toast.error("키워드를 입력해주세요");
+      return;
+    }
     try {
       await createRule.mutateAsync({
         type: ruleType,
+        name: ruleName.trim() || undefined,
         rule_json: {
           keyword: keyword || undefined,
           budgetMin: budgetMin ? Number(budgetMin) : undefined,
@@ -87,6 +101,7 @@ export default function AlertsPage() {
     try {
       await deleteRule.mutateAsync(id);
       toast.success("규칙 삭제 완료");
+      setDeleteTargetId(null);
     } catch {
       toast.error("삭제 실패");
     }
@@ -94,6 +109,7 @@ export default function AlertsPage() {
 
   const resetForm = () => {
     setRuleType("KEYWORD");
+    setRuleName("");
     setKeyword("");
     setBudgetMin("");
     setBudgetMax("");
@@ -128,6 +144,16 @@ export default function AlertsPage() {
                 <DialogTitle>새 알림 규칙</DialogTitle>
               </DialogHeader>
               <div className="space-y-4 pt-2">
+                <div className="space-y-2">
+                  <Label className="text-xs font-medium text-muted-foreground uppercase tracking-wider">규칙 이름 (선택)</Label>
+                  <Input
+                    placeholder="예: AI 공공사업 알림"
+                    value={ruleName}
+                    onChange={(e) => setRuleName(e.target.value)}
+                    className="h-11"
+                  />
+                </div>
+
                 <div className="space-y-2">
                   <Label className="text-xs font-medium text-muted-foreground uppercase tracking-wider">유형</Label>
                   <Select
@@ -189,7 +215,9 @@ export default function AlertsPage() {
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="EMAIL">이메일</SelectItem>
-                      <SelectItem value="KAKAO">카카오톡 (준비중)</SelectItem>
+                      <SelectItem value="KAKAO" disabled>
+                        카카오톡 (준비중)
+                      </SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
@@ -251,6 +279,9 @@ export default function AlertsPage() {
                       <div className="flex items-center justify-between">
                         <div className="flex-1">
                           <div className="flex items-center gap-2 mb-1.5">
+                            {rule.name && (
+                              <span className="text-sm font-semibold text-foreground">{rule.name}</span>
+                            )}
                             <Badge variant={rule.type === "KEYWORD" ? "default" : "secondary"}>
                               {rule.type === "KEYWORD" ? "키워드" : "필터"}
                             </Badge>
@@ -293,7 +324,7 @@ export default function AlertsPage() {
                             variant="ghost"
                             size="icon"
                             className="h-8 w-8 rounded-full hover:bg-destructive/10"
-                            onClick={() => handleDelete(rule.id)}
+                            onClick={() => setDeleteTargetId(rule.id)}
                           >
                             <Trash2 className="h-4 w-4 text-destructive" />
                           </Button>
@@ -362,6 +393,28 @@ export default function AlertsPage() {
           )}
         </TabsContent>
       </Tabs>
+
+      {/* 삭제 확인 다이얼로그 */}
+      <AlertDialog open={!!deleteTargetId} onOpenChange={(o) => !o && setDeleteTargetId(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>알림 규칙을 삭제할까요?</AlertDialogTitle>
+            <AlertDialogDescription>
+              삭제된 규칙은 복구할 수 없습니다. 발송 이력은 유지됩니다.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>취소</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-destructive text-white hover:bg-destructive/90"
+              onClick={() => deleteTargetId && handleDelete(deleteTargetId)}
+              disabled={deleteRule.isPending}
+            >
+              {deleteRule.isPending ? "삭제 중..." : "삭제"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

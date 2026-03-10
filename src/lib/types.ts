@@ -87,6 +87,7 @@ export interface AlertRule {
   org_id: string;
   user_id: string;
   type: AlertType;
+  name: string | null;
   rule_json: AlertRuleJson;
   channel: AlertChannel;
   is_enabled: boolean;
