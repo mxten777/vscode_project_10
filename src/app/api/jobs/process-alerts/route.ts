@@ -70,6 +70,9 @@ export async function POST(request: NextRequest) {
         // 이미 처리된 (rule, tender) 쌍이면 DB가 UNIQUE 위반으로 skip
         if (logInsertErr?.code === "23505") continue;
 
+        // Resend 무료 플랜: 초당 2건 제한 → 600ms 간격으로 발송
+        await new Promise((r) => setTimeout(r, 600));
+
         const result = await provider.send({
           to: userEmail,
           subject: `[입찰알림] ${tender.title}`,
