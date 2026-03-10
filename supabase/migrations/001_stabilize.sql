@@ -8,9 +8,17 @@
 
 -- 1. alert_logs 중복 알림 방지 UNIQUE 제약 ──────────────────
 --    동일 (rule, tender) 쌍에 대한 중복 발송을 DB 레벨에서 차단
-ALTER TABLE public.alert_logs
-  ADD CONSTRAINT uq_alert_logs_rule_tender
-  UNIQUE (alert_rule_id, tender_id);
+DO $$ BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM information_schema.table_constraints
+    WHERE table_name = 'alert_logs'
+      AND constraint_name = 'uq_alert_logs_rule_tender'
+  ) THEN
+    ALTER TABLE public.alert_logs
+      ADD CONSTRAINT uq_alert_logs_rule_tender
+      UNIQUE (alert_rule_id, tender_id);
+  END IF;
+END $$;
 
 -- 2. alert_rules 이름 컬럼 추가 ───────────────────────────
 --    UI에서 규칙 이름 입력·표시를 위한 컬럼 (기존 데이터 NULL 허용)

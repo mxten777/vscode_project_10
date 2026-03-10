@@ -147,11 +147,12 @@ export default function AlertsPage() {
                 <div className="space-y-2">
                   <Label className="text-xs font-medium text-muted-foreground uppercase tracking-wider">키워드</Label>
                   <Input
-                    placeholder="예: 소프트웨어, 정보화"
+                    placeholder="예: AI 시스템 소프트웨어 (띄어쓰기로 구분, OR 조건)"
                     value={keyword}
                     onChange={(e) => setKeyword(e.target.value)}
                     className="h-11"
                   />
+                  <p className="text-xs text-muted-foreground">여러 키워드는 띄어쓰기로 구분 — 하나라도 포함되면 알림 발송</p>
                 </div>
 
                 <div className="grid grid-cols-2 gap-3">

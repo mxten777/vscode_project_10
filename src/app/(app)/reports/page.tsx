@@ -175,8 +175,7 @@ export default function ReportsPage() {
               </CardHeader>
               <CardContent>
                 {data.statusDistribution.length > 0 ? (
-                  <div className="h-[260px]">
-                    <ResponsiveContainer width="100%" height="100%">
+                  <ResponsiveContainer width="100%" height={260}>
                       <PieChart>
                         <Pie
                           data={data.statusDistribution.map((s) => ({
@@ -217,7 +216,6 @@ export default function ReportsPage() {
                         />
                       </PieChart>
                     </ResponsiveContainer>
-                  </div>
                 ) : (
                   <p className="py-12 text-center text-sm text-muted-foreground">
                     데이터 없음
@@ -237,8 +235,7 @@ export default function ReportsPage() {
               </CardHeader>
               <CardContent>
                 {data.topAgencies.length > 0 ? (
-                  <div className="h-[260px]">
-                    <ResponsiveContainer width="100%" height="100%">
+                  <ResponsiveContainer width="100%" height={260}>
                       <BarChart
                         data={data.topAgencies.slice(0, 8).map((a) => ({
                           name: a.name.length > 10 ? a.name.slice(0, 10) + "…" : a.name,
@@ -271,7 +268,6 @@ export default function ReportsPage() {
                         <Bar dataKey="count" fill="#4f46e5" radius={[4, 4, 0, 0]} />
                       </BarChart>
                     </ResponsiveContainer>
-                  </div>
                 ) : (
                   <p className="py-12 text-center text-sm text-muted-foreground">
                     데이터 없음

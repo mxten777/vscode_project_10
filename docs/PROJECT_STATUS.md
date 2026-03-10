@@ -207,7 +207,7 @@ ebb1a24 debug: xml response + key length check
 |---|------|------|--------|
 | 1 | **Resend API 키 발급** | https://resend.com 가입 → API Key 발급 → Vercel 환경변수 `RESEND_API_KEY` 등록. 이메일 알림 기능 활성화 | 낮음 |
 | 2 | **Cron Job 실제 수집 확인** | 나라장터 데이터가 DB에 실제로 적재되는지 확인. `curl -X POST https://bid-platform.vercel.app/api/jobs/poll-tenders -H "Authorization: Bearer {CRON_SECRET}"` | 낮음 |
-| 3 | **Migration 001 Supabase 적용** | `supabase/migrations/001_stabilize.sql`을 Supabase Dashboard > SQL Editor에서 실행 | 낮음 |
+| 3 | ~~**Migration 001 Supabase 적용**~~ ✅ | `supabase/migrations/001_stabilize.sql` Supabase Dashboard > SQL Editor 실행 완료 (2026-03-10) | 완료 |
 | 4 | **전체 사용자 플로우 테스트** | 회원가입 → 로그인 → 공고 조회 → 즐겨찾기 → 알림 규칙 생성 → 리포트 차트 | 중간 |
 | 5 | **에러 핸들링 강화** | API 에러 시 사용자 친화적 메시지, 네트워크 오류 재시도 UI | 중간 |
 

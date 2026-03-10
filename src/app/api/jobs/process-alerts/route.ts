@@ -106,9 +106,11 @@ function matchesRule(
 ): boolean {
   if (type === "KEYWORD" && ruleJson.keyword) {
     const title = (tender.title as string) || "";
-    if (!title.toLowerCase().includes(ruleJson.keyword.toLowerCase())) {
-      return false;
-    }
+    const titleLower = title.toLowerCase();
+    // 공백으로 분리된 키워드를 OR 조건으로 매칭 ("AI RAG LLM" → AI 또는 RAG 또는 LLM)
+    const keywords = ruleJson.keyword.split(/\s+/).filter(Boolean);
+    const matched = keywords.some((kw) => titleLower.includes(kw.toLowerCase()));
+    if (!matched) return false;
   }
 
   if (ruleJson.regionCodes?.length) {
