@@ -4,7 +4,7 @@ import { Suspense, useCallback, useEffect, useMemo, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { useTenders } from "@/hooks/use-api";
-import { formatKRW, tenderStatusLabel } from "@/lib/helpers";
+import { formatKRW, tenderStatusLabel, formatRawDate } from "@/lib/helpers";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -498,7 +498,7 @@ function HomeContent() {
                           {tender.deadline_at && (
                             <span className={`flex items-center gap-1.5 ${isUrgent ? "text-rose-500 dark:text-rose-400 font-medium" : ""}`}>
                               <Clock className="h-3.5 w-3.5 opacity-55" />
-                              마감: {new Date(tender.deadline_at).toLocaleDateString("ko-KR")}
+                              마감: {formatRawDate(tender.raw_json, "bidClseDt", tender.deadline_at)}
                             </span>
                           )}
                         </div>
@@ -509,7 +509,7 @@ function HomeContent() {
                         </p>
                         {tender.published_at && (
                           <p className="text-xs text-muted-foreground">
-                            공고: {new Date(tender.published_at).toLocaleDateString("ko-KR")}
+                            공고: {formatRawDate(tender.raw_json, "bidNtceDt", tender.published_at)}
                           </p>
                         )}
                         <div className="flex h-7 w-7 items-center justify-center rounded-full bg-primary/0 group-hover:bg-primary/10 transition-all mt-1">

@@ -3,7 +3,7 @@
 import { use } from "react";
 import { useRouter } from "next/navigation";
 import { useTender, useToggleFavorite } from "@/hooks/use-api";
-import { formatKRW, tenderStatusLabel } from "@/lib/helpers";
+import { formatKRW, tenderStatusLabel, formatRawDate } from "@/lib/helpers";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -283,20 +283,12 @@ export default function TenderDetailPage({
             <InfoRow
               icon={<Calendar className="h-4 w-4" />}
               label="공고일"
-              value={
-                tender.published_at
-                  ? new Date(tender.published_at).toLocaleString("ko-KR")
-                  : "-"
-              }
+              value={formatRawDate(tender.raw_json, "bidNtceDt", tender.published_at, true)}
             />
             <InfoRow
               icon={<Calendar className="h-4 w-4" />}
               label="마감일"
-              value={
-                tender.deadline_at
-                  ? new Date(tender.deadline_at).toLocaleString("ko-KR")
-                  : "-"
-              }
+              value={formatRawDate(tender.raw_json, "bidClseDt", tender.deadline_at, true)}
             />
             {tender.industry_name && (
               <InfoRow

@@ -157,8 +157,8 @@ function parseDate(dateStr?: string): string | null {
     const d = new Date(`${s.slice(0, 4)}-${s.slice(4, 6)}-${s.slice(6, 8)}`);
     return isNaN(d.getTime()) ? null : d.toISOString();
   }
-  // 기타 형식 ("2024-01-01 12:00" 등)
-  const d = new Date(s.replace(" ", "T"));
+  // 기타 형식 ("2026-03-03 09:40:03" 등) — 나라장터는 KST 기준, +09:00 명시
+  const d = new Date(s.replace(" ", "T") + "+09:00");
   return isNaN(d.getTime()) ? null : d.toISOString();
 }
 

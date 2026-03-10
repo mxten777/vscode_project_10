@@ -62,3 +62,26 @@ export function tenderStatusLabel(status: string): string {
   };
   return map[status] ?? status;
 }
+
+/**
+ * 나라장터 원본 날짜 문자열 포맷 (가공 없이 표시)
+ * raw_json의 bidNtceDt/bidClseDt → "YYYY. M. D." or "YYYY. M. D. HH:MM"
+ * 없으면 published_at ISO 문자열을 fallback으로 사용
+ */
+export function formatRawDate(
+  rawJson: Record<string, unknown> | null | undefined,
+  field: "bidNtceDt" | "bidClseDt",
+  fallbackIso: string | null | undefined,
+  includeTime = false
+): string {
+  const raw = rawJson?.[field] as string | undefined;
+  const src = raw || fallbackIso;
+  if (!src) return "-";
+  // "2026-03-03 09:40:03" 또는 ISO 형식에서 날짜/시간 파싱 (timezone 변환 없이)
+  const match = src.match(/^(\d{4})[^\d](\d{2})[^\d](\d{2})(?:[^\d](\d{2})[:.](\d{2}))?/);
+  if (!match) return src;
+  const [, y, m, d, hh, mm] = match;
+  const datePart = `${y}. ${parseInt(m)}. ${parseInt(d)}.`;
+  if (includeTime && hh && mm) return `${datePart} ${hh}:${mm}`;
+  return datePart;
+}

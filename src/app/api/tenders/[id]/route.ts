@@ -18,13 +18,14 @@ export async function GET(
     const { id } = await params;
     const supabase = await createClient();
 
-    // raw_json 제외 (보안: G2B 원본 필드 클라이언트 노출 차단)
+    // raw_json 포함 (공고일·마감일 원본 표시용, G2B 공개 데이터)
     const { data, error } = await supabase
       .from("tenders")
       .select(`
         id, source_tender_id, title, demand_agency_name,
         budget_amount, region_code, region_name, industry_code, industry_name,
         method_type, published_at, deadline_at, status, created_at, updated_at,
+        raw_json,
         agency:agencies(id, code, name),
         award:awards(id, winner_company_name, awarded_amount, awarded_rate, opened_at)
       `)
