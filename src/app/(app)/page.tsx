@@ -18,6 +18,14 @@ import {
 } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import {
   Search,
   ChevronLeft,
   ChevronRight,
@@ -35,9 +43,12 @@ import {
   Star,
   Bell,
   X,
+  LayoutList,
+  Table2,
 } from "lucide-react";
 
-const PAGE_SIZE = 20;
+const PAGE_SIZE_CARD = 20;
+const PAGE_SIZE_TABLE = 50;
 
 // Category chips mapping keyword → display
 const CATEGORY_CHIPS = [
@@ -109,6 +120,7 @@ function HomeContent() {
   );
   const [debouncedQ, setDebouncedQ] = useState(q);
   const [activeCategory, setActiveCategory] = useState("");
+  const [viewMode, setViewMode] = useState<"card" | "table">("table");
 
   useEffect(() => {
     const timer = setTimeout(() => setDebouncedQ(q), 300);
@@ -142,10 +154,10 @@ function HomeContent() {
     sortBy: sortBy as "published_at" | "deadline_at" | "budget_amount" | "created_at",
     sortOrder: "desc",
     page,
-    pageSize: PAGE_SIZE,
+    pageSize: viewMode === "table" ? PAGE_SIZE_TABLE : PAGE_SIZE_CARD,
   });
 
-  const totalPages = data ? Math.ceil(data.total / PAGE_SIZE) : 0;
+  const totalPages = data ? Math.ceil(data.total / (viewMode === "table" ? PAGE_SIZE_TABLE : PAGE_SIZE_CARD)) : 0;
 
   const statusColor = (s: string): "default" | "secondary" | "outline" => {
     switch (s) {
@@ -435,14 +447,119 @@ function HomeContent() {
             총 <span className="font-semibold text-foreground">{data.total.toLocaleString()}</span>건
             {debouncedQ && <span className="ml-1">· &ldquo;<span className="text-primary font-medium">{debouncedQ}</span>&rdquo; 검색결과</span>}
           </p>
-          <p className="text-xs text-muted-foreground">
-            {page} / {totalPages || 1} 페이지
-          </p>
+          <div className="flex items-center gap-2">
+            <p className="text-xs text-muted-foreground hidden sm:block">
+              {page} / {totalPages || 1} 페이지
+            </p>
+            <div className="flex rounded-lg border border-border/60 overflow-hidden">
+              <button
+                onClick={() => { setViewMode("table"); setPage(1); }}
+                className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium transition-colors ${viewMode === "table" ? "bg-primary text-primary-foreground" : "bg-background text-muted-foreground hover:text-foreground hover:bg-muted/50"}`}
+                title="테이블 뷰"
+              >
+                <Table2 className="h-3.5 w-3.5" />
+                <span className="hidden sm:inline">테이블</span>
+              </button>
+              <button
+                onClick={() => { setViewMode("card"); setPage(1); }}
+                className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium transition-colors border-l border-border/60 ${viewMode === "card" ? "bg-primary text-primary-foreground" : "bg-background text-muted-foreground hover:text-foreground hover:bg-muted/50"}`}
+                title="카드 뷰"
+              >
+                <LayoutList className="h-3.5 w-3.5" />
+                <span className="hidden sm:inline">카드</span>
+              </button>
+            </div>
+          </div>
         </div>
       )}
 
-      {/* ─── Tender List ─── */}
-      {data && data.data.length > 0 && (
+      {/* ─── Table View ─── */}
+      {data && data.data.length > 0 && viewMode === "table" && (
+        <Card className="premium-card overflow-hidden">
+          <Table>
+            <TableHeader>
+              <TableRow className="border-border/50 hover:bg-transparent">
+                <TableHead className="w-20 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">상태</TableHead>
+                <TableHead className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">공고명</TableHead>
+                <TableHead className="w-36 hidden md:table-cell text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">발주기관</TableHead>
+                <TableHead className="w-20 hidden lg:table-cell text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">지역</TableHead>
+                <TableHead className="w-32 hidden sm:table-cell text-[11px] font-semibold uppercase tracking-wider text-muted-foreground text-right">예산</TableHead>
+                <TableHead className="w-24 hidden xl:table-cell text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">공고일</TableHead>
+                <TableHead className="w-28 hidden sm:table-cell text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">마감일</TableHead>
+                <TableHead className="w-16 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground text-center">D-day</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {data.data.map((tender) => {
+                const dday = getDday(tender.deadline_at ?? null);
+                const isUrgent = dday?.cls === "dday-urgent";
+                const agencyName = (tender.agency as unknown as { name: string } | null)?.name
+                  || tender.demand_agency_name;
+                return (
+                  <TableRow
+                    key={tender.id}
+                    className={`border-border/40 cursor-pointer transition-colors hover:bg-primary/4 ${isUrgent ? "bg-rose-500/3" : ""}`}
+                    onClick={() => router.push(`/tenders/${tender.id}`)}
+                  >
+                    <TableCell className="py-2.5">
+                      <Badge
+                        variant={statusColor(tender.status)}
+                        className="rounded-md font-semibold text-[11px] h-5 whitespace-nowrap"
+                      >
+                        {tenderStatusLabel(tender.status)}
+                      </Badge>
+                    </TableCell>
+                    <TableCell className="py-2.5 max-w-0">
+                      <div className="flex items-start gap-1.5">
+                        <span className="font-medium text-sm leading-snug line-clamp-2 min-w-0 flex-1 hover:text-primary transition-colors">
+                          {tender.title}
+                        </span>
+                        {isNew(tender.published_at ?? null) && !dday && (
+                          <span className="badge-new shrink-0 mt-0.5">신규</span>
+                        )}
+                      </div>
+                      {tender.industry_name && (
+                        <span className="mt-0.5 inline-block text-[10px] text-muted-foreground/70">
+                          {tender.industry_name}{tender.method_type ? ` · ${tender.method_type}` : ""}
+                        </span>
+                      )}
+                    </TableCell>
+                    <TableCell className="py-2.5 hidden md:table-cell">
+                      <span className="text-xs text-muted-foreground line-clamp-1">{agencyName || "-"}</span>
+                    </TableCell>
+                    <TableCell className="py-2.5 hidden lg:table-cell">
+                      <span className="text-xs text-muted-foreground">{tender.region_name || "-"}</span>
+                    </TableCell>
+                    <TableCell className="py-2.5 hidden sm:table-cell text-right">
+                      <span className="text-sm font-bold text-primary tabular-nums">{formatKRW(tender.budget_amount)}</span>
+                    </TableCell>
+                    <TableCell className="py-2.5 hidden xl:table-cell">
+                      <span className="text-xs text-muted-foreground tabular-nums">
+                        {formatRawDate(tender.raw_json, "bidNtceDt", tender.published_at)}
+                      </span>
+                    </TableCell>
+                    <TableCell className="py-2.5 hidden sm:table-cell">
+                      <span className={`text-xs tabular-nums ${isUrgent ? "text-rose-500 font-medium" : "text-muted-foreground"}`}>
+                        {formatRawDate(tender.raw_json, "bidClseDt", tender.deadline_at)}
+                      </span>
+                    </TableCell>
+                    <TableCell className="py-2.5 text-center">
+                      {dday ? (
+                        <span className={dday.cls}>{dday.label}</span>
+                      ) : (
+                        <span className="text-muted-foreground/30 text-xs">—</span>
+                      )}
+                    </TableCell>
+                  </TableRow>
+                );
+              })}
+            </TableBody>
+          </Table>
+        </Card>
+      )}
+
+      {/* ─── Tender List (Card View) ─── */}
+      {data && data.data.length > 0 && viewMode === "card" && (
         <div className="space-y-3 stagger-children">
           {data.data.map((tender) => {
             const dday = getDday(tender.deadline_at ?? null);
