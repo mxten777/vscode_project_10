@@ -103,10 +103,19 @@ export async function POST(request: NextRequest) {
       results.inserted = upserted?.length ?? 0;
     }
 
+    // 진단: 첫 3건의 날짜 필드 원본값 로그 (파싱 형식 확인용)
+    const sampleDateFields = rawItems.slice(0, 3).map((item) => ({
+      bidNtceDt: item.bidNtceDt,
+      rgstDt: item.rgstDt,
+      parsed_published_at: parseDate((item.bidNtceDt || item.rgstDt) as string),
+    }));
+    console.log("[poll-tenders] 날짜 필드 샘플:", JSON.stringify(sampleDateFields));
+
     return successResponse({
       message: "수집 완료",
       totalFetched: rawItems.length,
       ...results,
+      sampleDateFields,
     });
   } catch (err) {
     console.error("poll-tenders 전체 오류:", err);
@@ -136,9 +145,20 @@ function determineTenderStatus(item: Record<string, unknown>): string {
 
 function parseDate(dateStr?: string): string | null {
   if (!dateStr) return null;
-  // 나라장터는 "20240101" 또는 "2024-01-01 12:00" 등 다양한 형식
-  const cleaned = dateStr.replace(/(\d{4})(\d{2})(\d{2})/, "$1-$2-$3");
-  const d = new Date(cleaned);
+  const s = dateStr.trim();
+  // YYYYMMDDHHMM (12자리, 나라장터 표준 형식) → KST(+09:00) 기준 ISO 변환
+  if (/^\d{12}$/.test(s)) {
+    const iso = `${s.slice(0, 4)}-${s.slice(4, 6)}-${s.slice(6, 8)}T${s.slice(8, 10)}:${s.slice(10, 12)}:00+09:00`;
+    const d = new Date(iso);
+    return isNaN(d.getTime()) ? null : d.toISOString();
+  }
+  // YYYYMMDD (8자리)
+  if (/^\d{8}$/.test(s)) {
+    const d = new Date(`${s.slice(0, 4)}-${s.slice(4, 6)}-${s.slice(6, 8)}`);
+    return isNaN(d.getTime()) ? null : d.toISOString();
+  }
+  // 기타 형식 ("2024-01-01 12:00" 등)
+  const d = new Date(s.replace(" ", "T"));
   return isNaN(d.getTime()) ? null : d.toISOString();
 }
 
