@@ -698,6 +698,154 @@
   animation: fill-bar 1.2s cubic-bezier(0.16, 1, 0.3, 1) both;
 }
 
+/* ─── Market Pulse Strip ─── */
+.mkt-pulse {
+  display: flex;
+  align-items: stretch;
+  border-radius: 14px;
+  border: 1px solid oklch(0.910 0.018 264 / 70%);
+  background: linear-gradient(135deg, oklch(1 0 0 / 92%) 0%, oklch(0.975 0.010 264 / 82%) 100%);
+  backdrop-filter: blur(12px);
+  overflow: hidden;
+  box-shadow:
+    0 1px 3px oklch(0 0 0 / 4%),
+    0 4px 24px oklch(0.500 0.220 264 / 7%),
+    inset 0 1px 0 oklch(1 0 0 / 60%);
+}
+.dark .mkt-pulse {
+  border-color: oklch(0.290 0.030 264 / 65%);
+  background: linear-gradient(135deg, oklch(0.178 0.026 264) 0%, oklch(0.158 0.022 264) 100%);
+  box-shadow:
+    0 1px 3px oklch(0 0 0 / 22%),
+    0 4px 24px oklch(0.620 0.230 264 / 9%);
+}
+.mkt-pulse-item {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 2px;
+  padding: 13px 18px;
+  flex: 1;
+  min-width: 0;
+  position: relative;
+}
+.mkt-pulse-item + .mkt-pulse-item::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 18%;
+  bottom: 18%;
+  width: 1px;
+  background: oklch(0.500 0.220 264 / 9%);
+}
+.dark .mkt-pulse-item + .mkt-pulse-item::before {
+  background: oklch(0.620 0.230 264 / 13%);
+}
+.mkt-pulse-label {
+  font-size: 9.5px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  color: oklch(0.550 0.025 264);
+  white-space: nowrap;
+}
+.dark .mkt-pulse-label { color: oklch(0.570 0.025 264); }
+.mkt-pulse-value {
+  font-size: 15px;
+  font-weight: 800;
+  letter-spacing: -0.025em;
+  color: oklch(0.130 0.020 264);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  line-height: 1.2;
+}
+.dark .mkt-pulse-value { color: oklch(0.94 0.008 264); }
+.mkt-pulse-sub {
+  font-size: 9.5px;
+  color: oklch(0.560 0.018 264);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+.dark .mkt-pulse-sub { color: oklch(0.530 0.018 264); }
+
+/* ─── Budget mini-bar (in table rows) ─── */
+.bgt-bar-track {
+  height: 3px;
+  border-radius: 999px;
+  background: oklch(0.910 0.018 264 / 55%);
+  overflow: hidden;
+  margin-top: 4px;
+  width: 100%;
+}
+.dark .bgt-bar-track { background: oklch(0.280 0.025 264 / 65%); }
+.bgt-bar-fill {
+  height: 100%;
+  border-radius: 999px;
+  background: linear-gradient(90deg, oklch(0.500 0.220 264 / 75%), oklch(0.580 0.200 230 / 75%));
+  transition: width 0.9s cubic-bezier(0.16, 1, 0.3, 1);
+  min-width: 3px;
+}
+
+/* ─── Table sortable header ─── */
+.th-sort {
+  cursor: pointer;
+  user-select: none;
+  transition: color 0.12s ease;
+}
+.th-sort:hover { color: oklch(0.250 0.025 264) !important; }
+.dark .th-sort:hover { color: oklch(0.94 0.008 264) !important; }
+.th-active { color: oklch(0.500 0.220 264) !important; }
+.dark .th-active { color: oklch(0.640 0.230 264) !important; }
+
+/* ─── Row number cell ─── */
+.row-num {
+  font-size: 10px;
+  font-weight: 500;
+  color: oklch(0.680 0.015 264);
+  font-variant-numeric: tabular-nums;
+  font-family: var(--font-mono);
+}
+.dark .row-num { color: oklch(0.440 0.018 264); }
+
+/* ─── Stat card compact (6-up) ─── */
+.stat-card-sm {
+  position: relative;
+  overflow: hidden;
+  transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.stat-card-sm::before {
+  content: "";
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 2.5px;
+  background: linear-gradient(90deg, var(--stat-color, oklch(0.500 0.220 264)), transparent 70%);
+  border-radius: 999px 999px 0 0;
+}
+.stat-card-sm:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 24px -6px var(--stat-glow, oklch(0.500 0.220 264 / 15%));
+}
+
+/* ─── Badge "신규" ─── */
+.badge-new {
+  display: inline-flex;
+  align-items: center;
+  border-radius: 6px;
+  font-size: 10px;
+  font-weight: 700;
+  padding: 1px 6px;
+  background: oklch(0.600 0.180 165 / 15%);
+  color: oklch(0.500 0.180 165);
+  border: 1px solid oklch(0.600 0.180 165 / 25%);
+}
+.dark .badge-new {
+  background: oklch(0.600 0.180 165 / 18%);
+  color: oklch(0.700 0.180 165);
+  border-color: oklch(0.600 0.180 165 / 28%);
+}
+
 /* ─── Number scroll (count-up effect placeholder) ─── */
 .tabular-nums { font-variant-numeric: tabular-nums; }
 

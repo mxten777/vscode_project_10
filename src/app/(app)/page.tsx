@@ -45,6 +45,8 @@ import {
   X,
   LayoutList,
   Table2,
+  Banknote,
+  Activity,
 } from "lucide-react";
 
 const PAGE_SIZE_CARD = 20;
@@ -78,6 +80,15 @@ function getDday(deadline: string | null): { label: string; cls: string } | null
 function isNew(publishedAt: string | null): boolean {
   if (!publishedAt) return false;
   return Date.now() - new Date(publishedAt).getTime() < 48 * 60 * 60 * 1000;
+}
+
+function formatBudgetCompact(amount: number): string {
+  if (!amount) return "-";
+  if (amount >= 1_000_000_000_000) return `${(amount / 1_000_000_000_000).toFixed(1)}조`;
+  if (amount >= 100_000_000) return `${Math.round(amount / 100_000_000)}억`;
+  if (amount >= 10_000_000) return `${Math.round(amount / 10_000_000)}천만`;
+  if (amount >= 10_000) return `${Math.round(amount / 10_000)}만`;
+  return `${amount.toLocaleString()}원`;
 }
 
 export default function HomePage() {
@@ -121,6 +132,16 @@ function HomeContent() {
   const [debouncedQ, setDebouncedQ] = useState(q);
   const [activeCategory, setActiveCategory] = useState("");
   const [viewMode, setViewMode] = useState<"card" | "table">("table");
+  const [sortOrder, setSortOrder] = useState<"asc" | "desc">("desc");
+  const handleTableSort = (col: string) => {
+    if (sortBy === col) {
+      setSortOrder((o) => (o === "desc" ? "asc" : "desc"));
+    } else {
+      setSortBy(col);
+      setSortOrder("desc");
+    }
+    setPage(1);
+  };
 
   useEffect(() => {
     const timer = setTimeout(() => setDebouncedQ(q), 300);
@@ -152,7 +173,7 @@ function HomeContent() {
     q: debouncedQ || undefined,
     status: (status as "OPEN" | "CLOSED" | "RESULT") || undefined,
     sortBy: sortBy as "published_at" | "deadline_at" | "budget_amount" | "created_at",
-    sortOrder: "desc",
+    sortOrder,
     page,
     pageSize: viewMode === "table" ? PAGE_SIZE_TABLE : PAGE_SIZE_CARD,
   });
@@ -179,6 +200,12 @@ function HomeContent() {
     if (!t.deadline_at) return false;
     return new Date(t.deadline_at).toDateString() === now.toDateString();
   }).length ?? 0;
+
+  const totalBudget = data?.data.reduce((s, t) => s + (t.budget_amount || 0), 0) ?? 0;
+  const openBudget = data?.data
+    .filter((t) => t.status === "OPEN")
+    .reduce((s, t) => s + (t.budget_amount || 0), 0) ?? 0;
+  const maxBudgetInPage = Math.max(1, ...(data?.data.map((t) => t.budget_amount || 0) ?? [1]));
 
   const hasFilters = debouncedQ || status;
 
@@ -244,29 +271,27 @@ function HomeContent() {
         </div>
       </div>
 
-      {/* ─── Stat Cards ─── */}
+      {/* ─── Stat Cards (6-up) ─── */}
       {data && (
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 stagger-children">
+        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-3 stagger-children">
           {[
             {
               label: "전체 공고",
-              sub: "수집된 공고 수",
+              sub: "수집된 전체",
               value: data.total.toLocaleString(),
               icon: FileText,
               color: "oklch(0.500 0.220 264)",
               glow: "oklch(0.500 0.220 264 / 15%)",
               textCls: "",
-              accent: "border-accent-top",
             },
             {
               label: "진행중",
-              sub: "현재 응찰 가능",
+              sub: "응찰 가능",
               value: String(openCount),
               icon: TrendingUp,
               color: "oklch(0.600 0.180 165)",
               glow: "oklch(0.600 0.180 165 / 15%)",
               textCls: "text-emerald-600 dark:text-emerald-400",
-              accent: "border-accent-emerald",
             },
             {
               label: "마감 임박",
@@ -276,7 +301,6 @@ function HomeContent() {
               color: "oklch(0.700 0.160 55)",
               glow: "oklch(0.700 0.160 55 / 15%)",
               textCls: "text-amber-600 dark:text-amber-400",
-              accent: "border-accent-amber",
             },
             {
               label: "오늘 마감",
@@ -286,28 +310,86 @@ function HomeContent() {
               color: "oklch(0.550 0.200 25)",
               glow: "oklch(0.550 0.200 25 / 15%)",
               textCls: "text-rose-600 dark:text-rose-400",
-              accent: "border-accent-rose",
             },
-          ].map(({ label, sub, value, icon: Icon, color, glow, textCls, accent }) => (
+            {
+              label: "수집 예산",
+              sub: "이 페이지 합계",
+              value: formatBudgetCompact(totalBudget),
+              icon: Banknote,
+              color: "oklch(0.550 0.200 300)",
+              glow: "oklch(0.550 0.200 300 / 15%)",
+              textCls: "text-violet-600 dark:text-violet-400",
+            },
+            {
+              label: "진행중 예산",
+              sub: "OPEN 합계",
+              value: formatBudgetCompact(openBudget),
+              icon: Activity,
+              color: "oklch(0.520 0.200 215)",
+              glow: "oklch(0.520 0.200 215 / 15%)",
+              textCls: "text-cyan-600 dark:text-cyan-400",
+            },
+          ].map(({ label, sub, value, icon: Icon, color, glow, textCls }) => (
             <Card
               key={label}
-              className={`stat-card premium-card ${accent}`}
+              className="stat-card-sm premium-card"
               style={{ "--stat-color": color, "--stat-glow": glow } as React.CSSProperties}
             >
-              <CardContent className="pt-5 pb-4">
-                <div className="flex items-start justify-between gap-2">
-                  <div>
-                    <p className="text-[11px] font-semibold text-muted-foreground uppercase tracking-widest">{label}</p>
-                    <p className={`text-2xl font-extrabold mt-1.5 tabular-nums tracking-tight ${textCls}`}>{value}</p>
-                    <p className="text-[11px] text-muted-foreground/60 mt-1">{sub}</p>
+              <CardContent className="pt-4 pb-3.5 px-4">
+                <div className="flex items-start justify-between gap-1.5">
+                  <div className="min-w-0 flex-1">
+                    <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-[0.07em] truncate">{label}</p>
+                    <p className={`text-xl font-extrabold mt-1 tabular-nums tracking-tight leading-none ${textCls}`}>{value}</p>
+                    <p className="text-[10px] text-muted-foreground/55 mt-1 truncate">{sub}</p>
                   </div>
-                  <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-linear-to-br from-current/15 to-current/5 opacity-80">
-                    <Icon className="h-4.5 w-4.5" />
+                  <div
+                    className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg opacity-80"
+                    style={{ background: `linear-gradient(135deg, oklch(from ${color} l c h / 15%), oklch(from ${color} l c h / 5%))` }}
+                  >
+                    <Icon className="h-4 w-4" style={{ color }} />
                   </div>
                 </div>
               </CardContent>
             </Card>
           ))}
+        </div>
+      )}
+
+      {/* ─── Market Pulse Strip ─── */}
+      {data && (
+        <div className="mkt-pulse">
+          <div className="mkt-pulse-item">
+            <span className="mkt-pulse-label">진행중 비율</span>
+            <span className="mkt-pulse-value text-emerald-600 dark:text-emerald-400">
+              {data.data.length > 0 ? Math.round((openCount / data.data.length) * 100) : 0}%
+            </span>
+            <span className="mkt-pulse-sub">{openCount} / {data.data.length}건</span>
+          </div>
+          <div className="mkt-pulse-item">
+            <span className="mkt-pulse-label">수집 총예산</span>
+            <span className="mkt-pulse-value">{formatBudgetCompact(totalBudget)}</span>
+            <span className="mkt-pulse-sub">이 페이지 기준</span>
+          </div>
+          <div className="mkt-pulse-item">
+            <span className="mkt-pulse-label">진행중 예산</span>
+            <span className="mkt-pulse-value text-violet-600 dark:text-violet-400">{formatBudgetCompact(openBudget)}</span>
+            <span className="mkt-pulse-sub">OPEN 공고 합계</span>
+          </div>
+          <div className="mkt-pulse-item hidden sm:flex">
+            <span className="mkt-pulse-label">최대 단건</span>
+            <span className="mkt-pulse-value">{formatBudgetCompact(maxBudgetInPage)}</span>
+            <span className="mkt-pulse-sub">최고 예산 공고</span>
+          </div>
+          <div className="mkt-pulse-item hidden md:flex">
+            <span className="mkt-pulse-label">전체 공고</span>
+            <span className="mkt-pulse-value">{data.total.toLocaleString()}건</span>
+            <span className="mkt-pulse-sub">총 수집 공고</span>
+          </div>
+          <div className="mkt-pulse-item hidden lg:flex">
+            <span className="mkt-pulse-label">다음 수집</span>
+            <span className="mkt-pulse-value text-primary">09:00</span>
+            <span className="mkt-pulse-sub">평일 자동 수집</span>
+          </div>
         </div>
       )}
 
@@ -479,18 +561,39 @@ function HomeContent() {
           <Table>
             <TableHeader>
               <TableRow className="border-border/50 hover:bg-transparent">
+                <TableHead className="w-8 text-[10px] text-muted-foreground/40 text-center">#</TableHead>
                 <TableHead className="w-20 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">상태</TableHead>
-                <TableHead className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">공고명</TableHead>
+                <TableHead
+                  className={`text-[11px] font-semibold uppercase tracking-wider text-muted-foreground th-sort${sortBy === "published_at" ? " th-active" : ""}`}
+                  onClick={() => handleTableSort("published_at")}
+                >
+                  공고명{sortBy === "published_at" ? (sortOrder === "desc" ? " ↓" : " ↑") : ""}
+                </TableHead>
                 <TableHead className="w-36 hidden md:table-cell text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">발주기관</TableHead>
                 <TableHead className="w-20 hidden lg:table-cell text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">지역</TableHead>
-                <TableHead className="w-32 hidden sm:table-cell text-[11px] font-semibold uppercase tracking-wider text-muted-foreground text-right">예산</TableHead>
-                <TableHead className="w-24 hidden xl:table-cell text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">공고일</TableHead>
-                <TableHead className="w-28 hidden sm:table-cell text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">마감일</TableHead>
+                <TableHead
+                  className={`w-40 hidden sm:table-cell text-[11px] font-semibold uppercase tracking-wider text-muted-foreground text-right th-sort${sortBy === "budget_amount" ? " th-active" : ""}`}
+                  onClick={() => handleTableSort("budget_amount")}
+                >
+                  예산{sortBy === "budget_amount" ? (sortOrder === "desc" ? " ↓" : " ↑") : ""}
+                </TableHead>
+                <TableHead
+                  className={`w-24 hidden xl:table-cell text-[11px] font-semibold uppercase tracking-wider text-muted-foreground th-sort${sortBy === "published_at" ? " th-active" : ""}`}
+                  onClick={() => handleTableSort("published_at")}
+                >
+                  공고일{sortBy === "published_at" ? (sortOrder === "desc" ? " ↓" : " ↑") : ""}
+                </TableHead>
+                <TableHead
+                  className={`w-28 hidden sm:table-cell text-[11px] font-semibold uppercase tracking-wider text-muted-foreground th-sort${sortBy === "deadline_at" ? " th-active" : ""}`}
+                  onClick={() => handleTableSort("deadline_at")}
+                >
+                  마감일{sortBy === "deadline_at" ? (sortOrder === "desc" ? " ↓" : " ↑") : ""}
+                </TableHead>
                 <TableHead className="w-16 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground text-center">D-day</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
-              {data.data.map((tender) => {
+              {data.data.map((tender, idx) => {
                 const dday = getDday(tender.deadline_at ?? null);
                 const isUrgent = dday?.cls === "dday-urgent";
                 const agencyName = (tender.agency as unknown as { name: string } | null)?.name
@@ -501,6 +604,9 @@ function HomeContent() {
                     className={`border-border/40 cursor-pointer transition-colors hover:bg-primary/4 ${isUrgent ? "bg-rose-500/3" : ""}`}
                     onClick={() => router.push(`/tenders/${tender.id}`)}
                   >
+                    <TableCell className="py-2.5 text-center text-[11px] text-muted-foreground/35 tabular-nums font-mono">
+                      {(page - 1) * PAGE_SIZE_TABLE + idx + 1}
+                    </TableCell>
                     <TableCell className="py-2.5">
                       <Badge
                         variant={statusColor(tender.status)}
@@ -532,6 +638,11 @@ function HomeContent() {
                     </TableCell>
                     <TableCell className="py-2.5 hidden sm:table-cell text-right">
                       <span className="text-sm font-bold text-primary tabular-nums">{formatKRW(tender.budget_amount)}</span>
+                      {tender.budget_amount ? (
+                        <div className="bgt-bar-track">
+                          <div className="bgt-bar-fill" style={{ width: `${Math.round((tender.budget_amount / maxBudgetInPage) * 100)}%` }} />
+                        </div>
+                      ) : null}
                     </TableCell>
                     <TableCell className="py-2.5 hidden xl:table-cell">
                       <span className="text-xs text-muted-foreground tabular-nums">
