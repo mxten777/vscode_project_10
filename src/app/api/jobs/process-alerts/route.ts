@@ -28,8 +28,8 @@ export async function POST(request: NextRequest) {
       return internalErrorResponse("알림 규칙 조회 실패");
     }
 
-    // 2) 최근 15분 이내에 수집된 신규 공고
-    const since = new Date(Date.now() - 15 * 60 * 1000).toISOString();
+    // 2) 최근 90분 이내에 수집된 신규 공고 (poll-tenders와 1시간 간격 + 여유)
+    const since = new Date(Date.now() - 90 * 60 * 1000).toISOString();
     const { data: recentTenders } = await supabase
       .from("tenders")
       .select("*")
