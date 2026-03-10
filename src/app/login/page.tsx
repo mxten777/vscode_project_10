@@ -75,6 +75,9 @@ function LoginContent() {
 
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
+  const [resetMode, setResetMode] = useState(false);
+  const [resetEmail, setResetEmail] = useState("");
+  const [resetDone, setResetDone] = useState(false);
 
   // Sign In
   const [signInEmail, setSignInEmail] = useState("");
@@ -86,6 +89,25 @@ function LoginContent() {
   const [orgName, setOrgName] = useState("");
 
   const supabase = createClient();
+
+  const handleReset = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoading(true);
+    try {
+      const { error } = await supabase.auth.resetPasswordForEmail(resetEmail, {
+        redirectTo: `${window.location.origin}/login`,
+      });
+      if (error) {
+        toast.error(error.message);
+        return;
+      }
+      setResetDone(true);
+    } catch {
+      toast.error("오류가 발생했습니다");
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const handleSignIn = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -280,6 +302,13 @@ function LoginContent() {
                     <div className="space-y-2">
                       <div className="flex items-center justify-between">
                         <Label htmlFor="signin-password">비밀번호</Label>
+                        <button
+                          type="button"
+                          className="text-xs text-primary hover:underline"
+                          onClick={() => { setResetMode(true); setResetEmail(signInEmail); }}
+                        >
+                          비밀번호 찾기
+                        </button>
                       </div>
                       <div className="relative">
                         <Input
@@ -376,6 +405,54 @@ function LoginContent() {
           </p>
         </div>
       </div>
+
+      {/* 비밀번호 찾기 오버레이 */}
+      {resetMode && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm px-4">
+          <div className="w-full max-w-sm rounded-2xl bg-background border border-border shadow-2xl p-8 animate-fade-up">
+            {resetDone ? (
+              <div className="text-center space-y-4">
+                <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-emerald-500/10 mx-auto">
+                  <ArrowRight className="h-6 w-6 text-emerald-500" />
+                </div>
+                <p className="text-lg font-bold">이메일을 확인하세요</p>
+                <p className="text-sm text-muted-foreground">
+                  <strong>{resetEmail}</strong>로 비밀번호 재설정 링크를 보냈습니다.
+                  스팸함도 확인해주세요.
+                </p>
+                <Button className="w-full h-11 rounded-xl" onClick={() => { setResetMode(false); setResetDone(false); }}>
+                  로그인으로 돌아가기
+                </Button>
+              </div>
+            ) : (
+              <>
+                <h2 className="text-xl font-bold mb-1">비밀번호 찾기</h2>
+                <p className="text-sm text-muted-foreground mb-6">가입하신 이메일로 재설정 링크를 보내드립니다.</p>
+                <form onSubmit={handleReset} className="space-y-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="reset-email">이메일</Label>
+                    <Input
+                      id="reset-email"
+                      type="email"
+                      placeholder="email@example.com"
+                      required
+                      className="h-11"
+                      value={resetEmail}
+                      onChange={(e) => setResetEmail(e.target.value)}
+                    />
+                  </div>
+                  <Button className="w-full h-11 rounded-xl font-semibold btn-premium text-white" type="submit" disabled={loading}>
+                    {loading ? "전송 중..." : "재설정 링크 보내기"}
+                  </Button>
+                  <Button variant="ghost" className="w-full h-11 rounded-xl" type="button" onClick={() => setResetMode(false)}>
+                    취소
+                  </Button>
+                </form>
+              </>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 }

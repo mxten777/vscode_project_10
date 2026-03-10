@@ -1,4 +1,12 @@
+import type { Metadata } from "next";
 import { Header } from "@/components/header";
+
+export const metadata: Metadata = {
+  title: {
+    default: "BidSight — AI 입찰·조달 분석",
+    template: "%s | BidSight",
+  },
+};
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
   return (
