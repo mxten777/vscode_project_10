@@ -8,7 +8,7 @@ CREATE TABLE IF NOT EXISTS bid_notices (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   
   -- 연결
-  tender_id UUID REFERENCES tenders(id) ON DELETE CASCADE,
+  tender_id UUID, -- FK는 나중에 추가: REFERENCES tenders(id) ON DELETE CASCADE
   source_bid_notice_id TEXT UNIQUE NOT NULL, -- 나라장터 고유 ID
   
   -- 기본 정보
@@ -129,7 +129,7 @@ CREATE TABLE IF NOT EXISTS bid_price_features (
 -- 5) bid_recommendations: 추천 투찰가 결과 (캐시)
 CREATE TABLE IF NOT EXISTS bid_recommendations (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  tender_id UUID REFERENCES tenders(id) ON DELETE CASCADE,
+  tender_id UUID, -- FK는 나중에 추가: REFERENCES tenders(id) ON DELETE CASCADE
   
   -- 추천 투찰가 (3가지)
   conservative_rate NUMERIC(5,2), -- 보수적 (75th percentile)
@@ -478,3 +478,15 @@ END;
 $$;
 
 COMMENT ON FUNCTION recommend_bid_price IS '투찰가 추천: 보수적/기준/공격적 3가지 전략 제시';
+
+-- ============================================================================
+-- FOREIGN KEY 제약조건 (tenders 테이블이 존재하는 경우에만 실행)
+-- ============================================================================
+
+-- bid_notices.tender_id FK
+-- ALTER TABLE bid_notices ADD CONSTRAINT fk_bid_notices_tender 
+--   FOREIGN KEY (tender_id) REFERENCES tenders(id) ON DELETE CASCADE;
+
+-- bid_recommendations.tender_id FK
+-- ALTER TABLE bid_recommendations ADD CONSTRAINT fk_bid_recommendations_tender 
+--   FOREIGN KEY (tender_id) REFERENCES tenders(id) ON DELETE CASCADE;
