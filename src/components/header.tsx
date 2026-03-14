@@ -39,6 +39,7 @@ import {
   KeyRound,
   Eye,
   EyeOff,
+  TrendingUp,
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -46,6 +47,7 @@ const navItems = [
   { href: "/", label: "공고 검색", icon: Search },
   { href: "/favorites", label: "즐겨찾기", icon: Star },
   { href: "/alerts", label: "알림 관리", icon: Bell },
+  { href: "/analytics", label: "낙찰 분석", icon: TrendingUp },
   { href: "/reports", label: "리포트", icon: BarChart3 },
 ];
 
