@@ -13,7 +13,7 @@
     },
     {
       "path": "/api/jobs/process-alerts",
-      "schedule": "0 1 * * 1-5"
+      "schedule": "30 0 * * 1-5"
     }
   ],
   "headers": [
