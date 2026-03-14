@@ -198,7 +198,9 @@ bid-platform/
 │   └── migrations/
 │       ├── 001_stabilize.sql      # 안정화 패치 (alert_logs UNIQUE, alert_rules.name, 인덱스)
 │       ├── 002_auto_org_on_signup.sql  # 회원가입 시 자동 조직 생성 트리거
-│       └── 003_add_delete_policy.sql   # RLS DELETE 정책 추가
+│       ├── 003_add_delete_policy.sql   # RLS DELETE 정책 추가
+│       ├── 004_report_summary_function.sql  # 리포트 성능 개선 (Postgres RPC 함수)
+│       └── 005_search_with_similarity.sql   # 검색 고도화 (pg_trgm GIN 인덱스)
 │
 ├── src/
 │   ├── app/
@@ -245,14 +247,16 @@ bid-platform/
 │   │   ├── api-response.ts        # API 응답 형식 헬퍼
 │   │   └── auth-context.ts        # 인증 컨텍스트 헬퍼
 │   │
-│   └── proxy.ts                   # Next.js 인증 프록시 (Next.js 16 컨벤션)
+│   └── middleware.ts              # Next.js 인증 미들웨어 (Next.js 16 표준)
 │
 ├── supabase/
 │   ├── schema.sql                 # 전체 DB 스키마 (DDL)
 │   └── migrations/
 │       ├── 001_stabilize.sql      # 안정화 패치 (alert_logs UNIQUE, alert_rules.name, 인덱스)
 │       ├── 002_auto_org_on_signup.sql  # 회원가입 시 자동 조직 생성 트리거
-│       └── 003_add_delete_policy.sql   # RLS DELETE 정책 추가
+│       ├── 003_add_delete_policy.sql   # RLS DELETE 정책 추가
+│       ├── 004_report_summary_function.sql  # 리포트 성능 개선 (Postgres RPC 함수)
+│       └── 005_search_with_similarity.sql   # 검색 고도화 (pg_trgm GIN 인덱스)
 │
 ├── scripts/
 │   └── seed-demo.mjs              # 데모 데이터 시드 스크립트
@@ -306,7 +310,12 @@ bid-platform/
 ## 7. 성능 고려사항
 
 ### 7.1 데이터베이스
-- **인덱스 전략**: 13개 인덱스 (B-tree 기본 + GIN 트리그램)
+- **인덱스 전략**: 15개 인덱스 (B-tree 기본 + GIN 트리그램)
+  - `idx_tenders_title_trgm`: 제목 유사도 검색 (GIN)
+  - `idx_tenders_demand_agency_name_trgm`: 수요기관명 검색 (GIN)
+  - 기타 외래키, 상태, 지역, 업종 등 B-tree 인덱스
+- **Postgres RPC**: 리포트 집계를 `report_summary()` 함수로 DB 레벨 처리
+  - 5개 쿼리 + 클라이언트 집계 → 1개 RPC 함수 (성능 대폭 향상)
 - **페이지네이션**: OFFSET 기반 (MVP), 향후 Cursor 기반으로 전환 가능
 - **병렬 쿼리**: count + data 쿼리를 `Promise.all`로 동시 실행
 
@@ -314,8 +323,14 @@ bid-platform/
 - **클라이언트 캐싱**: TanStack Query 기본 캐시 (staleTime)
 - **Debounced Search**: 검색어 입력 300ms 디바운스
 - **URL 동기화**: 검색 상태를 URL searchParams에 동기화 → 새로고침/공유 가능
+- **UI 최적화**: focus-visible 개선, transition 250ms, card-hover 효과 강화
 
-### 7.3 수집 파이프라인
+### 7.3 검색 고도화
+- **pg_trgm 유사도 검색**: title + demand_agency_name OR 조건 검색
+- **GIN 인덱스**: LIKE 연산자 성능 대폭 향상
+- **다중 필드 검색**: 제목과 수요기관명을 동시 검색하여 관련성 향상
+
+### 7.4 수집 파이프라인
 - **지수 백오프**: 나라장터 API 실패 시 1s → 2s → 4s 재시도
 - **Upsert**: `source_tender_id` 기준으로 INSERT or UPDATE → 에러 안전
 - **에러 격리**: 개별 공고 처리 실패 시에도 전체 배치는 계속 진행

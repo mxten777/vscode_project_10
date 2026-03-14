@@ -31,8 +31,11 @@
 
 - **API-First 아키텍처**: 모바일 앱 확장 준비 완료
 - **Postgres-First**: pg_trgm 인덱스로 별도 검색 엔진 불필요
+- **성능 최적화**: Postgres RPC로 리포트 집계 (5개 쿼리 → 1개 함수)
+- **검색 고도화**: 제목 + 수요기관명 동시 검색, GIN 인덱스 활용
 - **멱등성 보장**: Upsert 기반 중복 방지 설계
 - **확장 가능**: Provider 패턴으로 알림 채널 추가 용이
+- **UI/UX**: focus-visible 접근성, card-hover 프리미엄 효과
 
 ---
 
@@ -89,7 +92,13 @@ bid-platform/
 ├── docs/
 │   └── ENHANCEMENT_ROADMAP.md      # 고도화 로드맵
 ├── supabase/
-│   └── schema.sql                   # DB 스키마 (테이블 + 인덱스 + RLS)
+│   ├── schema.sql                   # DB 스키마 (테이블 + 인덱스 + RLS)
+│   └── migrations/
+│       ├── 001_stabilize.sql        # 안정화 패치
+│       ├── 002_auto_org_on_signup.sql # 자동 조직 생성
+│       ├── 003_add_delete_policy.sql # RLS DELETE 정책
+│       ├── 004_report_summary_function.sql # 리포트 RPC 함수
+│       └── 005_search_with_similarity.sql  # 검색 GIN 인덱스
 ├── src/
 │   ├── app/
 │   │   ├── layout.tsx               # 루트 레이아웃
