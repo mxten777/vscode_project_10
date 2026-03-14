@@ -133,7 +133,7 @@ Vercel Cron (평일 09:00 UTC — Hobby 플랜 1일 1회)
 Vercel Cron (평일 09:30 UTC — Hobby 플랜 1일 1회)
   → POST /api/jobs/process-alerts
   → 활성 alert_rules 전체 조회
-  → 최근 15분 내 신규 공고 조회
+  → 최근 2시간 내 신규 공고 조회 (Vercel Hobby 플랜 대응)
   → 각 규칙 × 각 공고 매칭 (keyword, region, industry, budget)
   → 중복 발송 방지 (alert_logs 확인)
   → 이메일/카카오 발송 + alert_logs 기록
@@ -196,7 +196,9 @@ bid-platform/
 ├── supabase/
 │   ├── schema.sql                 # 전체 DB 스키마 (DDL)
 │   └── migrations/
-│       └── 001_stabilize.sql      # 안정화 패치 (alert_logs UNIQUE, alert_rules.name, 인덱스)
+│       ├── 001_stabilize.sql      # 안정화 패치 (alert_logs UNIQUE, alert_rules.name, 인덱스)
+│       ├── 002_auto_org_on_signup.sql  # 회원가입 시 자동 조직 생성 트리거
+│       └── 003_add_delete_policy.sql   # RLS DELETE 정책 추가
 │
 ├── src/
 │   ├── app/
@@ -248,7 +250,9 @@ bid-platform/
 ├── supabase/
 │   ├── schema.sql                 # 전체 DB 스키마 (DDL)
 │   └── migrations/
-│       └── 001_stabilize.sql      # 안정화 패치 (alert_logs UNIQUE, alert_rules.name, 인덱스)
+│       ├── 001_stabilize.sql      # 안정화 패치 (alert_logs UNIQUE, alert_rules.name, 인덱스)
+│       ├── 002_auto_org_on_signup.sql  # 회원가입 시 자동 조직 생성 트리거
+│       └── 003_add_delete_policy.sql   # RLS DELETE 정책 추가
 │
 ├── scripts/
 │   └── seed-demo.mjs              # 데모 데이터 시드 스크립트
