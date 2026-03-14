@@ -85,3 +85,44 @@ export function formatRawDate(
   if (includeTime && hh && mm) return `${datePart} ${hh}:${mm}`;
   return datePart;
 }
+
+/**
+ * D-day 계산 (공통 버전)
+ * deadline이 있고 미래이면 { label, urgent, days, cls } 반환
+ */
+export function getDday(deadline: string | null): {
+  label: string;
+  urgent: boolean;
+  days: number;
+  cls: string;
+} | null {
+  if (!deadline) return null;
+  const diff = Math.ceil((new Date(deadline).getTime() - Date.now()) / (1000 * 60 * 60 * 24));
+  if (diff < 0) return null;
+
+  const label = diff === 0 ? "D-DAY" : `D-${diff}`;
+  const urgent = diff <= 3;
+  const cls = urgent ? "dday-urgent" : diff <= 7 ? "dday-warning" : "dday-safe";
+
+  return { label, urgent, days: diff, cls };
+}
+
+/**
+ * 신규 공고 판별 (48시간 이내)
+ */
+export function isNew(publishedAt: string | null): boolean {
+  if (!publishedAt) return false;
+  return Date.now() - new Date(publishedAt).getTime() < 48 * 60 * 60 * 1000;
+}
+
+/**
+ * 예산 금액을 간략하게 포맷 (조/억/천만/만)
+ */
+export function formatBudgetCompact(amount: number | null | undefined): string {
+  if (!amount) return "-";
+  if (amount >= 1_000_000_000_000) return `${(amount / 1_000_000_000_000).toFixed(1)}조`;
+  if (amount >= 100_000_000) return `${Math.round(amount / 100_000_000)}억`;
+  if (amount >= 10_000_000) return `${Math.round(amount / 10_000_000)}천만`;
+  if (amount >= 10_000) return `${Math.round(amount / 10_000)}만`;
+  return `${amount.toLocaleString()}원`;
+}

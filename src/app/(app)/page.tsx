@@ -4,7 +4,7 @@ import { Suspense, useCallback, useEffect, useMemo, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { useTenders } from "@/hooks/use-api";
-import { formatKRW, tenderStatusLabel, formatRawDate } from "@/lib/helpers";
+import { formatKRW, tenderStatusLabel, formatRawDate, getDday, isNew, formatBudgetCompact } from "@/lib/helpers";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -64,32 +64,6 @@ const CATEGORY_CHIPS = [
 
 // Trending keywords (swap with real analytics later)
 const TRENDING = ["AI 플랫폼", "정보화시스템", "시설유지보수", "SW개발", "디지털전환", "클라우드"];
-
-function getDday(deadline: string | null): { label: string; cls: string } | null {
-  if (!deadline) return null;
-  const diff = Math.ceil(
-    (new Date(deadline).getTime() - Date.now()) / (1000 * 60 * 60 * 24)
-  );
-  if (diff < 0) return null;
-  if (diff === 0) return { label: "D-DAY", cls: "dday-urgent" };
-  if (diff <= 3) return { label: `D-${diff}`, cls: "dday-urgent" };
-  if (diff <= 7) return { label: `D-${diff}`, cls: "dday-warning" };
-  return null;
-}
-
-function isNew(publishedAt: string | null): boolean {
-  if (!publishedAt) return false;
-  return Date.now() - new Date(publishedAt).getTime() < 48 * 60 * 60 * 1000;
-}
-
-function formatBudgetCompact(amount: number): string {
-  if (!amount) return "-";
-  if (amount >= 1_000_000_000_000) return `${(amount / 1_000_000_000_000).toFixed(1)}조`;
-  if (amount >= 100_000_000) return `${Math.round(amount / 100_000_000)}억`;
-  if (amount >= 10_000_000) return `${Math.round(amount / 10_000_000)}천만`;
-  if (amount >= 10_000) return `${Math.round(amount / 10_000)}만`;
-  return `${amount.toLocaleString()}원`;
-}
 
 export default function HomePage() {
   return (

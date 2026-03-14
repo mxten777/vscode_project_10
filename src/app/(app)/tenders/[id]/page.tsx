@@ -3,7 +3,7 @@
 import { use } from "react";
 import { useRouter } from "next/navigation";
 import { useTender, useToggleFavorite, useBidRecommendation, useSimilarBids } from "@/hooks/use-api";
-import { formatKRW, tenderStatusLabel, formatRawDate } from "@/lib/helpers";
+import { formatKRW, tenderStatusLabel, formatRawDate, getDday } from "@/lib/helpers";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -31,13 +31,6 @@ import {
   Shield,
   Target,
 } from "lucide-react";
-
-function getDdayInfo(deadline: string | null): { label: string; urgent: boolean; days: number } | null {
-  if (!deadline) return null;
-  const diff = Math.ceil((new Date(deadline).getTime() - Date.now()) / (1000 * 60 * 60 * 24));
-  if (diff < 0) return null;
-  return { label: diff === 0 ? "D-DAY" : `D-${diff}`, urgent: diff <= 3, days: diff };
-}
 import { toast } from "sonner";
 
 export default function TenderDetailPage({
@@ -107,7 +100,7 @@ export default function TenderDetailPage({
     awarded_rate: number | null;
     opened_at: string | null;
   } | null;
-  const dday = getDdayInfo(tender.deadline_at ?? null);
+  const dday = getDday(tender.deadline_at ?? null);
 
   // Timeline stages
   const stages = [
