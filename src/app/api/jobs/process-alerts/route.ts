@@ -28,9 +28,8 @@ export async function POST(request: NextRequest) {
       return internalErrorResponse("알림 규칙 조회 실패");
     }
 
-    // 2) 최근 90분 이내에 수집된 신규 공고 (poll-tenders와 1시간 간격 + 여유)
-    // 테스트: 24시간으로 확장
-    const since = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
+    // 2) 최근 2시간 이내에 수집된 신규 공고 (Vercel Hobby 플랜 flexible window 대응)
+    const since = new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString();
     const { data: recentTenders } = await supabase
       .from("tenders")
       .select("*")
