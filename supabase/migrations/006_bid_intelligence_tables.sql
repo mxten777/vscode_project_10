@@ -8,7 +8,7 @@ CREATE TABLE IF NOT EXISTS bid_notices (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   
   -- 연결
-  tender_id UUID REFERENCES tenders(id) ON DELETE CASCADE,
+  tender_id UUID REFERENCES public.tenders(id) ON DELETE CASCADE,
   source_bid_notice_id TEXT UNIQUE NOT NULL, -- 나라장터 고유 ID
   
   -- 기본 정보
@@ -129,7 +129,7 @@ CREATE TABLE IF NOT EXISTS bid_price_features (
 -- 5) bid_recommendations: 추천 투찰가 결과 (캐시)
 CREATE TABLE IF NOT EXISTS bid_recommendations (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  tender_id UUID REFERENCES tenders(id) ON DELETE CASCADE,
+  tender_id UUID REFERENCES public.tenders(id) ON DELETE CASCADE,
   
   -- 추천 투찰가 (3가지)
   conservative_rate NUMERIC(5,2), -- 보수적 (75th percentile)
