@@ -22,6 +22,7 @@ export type TenderSearchParams = z.infer<typeof tenderSearchSchema>;
 // ─── Alert Rule ────────────────────────────────────────
 export const alertRuleCreateSchema = z.object({
   type: z.enum(["KEYWORD", "FILTER"]),
+  name: z.string().optional(),
   rule_json: z.object({
     keyword: z.string().optional(),
     regionCodes: z.array(z.string()).optional(),
@@ -36,6 +37,7 @@ export type AlertRuleCreateInput = z.infer<typeof alertRuleCreateSchema>;
 
 export const alertRuleUpdateSchema = z.object({
   type: z.enum(["KEYWORD", "FILTER"]).optional(),
+  name: z.string().optional(),
   rule_json: z
     .object({
       keyword: z.string().optional(),
