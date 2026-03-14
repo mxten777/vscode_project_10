@@ -67,9 +67,14 @@ body {
   @apply selection:bg-primary/20;
 }
 
-/* Better focus states */
+/* Better focus states - 접근성 향상 */
 *:focus-visible {
-  @apply outline-none ring-2 ring-primary/30 ring-offset-2 ring-offset-background;
+  @apply outline-none ring-2 ring-primary/40 ring-offset-2 ring-offset-background;
+}
+
+button:focus-visible,
+a:focus-visible {
+  @apply ring-2 ring-primary/50 ring-offset-2;
 }
 
 /* Smooth scrolling */
@@ -77,18 +82,28 @@ html {
   scroll-behavior: smooth;
 }
 
-/* Better transitions */
+/* Better transitions - 부드러운 애니메이션 */
 * {
   @apply transition-colors duration-200;
 }
 
 button, a {
-  @apply transition-all duration-200;
+  @apply transition-all duration-250;
 }
 
-/* Card hover effect */
+/* Card hover effect - 프리미엄 느낌 */
 .card-hover {
-  @apply transition-all duration-300 hover:shadow-lg hover:shadow-primary/5 hover:-translate-y-0.5;
+  @apply transition-all duration-300 ease-out hover:shadow-xl hover:shadow-primary/8 hover:-translate-y-1;
+}
+
+/* Premium card - 고급 카드 스타일 */
+.premium-card {
+  @apply bg-card border border-border/60 rounded-2xl shadow-sm hover:shadow-md hover:border-primary/20 transition-all duration-300;
+}
+
+/* Glass effect */
+.glass {
+  @apply bg-background/95 backdrop-blur-lg border-b border-border/50;
 }
 
 /* Gradient text */

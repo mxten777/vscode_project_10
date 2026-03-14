@@ -156,13 +156,13 @@ export function Header() {
                 <Button
                   variant={active ? "secondary" : "ghost"}
                   size="sm"
-                  className={`gap-1.5 rounded-xl px-4 h-9 transition-all duration-200 ${
+                  className={`gap-1.5 rounded-xl px-4 h-9 transition-all duration-250 ${
                     active
-                      ? "bg-background shadow-sm font-semibold text-primary border border-border/60"
-                      : "hover:bg-background/60 text-muted-foreground hover:text-foreground"
+                      ? "bg-background shadow-md shadow-primary/10 font-semibold text-primary border border-primary/20 scale-[1.02]"
+                      : "hover:bg-background/60 text-muted-foreground hover:text-foreground hover:scale-[1.01]"
                   }`}
                 >
-                  <item.icon className="h-3.5 w-3.5" />
+                  <item.icon className={`h-3.5 w-3.5 ${active ? "text-primary" : ""}`} />
                   <span className="text-[13px]">{item.label}</span>
                 </Button>
               </Link>
@@ -177,8 +177,8 @@ export function Header() {
           {user ? (
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button variant="ghost" className="relative h-9 w-9 rounded-xl">
-                  <Avatar className="h-9 w-9 border-2 border-primary/15 shadow-sm">
+                <Button variant="ghost" className="relative h-9 w-9 rounded-xl hover:scale-105 transition-transform">
+                  <Avatar className="h-9 w-9 border-2 border-primary/15 shadow-sm hover:border-primary/30 transition-colors">
                     <AvatarFallback className="bg-linear-to-br from-primary/15 to-violet-500/10 text-primary font-bold text-sm">
                       {emailInitial}
                     </AvatarFallback>
