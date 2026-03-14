@@ -284,7 +284,7 @@ BEGIN
     target_industry,
     target_region,
     target_budget
-  FROM tenders
+  FROM public.tenders
   WHERE id = target_tender_id;
   
   -- 유사도 점수 계산 및 검색
@@ -387,7 +387,7 @@ DECLARE
 BEGIN
   -- 대상 공고 예정가격 조회
   SELECT budget_amount INTO estimated_price
-  FROM tenders
+  FROM public.tenders
   WHERE id = target_tender_id;
   
   IF estimated_price IS NULL THEN
