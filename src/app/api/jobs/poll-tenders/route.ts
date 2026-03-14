@@ -103,19 +103,10 @@ export async function POST(request: NextRequest) {
       results.inserted = upserted?.length ?? 0;
     }
 
-    // 진단: 첫 3건의 날짜 필드 원본값 로그 (파싱 형식 확인용)
-    const sampleDateFields = rawItems.slice(0, 3).map((item) => ({
-      bidNtceDt: item.bidNtceDt,
-      rgstDt: item.rgstDt,
-      parsed_published_at: parseDate((item.bidNtceDt || item.rgstDt) as string),
-    }));
-    console.log("[poll-tenders] 날짜 필드 샘플:", JSON.stringify(sampleDateFields));
-
     return successResponse({
       message: "수집 완료",
       totalFetched: rawItems.length,
       ...results,
-      sampleDateFields,
     });
   } catch (err) {
     console.error("poll-tenders 전체 오류:", err);

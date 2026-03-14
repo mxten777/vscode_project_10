@@ -75,7 +75,6 @@ function daysAgo(days) {
 
 // ─── 공고 원시 데이터 ─────────────────────────────────────
 function makeTenders(agencyMap) {
-  const now = new Date();
   return [
     // ── 진행중 (OPEN) ────────────────────────────────────
     {

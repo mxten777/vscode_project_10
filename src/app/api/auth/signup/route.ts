@@ -3,12 +3,12 @@ import { createServiceClient } from "@/lib/supabase/service";
 
 /**
  * POST /api/auth/signup
- * 회원가입 + 자동 org 생성 + org_members 연결
+ * 회원가입 (org 자동 생성은 DB 트리거에서 처리 — migration 002)
  */
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { email, password, orgName } = body;
+    const { email, password } = body;
 
     if (!email || !password) {
       return NextResponse.json(
@@ -19,7 +19,7 @@ export async function POST(request: NextRequest) {
 
     const supabase = createServiceClient();
 
-    // 1) Supabase Auth 회원가입
+    // Supabase Auth 회원가입 (org + org_members는 트리거가 자동 생성)
     const { data: authData, error: authError } = await supabase.auth.admin.createUser({
       email,
       password,
@@ -33,31 +33,8 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const userId = authData.user.id;
-
-    // 2) org 생성
-    const { data: org, error: orgError } = await supabase
-      .from("orgs")
-      .insert({ name: orgName || `${email}의 조직` })
-      .select("id")
-      .single();
-
-    if (orgError) {
-      return NextResponse.json(
-        { code: "ORG_ERROR", message: orgError.message },
-        { status: 500 }
-      );
-    }
-
-    // 3) org_members 연결 (admin)
-    await supabase.from("org_members").insert({
-      org_id: org.id,
-      user_id: userId,
-      role: "admin",
-    });
-
     return NextResponse.json(
-      { message: "회원가입 완료", userId, orgId: org.id },
+      { message: "회원가입 완료", userId: authData.user.id },
       { status: 201 }
     );
   } catch (err) {
