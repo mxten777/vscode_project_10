@@ -212,27 +212,21 @@ function HomeContent() {
   return (
     <div className="space-y-6 animate-fade-up">
 
-      {/* ─── Hero Banner ─── */}
+      {/* ─── Hero Banner (Streamlined) ─── */}
       <div className="relative overflow-hidden rounded-2xl hero-grid">
         <div className="absolute inset-0 bg-linear-to-br from-indigo-950 via-indigo-900 to-violet-950" />
         <div className="noise-overlay" />
+        {/* Simplified gradient orbs (2 instead of 3) */}
         <div className="absolute inset-0 overflow-hidden">
-          <div className="absolute top-[-20%] left-[-5%] h-70 w-70 rounded-full bg-indigo-500/30 blur-[90px] animate-mesh" />
+          <div className="absolute top-[-20%] left-[-5%] h-80 w-80 rounded-full bg-indigo-500/30 blur-[100px] animate-mesh" />
           <div className="absolute bottom-[-20%] right-[-5%] h-80 w-80 rounded-full bg-violet-500/25 blur-[100px] animate-mesh" style={{ animationDelay: "-8s" }} />
-          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 h-50 w-50 rounded-full bg-cyan-500/10 blur-[80px] animate-mesh" style={{ animationDelay: "-4s" }} />
         </div>
-        {/* Floating keyword pills */}
-        <span className="float-slow absolute top-6 right-[12%] hidden lg:inline-flex items-center gap-1.5 rounded-full bg-white/10 backdrop-blur-sm border border-white/15 px-3 py-1 text-xs text-white/70 font-medium">
+        {/* Streamlined floating keywords (2 instead of 4) */}
+        <span className="float-slow absolute top-8 right-[15%] hidden lg:inline-flex items-center gap-1.5 rounded-full bg-white/10 backdrop-blur-sm border border-white/15 px-3 py-1 text-xs text-white/70 font-medium">
           <Zap className="h-3 w-3 text-amber-300" /> AI분석
         </span>
-        <span className="float-slow-rev absolute top-14 right-[28%] hidden lg:inline-flex items-center gap-1.5 rounded-full bg-white/10 backdrop-blur-sm border border-white/15 px-3 py-1 text-xs text-white/70 font-medium">
+        <span className="float-slow-rev absolute bottom-12 right-[12%] hidden lg:inline-flex items-center gap-1.5 rounded-full bg-white/10 backdrop-blur-sm border border-white/15 px-3 py-1 text-xs text-white/70 font-medium">
           <TrendingUp className="h-3 w-3 text-emerald-300" /> 실시간
-        </span>
-        <span className="float-slow-2 absolute bottom-10 right-[8%] hidden lg:inline-flex items-center gap-1.5 rounded-full bg-white/10 backdrop-blur-sm border border-white/15 px-3 py-1 text-xs text-white/70 font-medium">
-          <BarChart3 className="h-3 w-3 text-cyan-300" /> 빅데이터
-        </span>
-        <span className="float-slow-3 absolute bottom-16 right-[24%] hidden xl:inline-flex items-center gap-1.5 rounded-full bg-white/10 backdrop-blur-sm border border-white/15 px-3 py-1 text-xs text-white/70 font-medium">
-          <Star className="h-3 w-3 text-rose-300" /> 낙찰예측
         </span>
 
         <div className="relative z-10 px-8 py-10 sm:px-12 sm:py-12">
@@ -271,7 +265,7 @@ function HomeContent() {
         </div>
       </div>
 
-      {/* ─── Stat Cards (6-up) ─── */}
+      {/* ─── Stat Cards (Refined Color Scheme) ─── */}
       {data && (
         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-3 stagger-children">
           {[
@@ -280,25 +274,25 @@ function HomeContent() {
               sub: "수집된 전체",
               value: data.total.toLocaleString(),
               icon: FileText,
-              color: "oklch(0.500 0.220 264)",
+              color: "oklch(0.500 0.220 264)", // Primary
               glow: "oklch(0.500 0.220 264 / 15%)",
-              textCls: "",
+              textCls: "text-primary",
             },
             {
               label: "진행중",
               sub: "응찰 가능",
               value: String(openCount),
               icon: TrendingUp,
-              color: "oklch(0.600 0.180 165)",
-              glow: "oklch(0.600 0.180 165 / 15%)",
-              textCls: "text-emerald-600 dark:text-emerald-400",
+              color: "oklch(0.500 0.220 264)", // Primary (일관성)
+              glow: "oklch(0.500 0.220 264 / 15%)",
+              textCls: "text-primary",
             },
             {
               label: "마감 임박",
               sub: "D-3 이내",
               value: String(urgentCount),
               icon: Clock,
-              color: "oklch(0.700 0.160 55)",
+              color: "oklch(0.700 0.160 55)", // Amber (경고 유지)
               glow: "oklch(0.700 0.160 55 / 15%)",
               textCls: "text-amber-600 dark:text-amber-400",
             },
@@ -307,7 +301,7 @@ function HomeContent() {
               sub: "D-DAY 공고",
               value: String(closingToday),
               icon: Bell,
-              color: "oklch(0.550 0.200 25)",
+              color: "oklch(0.550 0.200 25)", // Red (긴급 유지)
               glow: "oklch(0.550 0.200 25 / 15%)",
               textCls: "text-rose-600 dark:text-rose-400",
             },
@@ -316,18 +310,18 @@ function HomeContent() {
               sub: "이 페이지 합계",
               value: formatBudgetCompact(totalBudget),
               icon: Banknote,
-              color: "oklch(0.550 0.200 300)",
-              glow: "oklch(0.550 0.200 300 / 15%)",
-              textCls: "text-violet-600 dark:text-violet-400",
+              color: "oklch(0.500 0.220 264)", // Primary (통일)
+              glow: "oklch(0.500 0.220 264 / 15%)",
+              textCls: "text-primary",
             },
             {
               label: "진행중 예산",
               sub: "OPEN 합계",
               value: formatBudgetCompact(openBudget),
               icon: Activity,
-              color: "oklch(0.520 0.200 215)",
-              glow: "oklch(0.520 0.200 215 / 15%)",
-              textCls: "text-cyan-600 dark:text-cyan-400",
+              color: "oklch(0.500 0.220 264)", // Primary (통일)
+              glow: "oklch(0.500 0.220 264 / 15%)",
+              textCls: "text-primary",
             },
           ].map(({ label, sub, value, icon: Icon, color, glow, textCls }) => (
             <Card
