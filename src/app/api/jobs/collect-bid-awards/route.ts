@@ -44,10 +44,10 @@ export async function GET(request: NextRequest) {
     }
 
     const supabase = await createClient();
-    const NARAMARKET_API_KEY = process.env.NARAMARKET_API_KEY;
+    const NARAMARKET_API_KEY = process.env.NARA_API_KEY;
 
     if (!NARAMARKET_API_KEY) {
-      throw new Error("NARAMARKET_API_KEY not configured");
+      throw new Error("NARA_API_KEY not configured");
     }
 
     // 최근 7일간 개찰된 공고 조회 (나라장터 API 호출)
