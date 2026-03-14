@@ -123,3 +123,131 @@ export interface ReportSummary {
   topIndustries: { name: string; count: number }[];
   statusDistribution: { status: string; count: number }[];
 }
+
+// ─── Bid Intelligence 타입 ─────────────────────────────
+
+export interface BidNotice {
+  id: string;
+  tender_id: string | null;
+  source_bid_notice_id: string;
+  notice_number: string;
+  notice_name: string;
+  demand_organization: string | null;
+  contract_type: string | null;
+  bid_type: string | null;
+  base_amount: number | null;
+  estimated_price: number | null;
+  lower_limit_rate: number | null;
+  bid_start_datetime: string | null;
+  bid_end_datetime: string | null;
+  open_datetime: string | null;
+  industry_code: string | null;
+  industry_name: string | null;
+  region_code: string | null;
+  region_name: string | null;
+  raw_json: Record<string, unknown> | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface BidOpenResult {
+  id: string;
+  bid_notice_id: string;
+  opened_at: string;
+  total_bidders: number;
+  valid_bidders: number;
+  highest_bid_rate: number | null;
+  lowest_bid_rate: number | null;
+  average_bid_rate: number | null;
+  median_bid_rate: number | null;
+  expected_winner_company: string | null;
+  expected_winner_bid_rate: number | null;
+  expected_winner_amount: number | null;
+  is_successful: boolean;
+  failure_reason: string | null;
+  raw_json: Record<string, unknown> | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface BidAward {
+  id: string;
+  bid_notice_id: string;
+  winner_company_name: string;
+  winner_business_number: string | null;
+  winner_bid_rate: number;
+  winner_bid_amount: number;
+  contract_amount: number | null;
+  contract_date: string | null;
+  contract_type: string | null;
+  performance_guarantee_rate: number | null;
+  advance_payment_rate: number | null;
+  is_final: boolean;
+  awarded_at: string | null;
+  raw_json: Record<string, unknown> | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export type BidConfidence = "HIGH" | "MEDIUM" | "LOW" | "VERY_LOW";
+
+export interface BidStrategy {
+  rate: number;
+  amount: number;
+  confidence: BidConfidence;
+  description: string;
+}
+
+export interface BidRecommendation {
+  id: string;
+  tender_id: string;
+  conservative_rate: number;
+  conservative_amount: number;
+  conservative_confidence: BidConfidence;
+  standard_rate: number;
+  standard_amount: number;
+  standard_confidence: BidConfidence;
+  aggressive_rate: number;
+  aggressive_amount: number;
+  aggressive_confidence: BidConfidence;
+  similar_bids_count: number;
+  analysis_period_months: number;
+  data_quality_score: number;
+  warnings: string[];
+  explanation: Record<string, unknown>;
+  recommended_at: string;
+  expires_at: string;
+  created_at: string;
+  cached?: boolean;
+}
+
+export interface SimilarBid {
+  bid_notice_id: string;
+  similarity_score: number;
+  notice_name: string;
+  demand_organization: string;
+  winner_bid_rate: number;
+  winner_bid_amount: number;
+  total_bidders: number;
+  awarded_at: string;
+}
+
+export interface BidAnalytics {
+  count: number;
+  bid_rate: {
+    min: number;
+    max: number;
+    mean: number;
+    median: number;
+    p25: number;
+    p75: number;
+  };
+  bid_amount: {
+    min: number;
+    max: number;
+    mean: number;
+    median: number;
+    total: number;
+  };
+}
+

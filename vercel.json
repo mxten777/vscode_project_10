@@ -14,6 +14,10 @@
     {
       "path": "/api/jobs/process-alerts",
       "schedule": "30 0 * * 1-5"
+    },
+    {
+      "path": "/api/jobs/collect-bid-awards",
+      "schedule": "10 0 * * 1-5"
     }
   ],
   "headers": [

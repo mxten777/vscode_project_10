@@ -34,3 +34,13 @@ export function notFoundResponse(message = "리소스를 찾을 수 없습니다
 export function internalErrorResponse(message = "서버 오류가 발생했습니다") {
   return errorResponse("INTERNAL_ERROR", message, 500);
 }
+
+// Simplified API response helper
+export const apiResponse = {
+  success: <T>(data: T, status = 200) => successResponse(data, status),
+  error: (message: string, status = 500, details?: unknown) =>
+    errorResponse("ERROR", message, status, details),
+  unauthorized: unauthorizedResponse,
+  forbidden: forbiddenResponse,
+  notFound: notFoundResponse,
+};

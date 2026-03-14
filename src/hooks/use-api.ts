@@ -8,6 +8,8 @@ import type {
   AlertRule,
   AlertLog,
   ReportSummary,
+  BidRecommendation,
+  SimilarBid,
 } from "@/lib/types";
 import type { TenderSearchParams } from "@/lib/validations";
 
@@ -141,3 +143,43 @@ export function useReportSummary(from?: string, to?: string) {
     queryFn: () => fetcher(`/api/reports/summary?${qs}`),
   });
 }
+
+// ─── Bid Intelligence ──────────────────────────────────
+
+export function useBidRecommendation(tenderId: string | undefined) {
+  return useQuery<BidRecommendation>({
+    queryKey: ["bid-recommendation", tenderId],
+    queryFn: () => fetcher(`/api/bid-analysis/recommend?tenderId=${tenderId}`),
+    enabled: !!tenderId,
+    staleTime: 1000 * 60 * 30, // 30분 캐시 (서버에서 24시간 캐시되므로)
+  });
+}
+
+export function useSimilarBids(tenderId: string | undefined, limit?: number) {
+  const qs = buildQueryString({ tenderId: tenderId || "", limit: limit || 20 });
+  return useQuery<{
+    total: number;
+    items: SimilarBid[];
+    grouped: { high: SimilarBid[]; medium: SimilarBid[]; low: SimilarBid[] };
+    summary: { high_similarity: number; medium_similarity: number; low_similarity: number };
+  }>({
+    queryKey: ["similar-bids", qs],
+    queryFn: () => fetcher(`/api/bid-analysis/similar?${qs}`),
+    enabled: !!tenderId,
+    staleTime: 1000 * 60 * 15, // 15분 캐시
+  });
+}
+
+export function useBidAnalytics(
+  type?: "overall" | "agency" | "industry" | "region",
+  value?: string,
+  months?: number
+) {
+  const qs = buildQueryString({ type, value, months });
+  return useQuery<Record<string, unknown>>({
+    queryKey: ["bid-analytics", qs],
+    queryFn: () => fetcher(`/api/bid-analysis/stats?${qs}`),
+    staleTime: 1000 * 60 * 60, // 1시간 캐시 (통계는 자주 변하지 않음)
+  });
+}
+
