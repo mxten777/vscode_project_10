@@ -56,7 +56,10 @@ export async function GET(request: NextRequest) {
 
     // 필터 적용 (count + data 동시)
     const applyFilters = (query: typeof countQuery | typeof dataQuery) => {
-      if (q) query = query.ilike("title", `%${q}%`);
+      // 검색어: title 또는 demand_agency_name에서 매칭 (pg_trgm % 연산자 활용)
+      if (q) {
+        query = query.or(`title.ilike.%${q}%,demand_agency_name.ilike.%${q}%`);
+      }
       if (status) query = query.eq("status", status);
       if (regionCode) query = query.eq("region_code", regionCode);
       if (industryCode) query = query.eq("industry_code", industryCode);
