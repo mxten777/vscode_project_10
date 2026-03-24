@@ -4,7 +4,7 @@
  */
 
 import { NextRequest } from "next/server";
-import { createClient } from "@/lib/supabase/server";
+import { createServiceClient } from "@/lib/supabase/service";
 import { apiResponse } from "@/lib/api-response";
 
 export async function GET(request: NextRequest) {
@@ -13,7 +13,7 @@ export async function GET(request: NextRequest) {
     const value = request.nextUrl.searchParams.get("value");
     const months = parseInt(request.nextUrl.searchParams.get("months") || "6");
 
-    const supabase = await createClient();
+    const supabase = createServiceClient();
     const sinceDate = new Date();
     sinceDate.setMonth(sinceDate.getMonth() - months);
 
@@ -24,7 +24,6 @@ export async function GET(request: NextRequest) {
         `
         winner_bid_rate,
         winner_bid_amount,
-        total_bidders:bid_open_results(total_bidders),
         bid_notices!inner(
           demand_organization,
           industry_code,
@@ -122,34 +121,45 @@ export async function GET(request: NextRequest) {
       avg_bid_rate: m.rates.reduce((sum: number, r: number) => sum + r, 0) / m.rates.length,
     }));
 
-    // 상위 기관/업종/지역 (type이 overall일 때)
-    let topCategories = {};
-    if (type === "overall") {
-      const byAgency = groupBy(awards, (a) => {
-        const noticeData = Array.isArray(a.bid_notices) ? a.bid_notices[0] : a.bid_notices;
-        return noticeData?.demand_organization || "Unknown";
-      });
-      const byIndustry = groupBy(awards, (a) => {
-        const noticeData = Array.isArray(a.bid_notices) ? a.bid_notices[0] : a.bid_notices;
-        return noticeData?.industry_name || "Unknown";
-      });
-      const byRegion = groupBy(awards, (a) => {
-        const noticeData = Array.isArray(a.bid_notices) ? a.bid_notices[0] : a.bid_notices;
-        return noticeData?.region_name || "Unknown";
-      });
+    // 상위 기관/업종/지역 (항상 계산)
+    const byAgency = groupBy(awards, (a) => {
+      const noticeData = Array.isArray(a.bid_notices) ? a.bid_notices[0] : a.bid_notices;
+      return noticeData?.demand_organization || "Unknown";
+    });
+    const byIndustry = groupBy(awards, (a) => {
+      const noticeData = Array.isArray(a.bid_notices) ? a.bid_notices[0] : a.bid_notices;
+      return noticeData?.industry_name || "Unknown";
+    });
+    const byRegion = groupBy(awards, (a) => {
+      const noticeData = Array.isArray(a.bid_notices) ? a.bid_notices[0] : a.bid_notices;
+      return noticeData?.region_name || "Unknown";
+    });
 
-      topCategories = {
-        top_agencies: topN(byAgency, 10),
-        top_industries: topN(byIndustry, 10),
-        top_regions: topN(byRegion, 10),
-      };
-    }
+    const topAgencies = topN(byAgency, 10);
+    const topIndustries = topN(byIndustry, 10);
+    const topRegions = topN(byRegion, 10);
+    const activeAgencies = Object.keys(byAgency).filter((k) => k !== "Unknown").length;
+
+    // type에 따라 top_categories 결정
+    const topCategories =
+      type === "region" ? topRegions
+      : type === "industry" ? topIndustries
+      : topAgencies; // agency 또는 overall
 
     return apiResponse.success({
+      // KPI 평탄화 필드
+      total_bids: awards.length,
+      avg_bid_rate: stats.bid_rate.mean,
+      total_amount: stats.bid_amount.total,
+      active_agencies: activeAgencies,
+      // 상세 통계
       filter: { type, value, months },
       stats,
       trend: trendData.sort((a, b) => a.month.localeCompare(b.month)),
-      ...topCategories,
+      top_categories: topCategories,
+      top_agencies: topAgencies,
+      top_industries: topIndustries,
+      top_regions: topRegions,
     });
   } catch (error) {
     const message = error instanceof Error ? error.message : "Unknown error";
@@ -176,10 +186,15 @@ function topN(grouped: Record<string, unknown[]>, n: number) {
       count: items.length,
       total_amount: items.reduce(
         (sum: number, i) =>
-          sum +
-          ((i as { winner_bid_amount?: number }).winner_bid_amount || 0),
+          sum + ((i as { winner_bid_amount?: number }).winner_bid_amount || 0),
         0
       ),
+      avg_bid_rate:
+        items.reduce(
+          (sum: number, i) =>
+            sum + ((i as { winner_bid_rate?: number }).winner_bid_rate || 0),
+          0
+        ) / (items.length || 1),
     }))
     .sort((a, b) => b.count - a.count)
     .slice(0, n);

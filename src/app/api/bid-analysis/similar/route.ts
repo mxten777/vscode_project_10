@@ -4,7 +4,7 @@
  */
 
 import { NextRequest } from "next/server";
-import { createClient } from "@/lib/supabase/server";
+import { createServiceClient } from "@/lib/supabase/service";
 import { apiResponse } from "@/lib/api-response";
 import type { SimilarBid } from "@/lib/types";
 
@@ -17,7 +17,7 @@ export async function GET(request: NextRequest) {
       return apiResponse.error("tenderId is required", 400);
     }
 
-    const supabase = await createClient();
+    const supabase = createServiceClient();
 
     // Postgres RPC 함수 호출: get_similar_bids
     const { data: similarBids, error: rpcError } = await supabase.rpc("get_similar_bids", {
