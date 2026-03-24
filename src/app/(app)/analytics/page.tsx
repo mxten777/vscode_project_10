@@ -112,7 +112,7 @@ function KPICard({ title, value, subtitle, icon, trend, color = "blue" }: KPICar
               </div>
             )}
           </div>
-          <div className={`flex h-12 w-12 items-center justify-center rounded-xl bg-gradient-to-br ${classes.bg}`}>
+          <div className={`flex h-12 w-12 items-center justify-center rounded-xl bg-linear-to-br ${classes.bg}`}>
             <div className={classes.icon}>{icon}</div>
           </div>
         </div>
@@ -140,9 +140,9 @@ export default function AnalyticsPage() {
   };
 
   // 월별 트렌드 데이터 변환
-  const trendData = (analytics as Record<string, unknown>)?.monthly_trend
-    ? Object.entries((analytics as Record<string, unknown>).monthly_trend as Record<string, Record<string, unknown>>).map(([month, data]) => ({
-        month: month.substring(5), // "2026-03" → "03"
+  const trendData = Array.isArray((analytics as Record<string, unknown>)?.trend)
+    ? ((analytics as Record<string, unknown>).trend as Array<Record<string, unknown>>).map((data) => ({
+        month: ((data.month as string) ?? "").replace(/^20(\d{2})-(\d{2})$/, "'$1.$2"), // "2025-03" → "'25.03"
         count: data.count as number,
         avg_rate: parseFloat(((data.avg_bid_rate as number)?.toFixed?.(2) ?? "0")),
         total_amount: ((data.total_amount as number) ?? 0) / 100000000, // 억 단위
@@ -261,7 +261,8 @@ export default function AnalyticsPage() {
                 {isLoading ? (
                   <Skeleton className="h-80 rounded-xl" />
                 ) : trendData.length > 0 ? (
-                  <ResponsiveContainer width="100%" height={300}>
+                  <div className="w-full" style={{ height: 300 }}>
+                  <ResponsiveContainer width="100%" height="100%">
                     <LineChart data={trendData}>
                       <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
                       <XAxis
@@ -307,6 +308,7 @@ export default function AnalyticsPage() {
                       />
                     </LineChart>
                   </ResponsiveContainer>
+                  </div>
                 ) : (
                   <div className="flex items-center justify-center h-80 text-muted-foreground">
                     <p className="text-sm">데이터가 수집 중입니다</p>

@@ -3,6 +3,15 @@
 -- 낙찰 분석 + 투찰가 추천 기능을 위한 테이블 추가
 -- ============================================================================
 
+-- updated_at 자동 업데이트 함수 (없을 경우 생성 — schema.sql의 set_updated_at과 동일)
+CREATE OR REPLACE FUNCTION update_updated_at_column()
+RETURNS TRIGGER LANGUAGE plpgsql AS $$
+BEGIN
+  NEW.updated_at = NOW();
+  RETURN NEW;
+END;
+$$;
+
 -- 1) bid_notices: 입찰 공고 기본 정보 (나라장터 원본)
 CREATE TABLE IF NOT EXISTS bid_notices (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),

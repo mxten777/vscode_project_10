@@ -56,9 +56,9 @@ export default function ReportsPage() {
   return (
     <div className="space-y-8 animate-fade-up">
       {/* Header */}
-      <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-violet-950 via-indigo-900 to-indigo-950 px-8 py-8 sm:px-10">
+      <div className="relative overflow-hidden rounded-2xl bg-linear-to-br from-violet-950 via-indigo-900 to-indigo-950 px-8 py-8 sm:px-10">
         <div className="noise-overlay" />
-        <div className="absolute top-[-20%] right-[-5%] h-[240px] w-[240px] rounded-full bg-violet-500/25 blur-[90px] animate-mesh pointer-events-none" />
+        <div className="absolute top-[-20%] right-[-5%] h-60 w-60 rounded-full bg-violet-500/25 blur-[90px] animate-mesh pointer-events-none" />
         <div className="relative z-10 flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4">
           <div>
             <div className="inline-flex items-center gap-2 rounded-full bg-white/10 border border-white/15 px-3 py-1 text-xs font-semibold text-white/80 mb-3">
@@ -308,7 +308,7 @@ export default function ReportsPage() {
                           </div>
                           <div className="h-1.5 bg-muted rounded-full overflow-hidden">
                             <div
-                              className="h-full rounded-full transition-all duration-500 bg-gradient-to-r from-primary to-primary/60"
+                              className="h-full rounded-full transition-all duration-500 bg-linear-to-r from-primary to-primary/60"
                               style={{ width: `${pct}%` }}
                             />
                           </div>

@@ -42,3 +42,14 @@ next-env.d.ts
 
 .vercel
 .env*.local
+
+# debug/temp scripts (local use only — contain env-var references, not for CI)
+analyze-dates.ps1
+check-api-response.ps1
+check-data.html
+check-database.ps1
+collect-data.ps1
+debug-api-mapping.ps1
+test-api-direct.ps1
+test-inqryDiv.ps1
+nara-api-response.json

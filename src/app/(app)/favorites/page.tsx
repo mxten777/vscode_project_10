@@ -8,7 +8,6 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
-  Star,
   StarOff,
   Building,
   Calendar,
@@ -59,7 +58,7 @@ export default function FavoritesPage() {
       {favorites && favorites.length === 0 && (
         <Card className="premium-card">
           <CardContent className="py-20 text-center text-muted-foreground">
-            <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-gradient-to-br from-amber-500/10 to-amber-500/5 mx-auto mb-5">
+            <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-linear-to-br from-amber-500/10 to-amber-500/5 mx-auto mb-5">
               <Heart className="h-7 w-7 text-amber-500/60" />
             </div>
             <p className="text-lg font-semibold text-foreground">즐겨찾기한 공고가 없습니다</p>

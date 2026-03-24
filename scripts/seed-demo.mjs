@@ -22,7 +22,8 @@ try {
       const eqIdx = trimmed.indexOf("=");
       if (eqIdx > 0) {
         const key = trimmed.slice(0, eqIdx).trim();
-        const value = trimmed.slice(eqIdx + 1).trim();
+        const raw = trimmed.slice(eqIdx + 1).trim();
+        const value = raw.replace(/^["']|["']$/g, "");
         if (!process.env[key]) process.env[key] = value;
       }
     }
@@ -622,7 +623,209 @@ async function seedDemo() {
   }
   console.log(`  ✅ ${awardRows?.length || 0}건 낙찰결과 완료\n`);
 
-  // 4. 요약
+  // 4. bid intelligence 데이터 (RESULT 공고 대상)
+  console.log("🔍 낙찰 분석 데이터 삽입 중...");
+
+  const BID_INTEL = [
+    {
+      source: "DEMO-2025-101",
+      industry: "C001", industry_name: "소프트웨어 개발",
+      region: "11", region_name: "서울",
+      base_amount: 4_100_000_000, estimated_price: 4_280_000_000,
+      lower_limit_rate: 87.745,
+      total_bidders: 12, valid_bidders: 10,
+      bid_rates: [97.2, 95.8, 93.4, 98.1, 96.0, 94.7, 97.5, 92.3, 95.1, 96.8],
+      winner_rate: 97.2,
+      winner_company: "삼성SDS 주식회사",
+    },
+    {
+      source: "DEMO-2025-102",
+      industry: "C004", industry_name: "정보통신공사",
+      region: "11", region_name: "서울",
+      base_amount: 7_600_000_000, estimated_price: 7_730_000_000,
+      lower_limit_rate: 87.745,
+      total_bidders: 8, valid_bidders: 7,
+      bid_rates: [95.8, 94.2, 96.5, 93.1, 97.0, 95.4, 94.8],
+      winner_rate: 95.8,
+      winner_company: "LG CNS 주식회사",
+    },
+    {
+      source: "DEMO-2025-103",
+      industry: "C001", industry_name: "소프트웨어 개발",
+      region: "11", region_name: "서울",
+      base_amount: 12_200_000_000, estimated_price: 12_375_000_000,
+      lower_limit_rate: 87.745,
+      total_bidders: 15, valid_bidders: 13,
+      bid_rates: [98.1, 96.7, 97.3, 95.9, 98.5, 97.0, 96.2, 95.5, 97.8, 98.2, 96.4, 97.1, 95.8],
+      winner_rate: 98.1,
+      winner_company: "SK텔레콤 주식회사",
+    },
+    {
+      source: "DEMO-2025-104",
+      industry: "C006", industry_name: "빅데이터·AI",
+      region: "41", region_name: "경기",
+      base_amount: 3_100_000_000, estimated_price: 3_168_000_000,
+      lower_limit_rate: 87.745,
+      total_bidders: 9, valid_bidders: 8,
+      bid_rates: [96.5, 95.0, 97.2, 94.3, 96.8, 95.7, 97.0, 94.9],
+      winner_rate: 96.5,
+      winner_company: "카카오엔터프라이즈",
+    },
+    {
+      source: "DEMO-2025-105",
+      industry: "C006", industry_name: "빅데이터·AI",
+      region: "42", region_name: "대전",
+      base_amount: 9_400_000_000, estimated_price: 9_504_000_000,
+      lower_limit_rate: null,
+      total_bidders: 6, valid_bidders: 5,
+      bid_rates: [94.3, 93.0, 95.1, 92.7, 94.8],
+      winner_rate: 94.3,
+      winner_company: "네이버클라우드 주식회사",
+    },
+    {
+      source: "DEMO-2025-106",
+      industry: "C001", industry_name: "소프트웨어 개발",
+      region: "26", region_name: "부산",
+      base_amount: 5_900_000_000, estimated_price: 6_039_000_000,
+      lower_limit_rate: 87.745,
+      total_bidders: 11, valid_bidders: 9,
+      bid_rates: [97.8, 96.3, 95.7, 97.2, 96.9, 95.1, 97.5, 96.6, 95.4],
+      winner_rate: 97.8,
+      winner_company: "현대오토에버 주식회사",
+    },
+    {
+      source: "DEMO-2025-107",
+      industry: "C006", industry_name: "빅데이터·AI",
+      region: "11", region_name: "서울",
+      base_amount: 8_200_000_000, estimated_price: 8_316_000_000,
+      lower_limit_rate: 87.745,
+      total_bidders: 13, valid_bidders: 11,
+      bid_rates: [96.0, 94.8, 95.5, 97.1, 96.3, 94.2, 95.9, 97.4, 96.7, 94.5, 95.2],
+      winner_rate: 96.0,
+      winner_company: "KT 주식회사",
+    },
+    {
+      source: "DEMO-2025-108",
+      industry: "F001", industry_name: "용역·서비스",
+      region: "11", region_name: "서울",
+      base_amount: 2_050_000_000, estimated_price: 2_079_000_000,
+      lower_limit_rate: null,
+      total_bidders: 7, valid_bidders: 7,
+      bid_rates: [99.2, 98.5, 97.8, 99.0, 98.1, 97.6, 98.8],
+      winner_rate: 99.2,
+      winner_company: "포스코ICT 주식회사",
+    },
+    {
+      source: "DEMO-2025-109",
+      industry: "C001", industry_name: "소프트웨어 개발",
+      region: "11", region_name: "서울",
+      base_amount: 1_620_000_000, estimated_price: 1_633_500_000,
+      lower_limit_rate: 87.745,
+      total_bidders: 10, valid_bidders: 9,
+      bid_rates: [95.4, 94.1, 96.0, 93.8, 95.7, 94.5, 96.2, 95.0, 94.7],
+      winner_rate: 95.4,
+      winner_company: "NHN 주식회사",
+    },
+    {
+      source: "DEMO-2025-110",
+      industry: "C001", industry_name: "소프트웨어 개발",
+      region: "11", region_name: "서울",
+      base_amount: 3_800_000_000, estimated_price: 3_861_000_000,
+      lower_limit_rate: 87.745,
+      total_bidders: 14, valid_bidders: 12,
+      bid_rates: [97.6, 96.2, 95.8, 97.3, 96.9, 95.3, 97.0, 96.5, 95.6, 97.4, 96.1, 95.9],
+      winner_rate: 97.6,
+      winner_company: "LG유플러스 주식회사",
+    },
+  ];
+
+  let bidNoticeInserted = 0;
+  let bidOpenInserted = 0;
+  let bidAwardInserted = 0;
+
+  for (const bid of BID_INTEL) {
+    const tenderId = tenderIdMap[bid.source];
+    if (!tenderId) continue;
+
+    const awardInfo = AWARD_DATA[bid.source];
+    const openedAt = daysAgo(awardInfo.offsetDays);
+
+    // bid_notices
+    const { data: noticeRow, error: noticeErr } = await supabase
+      .from("bid_notices")
+      .upsert({
+        tender_id: tenderId,
+        source_bid_notice_id: `NARA-${bid.source}`,
+        notice_number: `2025-${bid.source.replace("DEMO-2025-", "")}`,
+        notice_name: tenders.find((t) => t.source_tender_id === bid.source)?.title ?? bid.source,
+        demand_organization: tenders.find((t) => t.source_tender_id === bid.source)?.demand_agency_name,
+        contract_type: tenders.find((t) => t.source_tender_id === bid.source)?.method_type,
+        bid_type: "전자입찰",
+        base_amount: bid.base_amount,
+        estimated_price: bid.estimated_price,
+        lower_limit_rate: bid.lower_limit_rate,
+        bid_start_datetime: daysAgo(awardInfo.offsetDays + 30),
+        bid_end_datetime: daysAgo(awardInfo.offsetDays + 5),
+        open_datetime: openedAt,
+        industry_code: bid.industry,
+        industry_name: bid.industry_name,
+        region_code: bid.region,
+        region_name: bid.region_name,
+      }, { onConflict: "source_bid_notice_id" })
+      .select("id")
+      .single();
+
+    if (noticeErr) { console.error("  ⚠ bid_notices 오류:", bid.source, noticeErr.message); continue; }
+    bidNoticeInserted++;
+
+    const bidNoticeId = noticeRow.id;
+    const sortedRates = [...bid.bid_rates].sort((a, b) => a - b);
+    const avgRate = bid.bid_rates.reduce((s, r) => s + r, 0) / bid.bid_rates.length;
+    const medianRate = sortedRates[Math.floor(sortedRates.length / 2)];
+
+    // bid_open_results
+    const { error: openErr } = await supabase
+      .from("bid_open_results")
+      .upsert({
+        bid_notice_id: bidNoticeId,
+        opened_at: openedAt,
+        total_bidders: bid.total_bidders,
+        valid_bidders: bid.valid_bidders,
+        highest_bid_rate: sortedRates[sortedRates.length - 1],
+        lowest_bid_rate: sortedRates[0],
+        average_bid_rate: Math.round(avgRate * 100) / 100,
+        median_bid_rate: medianRate,
+        expected_winner_bid_rate: bid.winner_rate,
+        expected_winner_amount: Math.round(bid.estimated_price * bid.winner_rate / 100),
+        is_successful: true,
+      }, { onConflict: "bid_notice_id" });
+
+    if (openErr) { console.error("  ⚠ bid_open_results 오류:", bid.source, openErr.message); }
+    else bidOpenInserted++;
+
+    // bid_awards
+    const { error: awardErr2 } = await supabase
+      .from("bid_awards")
+      .upsert({
+        bid_notice_id: bidNoticeId,
+        winner_company_name: bid.winner_company,
+        winner_bid_rate: bid.winner_rate,
+        winner_bid_amount: Math.round(bid.estimated_price * bid.winner_rate / 100),
+        contract_amount: Math.round(bid.estimated_price * bid.winner_rate / 100),
+        contract_date: new Date(daysAgo(awardInfo.offsetDays - 7)).toISOString().slice(0, 10),
+        is_final: true,
+        awarded_at: openedAt,
+      }, { onConflict: "bid_notice_id" });
+
+    if (awardErr2) { console.error("  ⚠ bid_awards 오류:", bid.source, awardErr2.message); }
+    else bidAwardInserted++;
+  }
+
+  console.log(`  ✅ bid_notices: ${bidNoticeInserted}건`);
+  console.log(`  ✅ bid_open_results: ${bidOpenInserted}건`);
+  console.log(`  ✅ bid_awards: ${bidAwardInserted}건\n`);
+
+  // 5. 요약
   const openCount = tenders.filter((t) => t.status === "OPEN").length;
   const closedCount = tenders.filter((t) => t.status === "CLOSED").length;
   const resultCount = tenders.filter((t) => t.status === "RESULT").length;
@@ -632,15 +835,45 @@ async function seedDemo() {
     return diff >= 0 && diff <= 3;
   }).length;
 
+  // 6. 데모 계정 생성 (이미 있으면 skip)
+  console.log("👤 데모 계정 생성 중...");
+  const DEMO_EMAIL = "demo@bidsight.local";
+  const DEMO_PASSWORD = "demo1234!";
+  try {
+    // 기존 계정 확인
+    const { data: existingUsers } = await supabase.auth.admin.listUsers();
+    const existingDemo = existingUsers?.users?.find((u) => u.email === DEMO_EMAIL);
+    if (existingDemo) {
+      console.log("  ℹ 데모 계정 이미 존재 — 스킵");
+    } else {
+      const { error: userErr } = await supabase.auth.admin.createUser({
+        email: DEMO_EMAIL,
+        password: DEMO_PASSWORD,
+        email_confirm: true,
+      });
+      if (userErr) {
+        console.error("  ⚠ 데모 계정 생성 실패:", userErr.message);
+      } else {
+        console.log("  ✅ 데모 계정 생성 완료");
+      }
+    }
+  } catch (e) {
+    console.error("  ⚠ 데모 계정 생성 중 오류:", e.message);
+  }
+
   console.log("═══════════════════════════════════════════");
   console.log("✨ 데모 데이터 시드 완료!");
   console.log(`   전체 공고: ${tenders.length}건`);
   console.log(`   ├ 진행중:   ${openCount}건 (D-3 이내 긴급: ${urgentCount}건)`);
   console.log(`   ├ 마감:     ${closedCount}건`);
   console.log(`   └ 결과발표: ${resultCount}건`);
-  console.log(`   낙찰 결과: ${awardRows?.length || 0}건`);
+  console.log(`   낙찰 결과(awards): ${awardRows?.length || 0}건`);
+  console.log(`   낙찰 분석(bid_awards): ${bidAwardInserted}건`);
   console.log("═══════════════════════════════════════════");
-  console.log("\n👉 http://localhost:3000 을 새로고침하세요!");
+  console.log("\n🔑 데모 로그인 정보:");
+  console.log(`   이메일: ${DEMO_EMAIL}`);
+  console.log(`   비밀번호: ${DEMO_PASSWORD}`);
+  console.log("\n👉 http://localhost:3000/login 에서 위 계정으로 로그인하세요!");
 }
 
 seedDemo().catch((e) => {

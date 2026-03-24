@@ -80,7 +80,7 @@ export default function TenderDetailPage({
     return (
       <Card className="premium-card">
         <CardContent className="py-20 text-center text-muted-foreground">
-          <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-gradient-to-br from-primary/10 to-primary/5 mx-auto mb-5">
+          <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-linear-to-br from-primary/10 to-primary/5 mx-auto mb-5">
             <ExternalLink className="h-7 w-7 text-primary/50" />
           </div>
           <p className="text-lg font-semibold text-foreground">공고를 찾을 수 없습니다</p>
@@ -164,9 +164,9 @@ export default function TenderDetailPage({
       </div>
 
       {/* Title + D-day banner */}
-      <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-indigo-950 via-indigo-900 to-violet-950 px-8 py-7 sm:px-10">
+      <div className="relative overflow-hidden rounded-2xl bg-linear-to-br from-indigo-950 via-indigo-900 to-violet-950 px-8 py-7 sm:px-10">
         <div className="noise-overlay" />
-        <div className="absolute top-[-15%] right-[-5%] h-[200px] w-[200px] rounded-full bg-indigo-500/25 blur-[80px] animate-mesh pointer-events-none" />
+        <div className="absolute top-[-15%] right-[-5%] h-50 w-50 rounded-full bg-indigo-500/25 blur-[80px] animate-mesh pointer-events-none" />
         <div className="relative z-10">
           <div className="flex items-start justify-between gap-4 flex-wrap">
             <div className="flex-1 min-w-0">
@@ -193,7 +193,7 @@ export default function TenderDetailPage({
             </div>
             {/* D-day countdown card */}
             {dday && (
-              <div className={`shrink-0 flex flex-col items-center justify-center rounded-2xl px-5 py-3 min-w-[80px] ${dday.urgent ? "bg-rose-500/20 border border-rose-500/30" : "bg-amber-500/15 border border-amber-500/25"}`}>
+              <div className={`shrink-0 flex flex-col items-center justify-center rounded-2xl px-5 py-3 min-w-20 ${dday.urgent ? "bg-rose-500/20 border border-rose-500/30" : "bg-amber-500/15 border border-amber-500/25"}`}>
                 <Clock className={`h-4 w-4 mb-1 ${dday.urgent ? "text-rose-300" : "text-amber-300"}`} />
                 <span className={`text-2xl font-extrabold tracking-tight ${dday.urgent ? "text-rose-300" : "text-amber-300"}`}>{dday.label}</span>
                 <span className="text-[10px] text-white/50 mt-0.5">마감까지</span>
@@ -256,7 +256,7 @@ export default function TenderDetailPage({
         <Card className="premium-card card-hover">
           <CardHeader className="pb-3">
             <CardTitle className="text-base font-semibold flex items-center gap-2">
-              <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-gradient-to-br from-primary/15 to-primary/5">
+              <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-linear-to-br from-primary/15 to-primary/5">
                 <Building className="h-4 w-4 text-primary" />
               </div>
               공고 정보
@@ -302,7 +302,7 @@ export default function TenderDetailPage({
         <Card className="premium-card card-hover">
           <CardHeader className="pb-3">
             <CardTitle className="text-base font-semibold flex items-center gap-2">
-              <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-gradient-to-br from-amber-500/15 to-amber-500/5">
+              <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-linear-to-br from-amber-500/15 to-amber-500/5">
                 <Trophy className="h-4 w-4 text-amber-600 dark:text-amber-400" />
               </div>
               낙찰 결과
@@ -341,7 +341,7 @@ export default function TenderDetailPage({
               </div>
             ) : (
               <div className="flex flex-col items-center justify-center py-10 text-muted-foreground">
-                <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-br from-amber-500/10 to-amber-500/5 mb-3">
+                <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-linear-to-br from-amber-500/10 to-amber-500/5 mb-3">
                   <Trophy className="h-5 w-5 opacity-50" />
                 </div>
                 <p className="text-sm">아직 낙찰 결과가 없습니다</p>
@@ -354,9 +354,9 @@ export default function TenderDetailPage({
       {/* Bid Intelligence Section */}
       {tender.status === "OPEN" && (
         <Card className="premium-card overflow-hidden border-primary/20">
-          <CardHeader className="pb-4 bg-gradient-to-br from-primary/5 via-primary/3 to-transparent">
+          <CardHeader className="pb-4 bg-linear-to-br from-primary/5 via-primary/3 to-transparent">
             <CardTitle className="text-lg font-bold flex items-center gap-2">
-              <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br from-primary/20 to-primary/10">
+              <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-linear-to-br from-primary/20 to-primary/10">
                 <Lightbulb className="h-5 w-5 text-primary" />
               </div>
               AI 투찰가 분석
@@ -604,7 +604,7 @@ function StrategyCard({
 
   return (
     <div
-      className={`relative overflow-hidden rounded-xl border ${classes.border} bg-gradient-to-br ${classes.bg} p-4 transition-all hover:shadow-lg ${recommended ? "ring-2 ring-primary/20" : ""}`}
+      className={`relative overflow-hidden rounded-xl border ${classes.border} bg-linear-to-br ${classes.bg} p-4 transition-all hover:shadow-lg ${recommended ? "ring-2 ring-primary/20" : ""}`}
     >
       {recommended && (
         <div className="absolute top-2 right-2">

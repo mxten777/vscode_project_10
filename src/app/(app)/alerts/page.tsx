@@ -119,10 +119,10 @@ export default function AlertsPage() {
   return (
     <div className="space-y-8 animate-fade-up">
       {/* Header */}
-      <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-rose-950 via-indigo-950 to-indigo-900 px-8 py-8 sm:px-10">
+      <div className="relative overflow-hidden rounded-2xl bg-linear-to-br from-rose-950 via-indigo-950 to-indigo-900 px-8 py-8 sm:px-10">
         <div className="noise-overlay" />
-        <div className="absolute top-[-10%] right-[-5%] h-[220px] w-[220px] rounded-full bg-rose-500/20 blur-[80px] animate-mesh pointer-events-none" />
-        <div className="absolute bottom-[-10%] left-[10%] h-[180px] w-[180px] rounded-full bg-indigo-500/20 blur-[70px] animate-mesh pointer-events-none" style={{ animationDelay: "-5s" }} />
+        <div className="absolute top-[-10%] right-[-5%] h-55 w-55 rounded-full bg-rose-500/20 blur-[80px] animate-mesh pointer-events-none" />
+        <div className="absolute bottom-[-10%] left-[10%] h-45 w-45 rounded-full bg-indigo-500/20 blur-[70px] animate-mesh pointer-events-none" style={{ animationDelay: "-5s" }} />
         <div className="relative z-10 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div>
             <div className="inline-flex items-center gap-2 rounded-full bg-white/10 border border-white/15 px-3 py-1 text-xs font-semibold text-white/80 mb-3">
@@ -260,10 +260,10 @@ export default function AlertsPage() {
           {rules && rules.length === 0 && (
             <Card className="premium-card">
               <CardContent className="py-20 text-center text-muted-foreground">
-                <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-gradient-to-br from-primary/10 to-primary/5 mx-auto mb-5">
+                <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-linear-to-br from-primary/10 to-primary/5 mx-auto mb-5">
                   <Bell className="h-7 w-7 text-primary/50" />
                 </div>
-                <p className="text-lg font-semibold text-foreground">설정된 알림 규칙이 없습니다</p>
+                <p className="text-lg font-semibold text-foreground">알림 규칙이 없습니다</p>
                 <p className="text-sm mt-1.5">새 규칙을 추가하여 맞춤 알림을 받아보세요</p>
               </CardContent>
             </Card>
@@ -351,7 +351,7 @@ export default function AlertsPage() {
           {logs && logs.length === 0 && (
             <Card className="premium-card">
               <CardContent className="py-20 text-center text-muted-foreground">
-                <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-gradient-to-br from-primary/10 to-primary/5 mx-auto mb-5">
+                <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-linear-to-br from-primary/10 to-primary/5 mx-auto mb-5">
                   <Send className="h-7 w-7 text-primary/50" />
                 </div>
                 <p className="text-lg font-semibold text-foreground">발송 이력이 없습니다</p>

@@ -9,7 +9,8 @@
  */
 
 import { NextRequest, NextResponse } from "next/server";
-import { createClient } from "@/lib/supabase/server";
+import { createServiceClient } from "@/lib/supabase/service";
+import { verifyCronSecret } from "@/lib/helpers";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 // 나라장터 API 타입
@@ -38,12 +39,11 @@ interface NaramarketBidResult {
 export async function GET(request: NextRequest) {
   try {
     // Cron secret 검증
-    const authHeader = request.headers.get("authorization");
-    if (authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
+    if (!verifyCronSecret(request)) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const supabase = await createClient();
+    const supabase = createServiceClient();
     const NARAMARKET_API_KEY = process.env.NARA_API_KEY;
 
     if (!NARAMARKET_API_KEY) {
@@ -113,8 +113,7 @@ export async function GET(request: NextRequest) {
       }
     }
 
-    // 5) 파생 변수 계산 (최근 업데이트된 항목만)
-    await calculatePriceFeatures(supabase);
+    // 5) bid_price_features는 DB 트리거(trg_bid_awards_compute_features)가 자동 계산
 
     return NextResponse.json({
       success: true,
@@ -227,79 +226,6 @@ async function processAwardResult(supabase: SupabaseClient, item: NaramarketBidR
   );
 
   if (awardError) throw awardError;
-}
-
-/**
- * 파생 변수 계산
- */
-async function calculatePriceFeatures(supabase: SupabaseClient) {
-  // 최근 7일간 업데이트된 bid_awards 조회
-  const { data: recentAwards } = await supabase
-    .from("bid_awards")
-    .select(
-      `
-      bid_notice_id,
-      winner_bid_rate,
-      bid_notices!inner (
-        id,
-        demand_organization,
-        industry_code,
-        region_code,
-        estimated_price,
-        base_amount
-      )
-    `
-    )
-    .gte("updated_at", new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString());
-
-  if (!recentAwards || recentAwards.length === 0) return;
-
-  // 각 낙찰 건에 대해 파생 변수 계산
-  for (const award of recentAwards) {
-    const noticeData = Array.isArray(award.bid_notices) ? award.bid_notices[0] : award.bid_notices;
-    const notice = noticeData || {};
-    const sixMonthsAgo = new Date();
-    sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 6);
-
-    const { data: agencyAvg } = await supabase.rpc("calculate_avg_bid_rate", {
-      filter_type: "agency",
-      filter_value: (notice as { demand_organization?: string }).demand_organization || null,
-      since_date: sixMonthsAgo.toISOString(),
-    });
-
-    const { data: industryAvg } = await supabase.rpc("calculate_avg_bid_rate", {
-      filter_type: "industry",
-      filter_value: (notice as { industry_code?: string }).industry_code || null,
-      since_date: sixMonthsAgo.toISOString(),
-    });
-
-    const { data: regionAvg } = await supabase.rpc("calculate_avg_bid_rate", {
-      filter_type: "region",
-      filter_value: (notice as { region_code?: string }).region_code || null,
-      since_date: sixMonthsAgo.toISOString(),
-    });
-
-    // bid_price_features upsert
-    const typedNotice = notice as {
-      base_amount?: number;
-      estimated_price?: number;
-    };
-    await supabase.from("bid_price_features").upsert(
-      {
-        bid_notice_id: award.bid_notice_id,
-        price_to_base_ratio:
-          typedNotice.base_amount && typedNotice.estimated_price
-            ? typedNotice.estimated_price / typedNotice.base_amount
-            : null,
-        agency_avg_bid_rate: agencyAvg || null,
-        industry_avg_bid_rate: industryAvg || null,
-        region_avg_bid_rate: regionAvg || null,
-        calculated_at: new Date().toISOString(),
-        updated_at: new Date().toISOString(),
-      },
-      { onConflict: "bid_notice_id" }
-    );
-  }
 }
 
 /**

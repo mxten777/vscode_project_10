@@ -80,7 +80,11 @@ export async function POST(request: NextRequest) {
           industry_code: (item.prdctClsfcNo as string) || null,
           industry_name: (item.prdctClsfcNoNm as string) || null,
           method_type: (item.cntrctMthdCd as string) || null,
-          published_at: parseDate((item.bidNtceDt || item.rgstDt) as string),
+          // published_at: use the latest of bidNtceDt and rgstDt to reduce UI freshness issues
+          published_at: latestDateIso(
+            parseDate(item.bidNtceDt as string),
+            parseDate(item.rgstDt as string)
+          ),
           deadline_at: parseDate(item.bidClseDt as string),
           status: determineTenderStatus(item),
           raw_json: item,
@@ -151,6 +155,16 @@ function parseDate(dateStr?: string): string | null {
   // 기타 형식 ("2026-03-03 09:40:03" 등) — 나라장터는 KST 기준, +09:00 명시
   const d = new Date(s.replace(" ", "T") + "+09:00");
   return isNaN(d.getTime()) ? null : d.toISOString();
+}
+
+function latestDateIso(a?: string | null, b?: string | null): string | null {
+  if (!a && !b) return null;
+  const ta = a ? Date.parse(a) : NaN;
+  const tb = b ? Date.parse(b) : NaN;
+  if (isNaN(ta) && isNaN(tb)) return null;
+  if (isNaN(ta)) return new Date(tb).toISOString();
+  if (isNaN(tb)) return new Date(ta).toISOString();
+  return ta >= tb ? new Date(ta).toISOString() : new Date(tb).toISOString();
 }
 
 function getTodayStr(): string {

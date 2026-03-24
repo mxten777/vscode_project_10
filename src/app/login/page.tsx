@@ -253,7 +253,7 @@ function LoginContent() {
       </div>
 
       {/* Right Form Panel */}
-      <div className="flex w-full lg:w-[45%] items-center justify-center bg-background px-6 py-12 relative">
+      <div className="flex w-full lg:w-[45%] items-center justify-center bg-background px-6 py-12 relative overflow-y-auto">
         {/* Subtle background gradient */}
         <div className="absolute inset-0 hero-gradient opacity-50" />
 
