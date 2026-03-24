@@ -1,8 +1,8 @@
 # AI 입찰·조달 분석 플랫폼 — 프로젝트 현황 보고서
 
-> 최초 작성: 2026-02-27 / 최종 업데이트: 2026-03-10  
+> 최초 작성: 2026-02-27 / 최종 업데이트: 2026-03-24  
 > 프로젝트: bid-platform  
-> 버전: 0.2.0
+> 버전: 0.3.0
 
 ---
 
@@ -127,6 +127,30 @@
 - [x] 회원가입 시 org + org_member(admin) 자동 생성 완료
   - 즐겨찾기, 알림 규칙 등 RLS 의존 기능 정상 작동
 
+### Phase 9: 낙찰 분석 대시보드 (2026-03-14)
+- [x] Migration 006 ~ 009 Supabase 적용 완료
+  - 006: `bid_notices`, `bid_open_results`, `bid_awards` 테이블
+  - 007: FK 제약, `calculate_avg_bid_rate` 함수, RLS 쓰기 정책
+  - 008: `bid_price_features` 트리거
+  - 009: `recommend_bid_price()` v2 (`lower_limit_rate` 클램핑)
+- [x] `/api/jobs/collect-bid-awards` 크론 구현 (나라장터 개찰결과 수집)
+- [x] bid-analysis API 3개 RLS 버그 수정: `createClient()` → `createServiceClient()`
+  - `/api/bid-analysis/stats`, `/api/bid-analysis/recommend`, `/api/bid-analysis/similar`
+- [x] 데모 시드 데이터 60건 삽입 (`scripts/seed-bid-awards.sql`)
+  - 3개 테이블 × 60행, 최근 12개월 균등 분산
+- [x] 낙찰 분석 대시보드 (`/analytics`) 완전 작동 확인
+  - KPI 카드: 69건, 91.56%, ₩370B, 15개 기관 (12개월 기준)
+  - 월별 트렌드 LineChart (Recharts ResponsiveContainer Tabs 버그 수정)
+  - 기관별/업종별/지역별 Top10 BarChart
+- [x] 월 레이블 포맷 개선: `"2025-03"` → `"'25.03"` (연도 중복 방지)
+
+### Phase 10: 코드 품질 정비 (2026-03-24)
+- [x] 미사용 패키지 3개 제거: `react-hook-form`, `@hookform/resolvers`, `date-fns`
+  - 소스 코드 어디에도 임포트되지 않아 번들에서 제거
+- [x] `header.tsx` `createClient()` 렌더 바디 → `useRef` 메모이제이션 (매 렌더 클라이언트 재생성 방지)
+- [x] `(app)/layout.tsx` footer `<span>` → `<a>` 접근성 수정 (이용약관/개인정보/문의)
+- [x] 기술부채 전수 분석 완료 (17개 항목 식별, 우선순위 분류)
+
 ---
 
 ## 3. 해결된 이슈 전체 목록
@@ -181,20 +205,21 @@
 | `NARA_API_BASE_URL` | 나라장터 API 베이스 URL | ✅ 등록 |
 | `NEXT_PUBLIC_APP_URL` | 앱 프로덕션 URL | ✅ 등록 |
 | `RESEND_API_KEY` | 이메일 알림 (Resend) | ⚠️ 미등록 (이메일 발송 비활성) |
+| `ALERT_FROM_EMAIL` | 발신자 주소 | ⚠️ 미등록 (기본값 `noreply@bidplatform.com`) |
 
 ### Git 커밋 이력 (최신 10개)
 
 ```
+d2698f1 chore: remove unused deps + fix header createClient memoization + fix footer a11y
+e992369 fix: wrap ResponsiveContainer in explicit height div to fix Tabs rendering bug
+6dab5b0 fix: bid-analysis API use service client to bypass RLS
+[seed]   scripts/seed-bid-awards.sql 추가 (60건 데모 데이터)
 2215402 chore: remove debug code from poll-tenders
 cf89ccf fix: deduplicate tender payloads to prevent PostgreSQL upsert conflict error
 ab18ccb debug: better error serialization
-4d641a7 debug: expose error message in POST handler
-896df17 debug: add GET endpoint for NARA API diagnosis
 d4d8b8b fix: trim NARA_API_KEY to remove potential newlines from Vercel env
 b611743 feat: switch to NARA production API endpoint, fix date format to 12-digit
 a756d45 revert: restore production poll-tenders, remove all debug code
-67890c9 debug: add GET test endpoint for raw NARA API response
-ebb1a24 debug: xml response + key length check
 ```
 
 ---
@@ -205,11 +230,11 @@ ebb1a24 debug: xml response + key length check
 
 | # | 작업 | 설명 | 난이도 |
 |---|------|------|--------|
-| 1 | **Resend API 키 발급** | https://resend.com 가입 → API Key 발급 → Vercel 환경변수 `RESEND_API_KEY` 등록. 이메일 알림 기능 활성화 | 낮음 |
+| 1 | **Resend API 키 발급 + 도메인 인증** | https://resend.com 가입 → API Key 발급 → Vercel `RESEND_API_KEY` 등록 → 도메인 DNS(SPF/DKIM) 인증 → `ALERT_FROM_EMAIL` 등록. 없으면 스팸함 직행 | 낮음 |
 | 2 | **Cron Job 실제 수집 확인** | 나라장터 데이터가 DB에 실제로 적재되는지 확인. `curl -X POST https://bid-platform.vercel.app/api/jobs/poll-tenders -H "Authorization: Bearer {CRON_SECRET}"` | 낮음 |
-| 3 | ~~**Migration 001 Supabase 적용**~~ ✅ | `supabase/migrations/001_stabilize.sql` Supabase Dashboard > SQL Editor 실행 완료 (2026-03-10) | 완료 |
+| 3 | **KST 시간대 버그 수정** | `collect-bid-awards/route.ts` 시간 파싱 시 `T${h}:${m}:${s}Z` → `T${h}:${m}:${s}+09:00` (9시간 오차) | 낮음 |
 | 4 | **전체 사용자 플로우 테스트** | 회원가입 → 로그인 → 공고 조회 → 즐겨찾기 → 알림 규칙 생성 → 리포트 차트 | 중간 |
-| 5 | **에러 핸들링 강화** | API 에러 시 사용자 친화적 메시지, 네트워크 오류 재시도 UI | 중간 |
+| 5 | **auth API Zod 검증 적용** | `signin/route.ts`, `signup/route.ts`에 이미 정의된 `signInSchema`, `signUpSchema` 연결 | 낮음 |
 
 ### 🟢 개선 (품질 향상)
 
@@ -264,7 +289,25 @@ node -e "require('child_process').execSync('vercel env add 변수명 production'
 
 ---
 
-## 7. 주요 접속 정보
+## 7. 다음 세션 시작 방법
+
+새 대화창에서 아래 문장을 그대로 붙여넣으면 됩니다:
+
+```
+PROJECT_STATUS.md와 SESSION_LOG_20260324.md를 읽고 현재 상태를 파악한 뒤, 남은 작업 목록에서 이어서 작업해줘.
+```
+
+또는 특정 작업을 바로 시작하려면:
+```
+PROJECT_STATUS.md를 읽고, [작업 내용]을 구현해줘.
+예) "Resend 이메일 연동 완료 및 도메인 인증 설정 가이드 작성"
+예) "KST 시간대 버그 수정"
+예) "auth 라우트에 Zod 검증 적용"
+```
+
+---
+
+## 8. 주요 접속 정보
 
 | 서비스 | URL |
 |--------|-----|
