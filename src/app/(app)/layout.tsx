@@ -19,9 +19,9 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
         <div className="mx-auto max-w-7xl px-4 sm:px-6 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-muted-foreground/60">
           <p>&copy; 2026 BidSight — AI 입찰·조달 분석 플랫폼</p>
           <div className="flex items-center gap-6">
-            <span className="hover:text-foreground transition-colors cursor-pointer">이용약관</span>
-            <span className="hover:text-foreground transition-colors cursor-pointer">개인정보처리방침</span>
-            <span className="hover:text-foreground transition-colors cursor-pointer">문의하기</span>
+            <a href="/terms" className="hover:text-foreground transition-colors">이용약관</a>
+            <a href="/privacy" className="hover:text-foreground transition-colors">개인정보처리방침</a>
+            <a href="/contact" className="hover:text-foreground transition-colors">문의하기</a>
           </div>
         </div>
       </footer>
