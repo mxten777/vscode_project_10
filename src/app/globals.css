@@ -866,20 +866,6 @@ button, a {
 }
 
 
-/* ─── Floating keyword pill ─── */
-@keyframes float-slow {
-  0%, 100% { transform: translateY(0px); }
-  50% { transform: translateY(-6px); }
-}
-@keyframes float-slow-rev {
-  0%, 100% { transform: translateY(-4px); }
-  50% { transform: translateY(4px); }
-}
-.float-slow { animation: float-slow 4s ease-in-out infinite; }
-.float-slow-rev { animation: float-slow-rev 5s ease-in-out infinite; }
-.float-slow-2 { animation: float-slow 6s ease-in-out infinite; animation-delay: -2s; }
-.float-slow-3 { animation: float-slow-rev 7s ease-in-out infinite; animation-delay: -3s; }
-
 /* ─── Progress bar fill animation ─── */
 @keyframes fill-bar {
   from { width: 0%; }

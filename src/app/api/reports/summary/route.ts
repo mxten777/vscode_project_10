@@ -1,5 +1,6 @@
 import { NextRequest } from "next/server";
 import { createClient } from "@/lib/supabase/server";
+import { getAuthContext } from "@/lib/auth-context";
 import { successResponse, internalErrorResponse } from "@/lib/api-response";
 
 /**
@@ -8,6 +9,9 @@ import { successResponse, internalErrorResponse } from "@/lib/api-response";
  */
 export async function GET(request: NextRequest) {
   try {
+    const ctx = await getAuthContext();
+    if ("error" in ctx) return ctx.error;
+
     const url = new URL(request.url);
     const from = url.searchParams.get("from");
     const to = url.searchParams.get("to");
