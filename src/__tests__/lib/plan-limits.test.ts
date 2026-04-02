@@ -1,4 +1,4 @@
-import { describe, it, expect } from "vitest";
+import { describe, it, expect, vi } from "vitest";
 import { PLAN_LIMITS } from "@/lib/auth-context";
 
 // auth-context.ts는 Supabase 클라이언트를 import하므로 mock 처리

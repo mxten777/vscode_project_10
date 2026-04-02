@@ -105,13 +105,14 @@ function HomeContent() {
   );
   const [debouncedQ, setDebouncedQ] = useState(q);
   const [activeCategory, setActiveCategory] = useState("");
-  const [viewMode, setViewMode] = useState<"card" | "table">("table");
+  const [viewMode, setViewMode] = useState<"card" | "table">(
+    () => typeof window !== "undefined" && window.matchMedia("(max-width: 639px)").matches ? "card" : "table"
+  );
   const [sortOrder, setSortOrder] = useState<"asc" | "desc">("desc");
 
   // 모바일(< 640px)에서 카드 뷰 자동 선택 + 리사이즈 반응
   useEffect(() => {
     const mql = window.matchMedia("(max-width: 639px)");
-    if (mql.matches) setViewMode("card");
     const handler = (e: MediaQueryListEvent) => setViewMode(e.matches ? "card" : "table");
     mql.addEventListener("change", handler);
     return () => mql.removeEventListener("change", handler);
@@ -733,7 +734,7 @@ function HomeContent() {
                           )}
                         </div>
                       </div>
-                      <div className="text-right shrink-0 flex flex-col items-end gap-1 min-w-[80px] sm:min-w-[100px]">
+                      <div className="text-right shrink-0 flex flex-col items-end gap-1 min-w-20 sm:min-w-25">
                         <p className="font-extrabold text-base sm:text-lg tracking-tight text-primary tabular-nums">
                           {formatKRW(tender.budget_amount)}
                         </p>
