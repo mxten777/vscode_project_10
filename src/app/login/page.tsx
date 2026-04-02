@@ -15,7 +15,6 @@ import {
 } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
-  BarChart3,
   Shield,
   Zap,
   TrendingUp,
@@ -25,6 +24,7 @@ import {
   ArrowRight,
   Sparkles,
 } from "lucide-react";
+import { BaikalLogo } from "@/components/baikal-logo";
 import { toast } from "sonner";
 
 const features = [
@@ -190,15 +190,7 @@ function LoginContent() {
 
         <div className="relative z-10 flex flex-col justify-between p-12 xl:p-16 text-white w-full">
           {/* Logo */}
-          <div className="flex items-center gap-3">
-            <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-white/10 backdrop-blur-xl border border-white/10 shadow-lg shadow-indigo-900/30">
-              <BarChart3 className="h-6 w-6" />
-            </div>
-            <div>
-              <p className="text-lg font-bold leading-tight tracking-tight">입찰분석</p>
-              <p className="text-xs text-white/50 font-medium">AI Procurement Platform</p>
-            </div>
-          </div>
+          <BaikalLogo variant="hero" />
 
           {/* Hero Content */}
           <div className="space-y-10 max-w-lg">
@@ -247,7 +239,7 @@ function LoginContent() {
 
           {/* Footer */}
           <p className="text-xs text-white/30">
-            &copy; 2025 입찰분석 — AI 입찰·조달 분석 플랫폼
+            &copy; 2026 BAIKAL BidSight — AI 입찰·조달 분석 플랫폼
           </p>
         </div>
       </div>
@@ -259,11 +251,8 @@ function LoginContent() {
 
         <div className="relative z-10 w-full max-w-110 animate-fade-up">
           {/* Mobile Logo */}
-          <div className="lg:hidden flex items-center justify-center gap-3 mb-10">
-            <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-primary text-primary-foreground shadow-lg shadow-primary/25">
-              <BarChart3 className="h-5 w-5" />
-            </div>
-            <span className="text-xl font-bold tracking-tight">입찰분석</span>
+          <div className="lg:hidden flex items-center justify-center mb-10 group">
+            <BaikalLogo />
           </div>
 
           <Card className="premium-card border-0 shadow-2xl shadow-primary/5 overflow-hidden">

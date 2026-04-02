@@ -42,6 +42,7 @@ import {
   TrendingUp,
 } from "lucide-react";
 import { toast } from "sonner";
+import { BaikalLogo } from "@/components/baikal-logo";
 
 const navItems = [
   { href: "/", label: "공고 검색", icon: Search },
@@ -134,20 +135,14 @@ export function Header() {
 
   return (
     <>
-    <header className="sticky top-0 z-50 glass">
+    <header className="sticky top-0 z-50 glass baikal-accent-line">
       {/* Gradient top border line */}
-      <div className="h-0.5 w-full bg-linear-to-r from-transparent via-primary/40 to-transparent" />
+      <div className="h-0.5 w-full bg-linear-to-r from-transparent via-[#1d4ed8]/50 to-transparent" />
 
       <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-4 sm:px-6">
         {/* Logo */}
-        <Link href="/" className="flex items-center gap-2.5 group">
-          <div className="relative flex h-9 w-9 items-center justify-center rounded-xl bg-linear-to-br from-primary to-primary/80 text-primary-foreground shadow-lg shadow-primary/20 transition-all group-hover:scale-105 group-hover:shadow-primary/30">
-            <BarChart3 className="h-4.5 w-4.5" />
-          </div>
-          <div className="hidden sm:flex flex-col">
-            <span className="text-base font-bold leading-tight tracking-tight">입찰분석</span>
-            <span className="text-[10px] font-medium text-muted-foreground/60 leading-none">AI Procurement Platform</span>
-          </div>
+        <Link href="/" className="group">
+          <BaikalLogo />
         </Link>
 
         {/* Desktop Nav — Pill style */}
