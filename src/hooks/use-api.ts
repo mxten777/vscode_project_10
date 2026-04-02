@@ -34,6 +34,23 @@ function buildQueryString(params: Record<string, unknown>): string {
 
 // ─── Tenders ───────────────────────────────────────────
 
+export interface TenderSummary {
+  total: number;
+  open_count: number;
+  urgent_count: number;
+  closing_today: number;
+  total_budget: number;
+  open_budget: number;
+}
+
+export function useTenderSummary() {
+  return useQuery<TenderSummary>({
+    queryKey: ["tenders", "summary"],
+    queryFn: () => fetcher("/api/tenders/summary"),
+    staleTime: 60 * 1000, // 1분 캐시
+  });
+}
+
 export function useTenders(params: Partial<TenderSearchParams>) {
   const qs = buildQueryString(params);
   return useQuery<PaginatedResponse<Tender>>({

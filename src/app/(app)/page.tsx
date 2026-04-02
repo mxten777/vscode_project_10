@@ -1,9 +1,9 @@
 "use client";
 
-import { Suspense, useCallback, useEffect, useMemo, useState } from "react";
+import { Suspense, useCallback, useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
-import { useTenders } from "@/hooks/use-api";
+import { useTenders, useTenderSummary } from "@/hooks/use-api";
 import { formatKRW, tenderStatusLabel, formatRawDate, getDday, isNew, formatBudgetCompact } from "@/lib/helpers";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -152,6 +152,8 @@ function HomeContent() {
     pageSize: viewMode === "table" ? PAGE_SIZE_TABLE : PAGE_SIZE_CARD,
   });
 
+  const { data: summary } = useTenderSummary();
+
   const totalPages = data ? Math.ceil(data.total / (viewMode === "table" ? PAGE_SIZE_TABLE : PAGE_SIZE_CARD)) : 0;
 
   const statusColor = (s: string): "default" | "secondary" | "outline" => {
@@ -163,23 +165,8 @@ function HomeContent() {
     }
   };
 
-  const now = useMemo(() => new Date(), []);
-  const openCount = data?.data.filter((t) => t.status === "OPEN").length ?? 0;
-  const urgentCount = data?.data.filter((t) => {
-    if (!t.deadline_at || t.status !== "OPEN") return false;
-    const diff = Math.ceil((new Date(t.deadline_at).getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
-    return diff >= 0 && diff <= 3;
-  }).length ?? 0;
-  const closingToday = data?.data.filter((t) => {
-    if (!t.deadline_at) return false;
-    return new Date(t.deadline_at).toDateString() === now.toDateString();
-  }).length ?? 0;
-
-  const totalBudget = data?.data.reduce((s, t) => s + (t.budget_amount || 0), 0) ?? 0;
-  const openBudget = data?.data
-    .filter((t) => t.status === "OPEN")
-    .reduce((s, t) => s + (t.budget_amount || 0), 0) ?? 0;
   const maxBudgetInPage = Math.max(1, ...(data?.data.map((t) => t.budget_amount || 0) ?? [1]));
+
 
   const hasFilters = debouncedQ || status;
 
@@ -225,9 +212,9 @@ function HomeContent() {
             </div>
             <div className="flex flex-wrap gap-2 mt-1">
               {[
-                { icon: FileText, label: `공고 ${data ? data.total.toLocaleString() : "—"}건` },
-                { icon: TrendingUp, label: `진행중 ${openCount}건` },
-                { icon: Clock, label: `마감임박 ${urgentCount}건` },
+                { icon: FileText, label: `공고 ${summary ? summary.total.toLocaleString() : "—"}건` },
+                { icon: TrendingUp, label: `진행중 ${summary ? summary.open_count.toLocaleString() : "—"}건` },
+                { icon: Clock, label: `마감임박 ${summary ? summary.urgent_count.toLocaleString() : "—"}건` },
               ].map(({ icon: Icon, label }) => (
                 <span key={label} className="inline-flex items-center gap-1.5 rounded-full bg-white/10 border border-white/10 px-3 py-1 text-xs font-medium text-white/75">
                   <Icon className="h-3 w-3" />
@@ -240,60 +227,60 @@ function HomeContent() {
       </div>
 
       {/* ─── Stat Cards (Refined Color Scheme) ─── */}
-      {data && (
+      {summary && (
         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-3 stagger-children">
           {[
             {
               label: "전체 공고",
               sub: "수집된 전체",
-              value: data.total.toLocaleString(),
+              value: summary.total.toLocaleString(),
               icon: FileText,
-              color: "oklch(0.500 0.220 264)", // Primary
+              color: "oklch(0.500 0.220 264)",
               glow: "oklch(0.500 0.220 264 / 15%)",
               textCls: "text-primary",
             },
             {
               label: "진행중",
               sub: "응찰 가능",
-              value: String(openCount),
+              value: summary.open_count.toLocaleString(),
               icon: TrendingUp,
-              color: "oklch(0.500 0.220 264)", // Primary (일관성)
+              color: "oklch(0.500 0.220 264)",
               glow: "oklch(0.500 0.220 264 / 15%)",
               textCls: "text-primary",
             },
             {
               label: "마감 임박",
               sub: "D-3 이내",
-              value: String(urgentCount),
+              value: summary.urgent_count.toLocaleString(),
               icon: Clock,
-              color: "oklch(0.700 0.160 55)", // Amber (경고 유지)
+              color: "oklch(0.700 0.160 55)",
               glow: "oklch(0.700 0.160 55 / 15%)",
               textCls: "text-amber-600 dark:text-amber-400",
             },
             {
               label: "오늘 마감",
               sub: "D-DAY 공고",
-              value: String(closingToday),
+              value: summary.closing_today.toLocaleString(),
               icon: Bell,
-              color: "oklch(0.550 0.200 25)", // Red (긴급 유지)
+              color: "oklch(0.550 0.200 25)",
               glow: "oklch(0.550 0.200 25 / 15%)",
               textCls: "text-rose-600 dark:text-rose-400",
             },
             {
               label: "수집 예산",
-              sub: "이 페이지 합계",
-              value: formatBudgetCompact(totalBudget),
+              sub: "전체 합계",
+              value: formatBudgetCompact(summary.total_budget),
               icon: Banknote,
-              color: "oklch(0.500 0.220 264)", // Primary (통일)
+              color: "oklch(0.500 0.220 264)",
               glow: "oklch(0.500 0.220 264 / 15%)",
               textCls: "text-primary",
             },
             {
               label: "진행중 예산",
               sub: "OPEN 합계",
-              value: formatBudgetCompact(openBudget),
+              value: formatBudgetCompact(summary.open_budget),
               icon: Activity,
-              color: "oklch(0.500 0.220 264)", // Primary (통일)
+              color: "oklch(0.500 0.220 264)",
               glow: "oklch(0.500 0.220 264 / 15%)",
               textCls: "text-primary",
             },
@@ -324,33 +311,33 @@ function HomeContent() {
       )}
 
       {/* ─── Market Pulse Strip ─── */}
-      {data && (
+      {(data || summary) && (
         <div className="mkt-pulse">
           <div className="mkt-pulse-item">
             <span className="mkt-pulse-label">진행중 비율</span>
             <span className="mkt-pulse-value text-emerald-600 dark:text-emerald-400">
-              {data.data.length > 0 ? Math.round((openCount / data.data.length) * 100) : 0}%
+              {summary && summary.total > 0 ? Math.round((summary.open_count / summary.total) * 100) : 0}%
             </span>
-            <span className="mkt-pulse-sub">{openCount} / {data.data.length}건</span>
+            <span className="mkt-pulse-sub">{summary ? summary.open_count : "—"} / {summary ? summary.total : "—"}건</span>
           </div>
           <div className="mkt-pulse-item">
             <span className="mkt-pulse-label">수집 총예산</span>
-            <span className="mkt-pulse-value">{formatBudgetCompact(totalBudget)}</span>
-            <span className="mkt-pulse-sub">이 페이지 기준</span>
+            <span className="mkt-pulse-value">{summary ? formatBudgetCompact(summary.total_budget) : "—"}</span>
+            <span className="mkt-pulse-sub">전체 기준</span>
           </div>
           <div className="mkt-pulse-item">
             <span className="mkt-pulse-label">진행중 예산</span>
-            <span className="mkt-pulse-value text-violet-600 dark:text-violet-400">{formatBudgetCompact(openBudget)}</span>
+            <span className="mkt-pulse-value text-violet-600 dark:text-violet-400">{summary ? formatBudgetCompact(summary.open_budget) : "—"}</span>
             <span className="mkt-pulse-sub">OPEN 공고 합계</span>
           </div>
           <div className="mkt-pulse-item hidden sm:flex">
             <span className="mkt-pulse-label">최대 단건</span>
             <span className="mkt-pulse-value">{formatBudgetCompact(maxBudgetInPage)}</span>
-            <span className="mkt-pulse-sub">최고 예산 공고</span>
+            <span className="mkt-pulse-sub">이 페이지 최고</span>
           </div>
           <div className="mkt-pulse-item hidden md:flex">
             <span className="mkt-pulse-label">전체 공고</span>
-            <span className="mkt-pulse-value">{data.total.toLocaleString()}건</span>
+            <span className="mkt-pulse-value">{summary ? summary.total.toLocaleString() : "—"}건</span>
             <span className="mkt-pulse-sub">총 수집 공고</span>
           </div>
           <div className="mkt-pulse-item hidden lg:flex">
