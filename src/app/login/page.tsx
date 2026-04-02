@@ -190,7 +190,7 @@ function LoginContent() {
 
         <div className="relative z-10 flex flex-col justify-between p-12 xl:p-16 text-white w-full">
           {/* Logo */}
-          <BaikalLogo variant="hero" />
+          <BaikalLogo variant="light" height={44} />
 
           {/* Hero Content */}
           <div className="space-y-10 max-w-lg">
