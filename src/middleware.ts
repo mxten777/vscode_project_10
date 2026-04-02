@@ -31,7 +31,7 @@ export async function middleware(request: NextRequest) {
   } = await supabase.auth.getUser();
 
   // 보호 경로: 로그인 안 된 사용자 → /login 리다이렉트
-  const protectedPaths = ["/favorites", "/alerts", "/reports"];
+  const protectedPaths = ["/favorites", "/alerts", "/reports", "/analytics"];
   const isProtected = protectedPaths.some((p) =>
     request.nextUrl.pathname.startsWith(p)
   );
@@ -43,8 +43,13 @@ export async function middleware(request: NextRequest) {
     return NextResponse.redirect(url);
   }
 
-  // 로그인 상태에서 /login 접근 시 → /
-  if (user && request.nextUrl.pathname === "/login") {
+  // 비로그인 사용자가 / 접근 시 → /landing 리다이렉트
+  if (!user && request.nextUrl.pathname === "/") {
+    return NextResponse.redirect(new URL("/landing", request.url));
+  }
+
+  // 로그인 상태에서 /login 또는 /landing 접근 시 → /
+  if (user && (request.nextUrl.pathname === "/login" || request.nextUrl.pathname === "/landing")) {
     return NextResponse.redirect(new URL("/", request.url));
   }
 

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createServiceClient } from "@/lib/supabase/service";
+import { signUpSchema } from "@/lib/validations";
 
 /**
  * POST /api/auth/signup
@@ -8,14 +9,15 @@ import { createServiceClient } from "@/lib/supabase/service";
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { email, password } = body;
 
-    if (!email || !password) {
+    const parsed = signUpSchema.safeParse(body);
+    if (!parsed.success) {
       return NextResponse.json(
-        { code: "VALIDATION_ERROR", message: "email, password 필수" },
+        { code: "VALIDATION_ERROR", message: parsed.error.issues[0]?.message ?? "입력값이 올바르지 않습니다" },
         { status: 400 }
       );
     }
+    const { email, password } = parsed.data;
 
     const supabase = createServiceClient();
 

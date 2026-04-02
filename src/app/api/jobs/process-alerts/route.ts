@@ -35,43 +35,27 @@ export async function POST(request: NextRequest) {
       .select("*")
       .gte("created_at", since);
 
+    // 신규 공고가 없으면 규칙 평가 자체를 건너뜀 (불필요한 "없음" 이메일 방지)
+    if (!recentTenders?.length) {
+      return successResponse({ message: "신규 공고 없음 — 알림 발송 생략", ...stats });
+    }
+
     // 3) 각 규칙에 대해 매칭 + 발송
     for (const rule of rules) {
       stats.evaluated++;
       const ruleJson = rule.rule_json as AlertRuleJson;
 
-      // 사용자 이메일 조회 (결과 없음 안내에도 필요)
+      const matched = recentTenders.filter((t) => matchesRule(t, ruleJson, rule.type));
+
+      // 매칭 공고 없으면 해당 규칙은 skip (이메일 미발송)
+      if (!matched.length) continue;
+
+      // 사용자 이메일 조회 (매칭된 공고가 있는 경우에만)
       const { data: userData } = await supabase.auth.admin.getUserById(rule.user_id);
       const userEmail = userData?.user?.email;
       if (!userEmail) continue;
 
       const provider = getNotificationProvider(rule.channel);
-
-      // 신규 공고 자체가 없는 경우
-      if (!recentTenders?.length) {
-        await new Promise((r) => setTimeout(r, 600));
-        await provider.send({
-          to: userEmail,
-          subject: `[입찰알림] 오늘 신규 공고 없음`,
-          body: buildNoTendersBody(ruleJson),
-        });
-        stats.sent++;
-        continue;
-      }
-
-      const matched = recentTenders.filter((t) => matchesRule(t, ruleJson, rule.type));
-
-      // 매칭 공고 없는 경우 → 결과 없음 안내 이메일
-      if (!matched.length) {
-        await new Promise((r) => setTimeout(r, 600));
-        await provider.send({
-          to: userEmail,
-          subject: `[입찰알림] 오늘 조건에 맞는 공고 없음`,
-          body: buildNoMatchBody(ruleJson),
-        });
-        stats.sent++;
-        continue;
-      }
 
       for (const tender of matched) {
         // 중복 발송 방지: INSERT ON CONFLICT DO NOTHING (UNIQUE 제약 활용, TOCTOU 제거)
@@ -150,44 +134,82 @@ function matchesRule(
   return true;
 }
 
-function buildNoTendersBody(ruleJson: AlertRuleJson): string {
-  return `
-    <div style="font-family: sans-serif; padding: 20px;">
-      <h2 style="color: #6b7280;">오늘 신규 입찰 공고 없음</h2>
-      <hr />
-      <p>오늘은 나라장터에서 수집된 신규 공고가 없습니다.</p>
-      <p><strong>알림 키워드:</strong> ${ruleJson.keyword || "(없음)"}</p>
-      <p style="color: #9ca3af; font-size: 12px;">다음 평일 오전 9시 30분에 다시 확인합니다.</p>
-    </div>
-  `;
-}
-
-function buildNoMatchBody(ruleJson: AlertRuleJson): string {
-  return `
-    <div style="font-family: sans-serif; padding: 20px;">
-      <h2 style="color: #6b7280;">오늘 조건에 맞는 공고 없음</h2>
-      <hr />
-      <p>오늘 수집된 공고 중 설정하신 조건에 맞는 공고가 없습니다.</p>
-      <p><strong>알림 키워드:</strong> ${ruleJson.keyword || "(없음)"}</p>
-      <p style="color: #9ca3af; font-size: 12px;">다음 평일 오전 9시 30분에 다시 확인합니다.</p>
-    </div>
-  `;
-}
-
 function buildAlertBody(tender: Record<string, unknown>): string {
-  return `
-    <div style="font-family: sans-serif; padding: 20px;">
-      <h2 style="color: #1a56db;">새로운 입찰 공고 알림</h2>
-      <hr />
-      <p><strong>공고명:</strong> ${tender.title}</p>
-      <p><strong>예산:</strong> ${tender.budget_amount ? Number(tender.budget_amount).toLocaleString() + "원" : "미정"}</p>
-      <p><strong>마감일:</strong> ${tender.deadline_at || "미정"}</p>
-      <p><strong>지역:</strong> ${tender.region_name || "전국"}</p>
-      <br />
-      <a href="${process.env.NEXT_PUBLIC_APP_URL}/tenders/${tender.id}"
-         style="background: #1a56db; color: white; padding: 10px 20px; text-decoration: none; border-radius: 4px;">
-        상세 보기
-      </a>
-    </div>
-  `;
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL || "https://bid-platform.vercel.app";
+  const budget = tender.budget_amount
+    ? Number(tender.budget_amount).toLocaleString("ko-KR") + "원"
+    : "미정";
+  const deadline = tender.deadline_at
+    ? new Date(tender.deadline_at as string).toLocaleDateString("ko-KR", {
+        year: "numeric",
+        month: "long",
+        day: "numeric",
+      })
+    : "미정";
+
+  return `<!DOCTYPE html>
+<html lang="ko">
+<head><meta charset="UTF-8" /><meta name="viewport" content="width=device-width,initial-scale=1" /></head>
+<body style="margin:0;padding:0;background:#f3f4f6;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="background:#f3f4f6;padding:32px 0;">
+    <tr><td align="center">
+      <table width="600" cellpadding="0" cellspacing="0" style="background:#ffffff;border-radius:12px;overflow:hidden;box-shadow:0 4px 12px rgba(0,0,0,0.08);">
+        <!-- Header -->
+        <tr>
+          <td style="background:linear-gradient(135deg,#4f46e5,#6366f1);padding:28px 32px;">
+            <div style="color:#ffffff;font-size:20px;font-weight:700;letter-spacing:-0.3px;">BidSight</div>
+            <div style="color:#c7d2fe;font-size:13px;margin-top:4px;">AI 입찰 정보 플랫폼</div>
+          </td>
+        </tr>
+        <!-- Body -->
+        <tr>
+          <td style="padding:32px;">
+            <p style="margin:0 0 8px;color:#6366f1;font-size:13px;font-weight:600;text-transform:uppercase;letter-spacing:0.5px;">새 입찰 공고 알림</p>
+            <h1 style="margin:0 0 24px;color:#111827;font-size:18px;font-weight:700;line-height:1.4;">${tender.title}</h1>
+            <table width="100%" cellpadding="0" cellspacing="0" style="background:#f9fafb;border-radius:8px;overflow:hidden;margin-bottom:24px;">
+              <tr>
+                <td style="padding:12px 16px;border-bottom:1px solid #e5e7eb;">
+                  <span style="color:#6b7280;font-size:12px;">발주기관</span>
+                  <div style="color:#111827;font-size:14px;font-weight:600;margin-top:2px;">${tender.demand_agency_name || "-"}</div>
+                </td>
+              </tr>
+              <tr>
+                <td style="padding:12px 16px;border-bottom:1px solid #e5e7eb;">
+                  <span style="color:#6b7280;font-size:12px;">예산 금액</span>
+                  <div style="color:#111827;font-size:14px;font-weight:600;margin-top:2px;">${budget}</div>
+                </td>
+              </tr>
+              <tr>
+                <td style="padding:12px 16px;border-bottom:1px solid #e5e7eb;">
+                  <span style="color:#6b7280;font-size:12px;">마감일</span>
+                  <div style="color:#111827;font-size:14px;font-weight:600;margin-top:2px;">${deadline}</div>
+                </td>
+              </tr>
+              <tr>
+                <td style="padding:12px 16px;">
+                  <span style="color:#6b7280;font-size:12px;">지역</span>
+                  <div style="color:#111827;font-size:14px;font-weight:600;margin-top:2px;">${tender.region_name || "전국"}</div>
+                </td>
+              </tr>
+            </table>
+            <a href="${appUrl}/tenders/${tender.id}"
+               style="display:inline-block;background:#4f46e5;color:#ffffff;font-size:14px;font-weight:600;padding:12px 24px;border-radius:8px;text-decoration:none;">
+              공고 상세 보기 →
+            </a>
+          </td>
+        </tr>
+        <!-- Footer -->
+        <tr>
+          <td style="background:#f9fafb;padding:20px 32px;border-top:1px solid #e5e7eb;">
+            <p style="margin:0;color:#9ca3af;font-size:12px;line-height:1.6;">
+              이 이메일은 BidSight 알림 규칙에 의해 자동 발송되었습니다.<br />
+              알림을 더 이상 받지 않으려면 <a href="${appUrl}/alerts" style="color:#6366f1;">알림 설정</a>에서 규칙을 비활성화하세요.
+            </p>
+          </td>
+        </tr>
+      </table>
+    </td></tr>
+  </table>
+</body>
+</html>`;
 }

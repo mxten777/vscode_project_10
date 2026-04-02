@@ -1,5 +1,5 @@
 import { NextRequest } from "next/server";
-import { getAuthContext } from "@/lib/auth-context";
+import { getAuthContext, PLAN_LIMITS } from "@/lib/auth-context";
 import {
   successResponse,
   errorResponse,
@@ -19,10 +19,26 @@ export async function POST(
     const ctx = await getAuthContext();
     if ("error" in ctx) return ctx.error;
 
-    const { supabase, user, orgId } = ctx;
+    const { supabase, user, orgId, plan } = ctx;
 
     if (!orgId) {
       return errorResponse("NO_ORG", "조직에 가입되어 있지 않습니다", 400);
+    }
+
+    // 플랜별 즐겨찾기 수 제한 체크
+    const limit = PLAN_LIMITS[plan].favorites;
+    if (isFinite(limit)) {
+      const { count } = await supabase
+        .from("favorites")
+        .select("*", { count: "exact", head: true })
+        .eq("user_id", user.id);
+      if ((count ?? 0) >= limit) {
+        return errorResponse(
+          "PLAN_LIMIT",
+          `현재 플랜(${plan})에서는 즐겨찾기를 최대 ${limit}개까지 저장할 수 있습니다.`,
+          403
+        );
+      }
     }
 
     const { data, error } = await supabase

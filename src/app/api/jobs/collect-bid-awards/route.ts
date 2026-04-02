@@ -56,42 +56,61 @@ export async function GET(request: NextRequest) {
     const startDate = targetDate.toISOString().split("T")[0].replace(/-/g, "");
     const endDate = new Date().toISOString().split("T")[0].replace(/-/g, "");
 
-    // 1) 개찰결과 API 호출
+    const PAGE_SIZE = 100;
+    const MAX_PAGES = 10; // 최대 1,000건 (과도한 API 호출 방지)
+
+    /**
+     * 나라장터 API 전체 페이지 수집 헬퍼
+     */
+    async function fetchAllPages(baseUrl: URL): Promise<NaramarketBidResult[]> {
+      const results: NaramarketBidResult[] = [];
+      for (let page = 1; page <= MAX_PAGES; page++) {
+        baseUrl.searchParams.set("pageNo", String(page));
+        const res = await fetch(baseUrl.toString());
+        const json = await res.json();
+        const body = json?.response?.body;
+        const rawItems = body?.items?.item;
+        if (!rawItems) break;
+        const items: NaramarketBidResult[] = Array.isArray(rawItems) ? rawItems : [rawItems];
+        results.push(...items);
+        // 마지막 페이지면 종료
+        const totalCount: number = body?.totalCount ?? 0;
+        if (results.length >= totalCount || items.length < PAGE_SIZE) break;
+      }
+      return results;
+    }
+
+    // 1) 개찰결과 API — 전체 페이지 수집
     const openResultsUrl = new URL(
       "https://apis.data.go.kr/1230000/BidPublicInfoService04/getBidPblancListInfoThngCnstwk"
     );
     openResultsUrl.searchParams.set("serviceKey", NARAMARKET_API_KEY);
-    openResultsUrl.searchParams.set("numOfRows", "100");
-    openResultsUrl.searchParams.set("pageNo", "1");
+    openResultsUrl.searchParams.set("numOfRows", String(PAGE_SIZE));
     openResultsUrl.searchParams.set("inqryDiv", "1"); // 조회구분 (1: 개찰일자)
     openResultsUrl.searchParams.set("inqryBgnDt", startDate);
     openResultsUrl.searchParams.set("inqryEndDt", endDate);
     openResultsUrl.searchParams.set("type", "json");
 
-    const openResponse = await fetch(openResultsUrl.toString());
-    const openData = await openResponse.json();
+    const openItems = await fetchAllPages(openResultsUrl);
 
-    // 2) 낙찰정보 API 호출
+    // 2) 낙찰정보 API — 전체 페이지 수집
     const awardUrl = new URL(
       "https://apis.data.go.kr/1230000/ScsbidInfoService04/getScsbidList04"
     );
     awardUrl.searchParams.set("serviceKey", NARAMARKET_API_KEY);
-    awardUrl.searchParams.set("numOfRows", "100");
-    awardUrl.searchParams.set("pageNo", "1");
+    awardUrl.searchParams.set("numOfRows", String(PAGE_SIZE));
     awardUrl.searchParams.set("inqryDiv", "1");
     awardUrl.searchParams.set("inqryBgnDt", startDate);
     awardUrl.searchParams.set("inqryEndDt", endDate);
     awardUrl.searchParams.set("type", "json");
 
-    const awardResponse = await fetch(awardUrl.toString());
-    const awardData = await awardResponse.json();
+    const awardItems = await fetchAllPages(awardUrl);
 
     let processedCount = 0;
     let errorCount = 0;
 
     // 3) 개찰결과 데이터 처리
-    const openItems = openData?.response?.body?.items?.item || [];
-    for (const item of Array.isArray(openItems) ? openItems : [openItems]) {
+    for (const item of openItems) {
       try {
         await processOpenResult(supabase, item);
         processedCount++;
@@ -102,8 +121,7 @@ export async function GET(request: NextRequest) {
     }
 
     // 4) 낙찰정보 데이터 처리
-    const awardItems = awardData?.response?.body?.items?.item || [];
-    for (const item of Array.isArray(awardItems) ? awardItems : [awardItems]) {
+    for (const item of awardItems) {
       try {
         await processAwardResult(supabase, item);
         processedCount++;
