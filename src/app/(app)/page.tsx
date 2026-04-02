@@ -175,19 +175,19 @@ function HomeContent() {
 
       {/* ─── Hero Banner — Premium 2-column ─── */}
       <div className="relative overflow-hidden rounded-3xl">
-        {/* Background — light indigo-to-blue gradient with depth */}
-        <div className="absolute inset-0 bg-linear-to-135deg from-[#0f172a] via-[#1e2d6b] to-[#1a1060]" />
+        {/* Background — deep navy-blue gradient (inline style to guarantee render across Tailwind versions) */}
+        <div className="absolute inset-0" style={{ background: "linear-gradient(135deg, #0f172a 0%, #1e2d6b 55%, #1a1060 100%)" }} />
         {/* Layered radial colour pops */}
         <div className="absolute inset-0">
-          <div className="absolute -top-24 -left-24 h-96 w-96 rounded-full bg-blue-500/20 blur-[120px]" />
-          <div className="absolute -bottom-20 right-[10%] h-80 w-80 rounded-full bg-violet-500/25 blur-[100px]" />
-          <div className="absolute top-1/2 left-1/3 h-64 w-64 rounded-full bg-cyan-400/10 blur-[80px]" />
+          <div className="absolute -top-24 -left-24 h-96 w-96 rounded-full bg-blue-500/25 blur-[120px]" />
+          <div className="absolute -bottom-20 right-[10%] h-80 w-80 rounded-full bg-violet-500/30 blur-[100px]" />
+          <div className="absolute top-1/2 left-1/3 h-64 w-64 rounded-full bg-cyan-400/15 blur-[80px]" />
         </div>
         {/* Fine grid overlay */}
-        <div className="absolute inset-0 opacity-[0.04]"
+        <div className="absolute inset-0 opacity-[0.05]"
           style={{ backgroundImage: "linear-gradient(rgba(255,255,255,0.5) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,0.5) 1px,transparent 1px)", backgroundSize: "40px 40px" }} />
         {/* Top shimmer line */}
-        <div className="absolute top-0 left-0 right-0 h-px bg-linear-to-r from-transparent via-cyan-400/60 to-transparent" />
+        <div className="absolute top-0 left-0 right-0 h-px" style={{ background: "linear-gradient(90deg, transparent, rgba(103,232,249,0.7) 50%, transparent)" }} />
 
         <div className="relative z-10 flex flex-col lg:flex-row items-center gap-8 px-8 py-10 sm:px-12 sm:py-12">
 
@@ -208,12 +208,12 @@ function HomeContent() {
                 공공 입찰,<br />
                 <span
                   className="bg-clip-text text-transparent"
-                  style={{ backgroundImage: "linear-gradient(90deg,#67e8f9,#a78bfa,#f9a8d4)" }}
+                  style={{ backgroundImage: "linear-gradient(90deg,#38bdf8,#c084fc,#fb7185)" }}
                 >
                   데이터로 앞서가세요
                 </span>
               </h1>
-              <p className="mt-3 text-white/50 text-[15px] leading-relaxed max-w-md">
+              <p className="mt-3 text-white/70 text-[15px] leading-relaxed max-w-md">
                 나라장터 전체 공고 자동 수집 · AI 낙찰 예측 · 키워드 알림까지<br className="hidden sm:block" />
                 하나의 플랫폼에서 완성합니다
               </p>
@@ -222,9 +222,9 @@ function HomeContent() {
             {/* Stat pills */}
             <div className="flex flex-wrap gap-2">
               {[
-                { icon: FileText, label: `공고 ${summary ? summary.total.toLocaleString() : "—"}건`, cls: "text-cyan-200 border-cyan-400/25 bg-cyan-400/10" },
-                { icon: TrendingUp, label: `진행중 ${summary ? summary.open_count.toLocaleString() : "—"}건`, cls: "text-emerald-200 border-emerald-400/25 bg-emerald-400/10" },
-                { icon: Clock, label: `마감임박 ${summary ? summary.urgent_count.toLocaleString() : "—"}건`, cls: "text-amber-200 border-amber-400/25 bg-amber-400/10" },
+                { icon: FileText, label: `공고 ${summary ? summary.total.toLocaleString() : "—"}건`, cls: "text-cyan-100 border-cyan-300/40 bg-cyan-400/20" },
+                { icon: TrendingUp, label: `진행중 ${summary ? summary.open_count.toLocaleString() : "—"}건`, cls: "text-emerald-100 border-emerald-300/40 bg-emerald-400/20" },
+                { icon: Clock, label: `마감임박 ${summary ? summary.urgent_count.toLocaleString() : "—"}건`, cls: "text-amber-100 border-amber-300/40 bg-amber-400/20" },
               ].map(({ icon: Icon, label, cls }) => (
                 <span key={label} className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-xs font-semibold backdrop-blur-sm ${cls}`}>
                   <Icon className="h-3 w-3 shrink-0" />
@@ -247,16 +247,16 @@ function HomeContent() {
                   key={label}
                   className="relative rounded-2xl p-4 overflow-hidden"
                   style={{
-                    background: "rgba(255,255,255,0.06)",
-                    border: "1px solid rgba(255,255,255,0.10)",
-                    backdropFilter: "blur(16px)",
+                    background: "rgba(255,255,255,0.11)",
+                    border: "1px solid rgba(255,255,255,0.18)",
+                    backdropFilter: "blur(20px)",
                   }}
                 >
                   {/* Colour accent dot top-right */}
-                  <div className="absolute top-3 right-3 h-1.5 w-1.5 rounded-full" style={{ background: accent, boxShadow: `0 0 6px ${accent}` }} />
-                  <p className="text-[10px] font-bold uppercase tracking-widest" style={{ color: "rgba(255,255,255,0.45)" }}>{label}</p>
-                  <p className="text-xl font-extrabold mt-1 leading-none text-white tabular-nums">{value}</p>
-                  <p className="text-[10px] mt-1.5" style={{ color: "rgba(255,255,255,0.35)" }}>{sub}</p>
+                  <div className="absolute top-3 right-3 h-1.5 w-1.5 rounded-full" style={{ background: accent, boxShadow: `0 0 8px ${accent}` }} />
+                  <p className="text-[10px] font-bold uppercase tracking-widest" style={{ color: "rgba(255,255,255,0.60)" }}>{label}</p>
+                  <p className="text-2xl font-extrabold mt-1 leading-none text-white tabular-nums">{value}</p>
+                  <p className="text-[11px] mt-1.5" style={{ color: "rgba(255,255,255,0.50)" }}>{sub}</p>
                 </div>
               ))}
             </div>
