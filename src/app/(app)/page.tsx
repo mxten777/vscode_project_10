@@ -173,56 +173,94 @@ function HomeContent() {
   return (
     <div className="space-y-6 animate-fade-up">
 
-      {/* ─── Hero Banner (Streamlined) ─── */}
-      <div className="relative overflow-hidden rounded-2xl hero-grid">
-        <div className="absolute inset-0 bg-linear-to-br from-indigo-950 via-indigo-900 to-violet-950" />
-        <div className="noise-overlay" />
-        {/* Simplified gradient orbs (2 instead of 3) */}
-        <div className="absolute inset-0 overflow-hidden">
-          <div className="absolute top-[-20%] left-[-5%] h-80 w-80 rounded-full bg-indigo-500/30 blur-[100px] animate-mesh" />
-          <div className="absolute bottom-[-20%] right-[-5%] h-80 w-80 rounded-full bg-violet-500/25 blur-[100px] animate-mesh" style={{ animationDelay: "-8s" }} />
+      {/* ─── Hero Banner — Premium 2-column ─── */}
+      <div className="relative overflow-hidden rounded-3xl">
+        {/* Background — light indigo-to-blue gradient with depth */}
+        <div className="absolute inset-0 bg-linear-to-135deg from-[#0f172a] via-[#1e2d6b] to-[#1a1060]" />
+        {/* Layered radial colour pops */}
+        <div className="absolute inset-0">
+          <div className="absolute -top-24 -left-24 h-96 w-96 rounded-full bg-blue-500/20 blur-[120px]" />
+          <div className="absolute -bottom-20 right-[10%] h-80 w-80 rounded-full bg-violet-500/25 blur-[100px]" />
+          <div className="absolute top-1/2 left-1/3 h-64 w-64 rounded-full bg-cyan-400/10 blur-[80px]" />
         </div>
-        {/* Streamlined floating keywords (2 instead of 4) */}
-        <span className="float-slow absolute top-8 right-[15%] hidden lg:inline-flex items-center gap-1.5 rounded-full bg-white/10 backdrop-blur-sm border border-white/15 px-3 py-1 text-xs text-white/70 font-medium">
-          <Zap className="h-3 w-3 text-amber-300" /> AI분석
-        </span>
-        <span className="float-slow-rev absolute bottom-12 right-[12%] hidden lg:inline-flex items-center gap-1.5 rounded-full bg-white/10 backdrop-blur-sm border border-white/15 px-3 py-1 text-xs text-white/70 font-medium">
-          <TrendingUp className="h-3 w-3 text-emerald-300" /> 실시간
-        </span>
+        {/* Fine grid overlay */}
+        <div className="absolute inset-0 opacity-[0.04]"
+          style={{ backgroundImage: "linear-gradient(rgba(255,255,255,0.5) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,0.5) 1px,transparent 1px)", backgroundSize: "40px 40px" }} />
+        {/* Top shimmer line */}
+        <div className="absolute top-0 left-0 right-0 h-px bg-linear-to-r from-transparent via-cyan-400/60 to-transparent" />
 
-        <div className="relative z-10 px-8 py-10 sm:px-12 sm:py-12">
-          <div className="flex flex-col gap-5 max-w-2xl">
+        <div className="relative z-10 flex flex-col lg:flex-row items-center gap-8 px-8 py-10 sm:px-12 sm:py-12">
+
+          {/* ── Left: text + badges ── */}
+          <div className="flex-1 min-w-0 flex flex-col gap-5">
+            {/* Live badge */}
             <div className="flex items-center gap-2.5">
               <span className="live-dot" />
-              <span className="inline-flex items-center gap-2 rounded-full bg-white/10 backdrop-blur-sm border border-white/15 px-3.5 py-1 text-xs font-semibold text-white/85">
+              <span className="inline-flex items-center gap-2 rounded-full bg-white/10 backdrop-blur-md border border-white/15 px-3.5 py-1 text-xs font-semibold text-white/85">
                 <Sparkles className="h-3 w-3 text-amber-300" />
-                AI 실시간 입찰 분석 플랫폼
+                BAIKAL AI · 입찰 분석 플랫폼
               </span>
             </div>
+
+            {/* Headline */}
             <div>
-              <h1 className="text-3xl sm:text-[2.6rem] font-extrabold text-white tracking-tight leading-[1.15]">
-                공공 입찰 공고를<br />
-                <span className="bg-linear-to-r from-cyan-300 via-violet-300 to-pink-300 bg-clip-text text-transparent">
-                  스마트하게 검색
+              <h1 className="text-3xl sm:text-[2.55rem] font-extrabold text-white tracking-tight leading-[1.18]">
+                공공 입찰,<br />
+                <span
+                  className="bg-clip-text text-transparent"
+                  style={{ backgroundImage: "linear-gradient(90deg,#67e8f9,#a78bfa,#f9a8d4)" }}
+                >
+                  데이터로 앞서가세요
                 </span>
               </h1>
-              <p className="mt-3 text-white/55 text-base max-w-md">
-                나라장터 실시간 공고 수집 · AI 분석 · 마감 알림까지 한 곳에서
+              <p className="mt-3 text-white/50 text-[15px] leading-relaxed max-w-md">
+                나라장터 전체 공고 자동 수집 · AI 낙찰 예측 · 키워드 알림까지<br className="hidden sm:block" />
+                하나의 플랫폼에서 완성합니다
               </p>
             </div>
-            <div className="flex flex-wrap gap-2 mt-1">
+
+            {/* Stat pills */}
+            <div className="flex flex-wrap gap-2">
               {[
-                { icon: FileText, label: `공고 ${summary ? summary.total.toLocaleString() : "—"}건` },
-                { icon: TrendingUp, label: `진행중 ${summary ? summary.open_count.toLocaleString() : "—"}건` },
-                { icon: Clock, label: `마감임박 ${summary ? summary.urgent_count.toLocaleString() : "—"}건` },
-              ].map(({ icon: Icon, label }) => (
-                <span key={label} className="inline-flex items-center gap-1.5 rounded-full bg-white/10 border border-white/10 px-3 py-1 text-xs font-medium text-white/75">
-                  <Icon className="h-3 w-3" />
+                { icon: FileText, label: `공고 ${summary ? summary.total.toLocaleString() : "—"}건`, cls: "text-cyan-200 border-cyan-400/25 bg-cyan-400/10" },
+                { icon: TrendingUp, label: `진행중 ${summary ? summary.open_count.toLocaleString() : "—"}건`, cls: "text-emerald-200 border-emerald-400/25 bg-emerald-400/10" },
+                { icon: Clock, label: `마감임박 ${summary ? summary.urgent_count.toLocaleString() : "—"}건`, cls: "text-amber-200 border-amber-400/25 bg-amber-400/10" },
+              ].map(({ icon: Icon, label, cls }) => (
+                <span key={label} className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-xs font-semibold backdrop-blur-sm ${cls}`}>
+                  <Icon className="h-3 w-3 shrink-0" />
                   {label}
                 </span>
               ))}
             </div>
           </div>
+
+          {/* ── Right: KPI glass card grid ── */}
+          {summary && (
+            <div className="shrink-0 w-full lg:w-90 grid grid-cols-2 gap-2.5">
+              {[
+                { label: "총 예산", value: formatBudgetCompact(summary.total_budget), sub: "전체 공고 기준", accent: "#67e8f9" },
+                { label: "진행중 예산", value: formatBudgetCompact(summary.open_budget), sub: "응찰 가능 기준", accent: "#a78bfa" },
+                { label: "오늘 마감", value: `${summary.closing_today}건`, sub: "D-DAY 공고", accent: "#fca5a5" },
+                { label: "마감 D-3", value: `${summary.urgent_count}건`, sub: "긴급 공고", accent: "#fcd34d" },
+              ].map(({ label, value, sub, accent }) => (
+                <div
+                  key={label}
+                  className="relative rounded-2xl p-4 overflow-hidden"
+                  style={{
+                    background: "rgba(255,255,255,0.06)",
+                    border: "1px solid rgba(255,255,255,0.10)",
+                    backdropFilter: "blur(16px)",
+                  }}
+                >
+                  {/* Colour accent dot top-right */}
+                  <div className="absolute top-3 right-3 h-1.5 w-1.5 rounded-full" style={{ background: accent, boxShadow: `0 0 6px ${accent}` }} />
+                  <p className="text-[10px] font-bold uppercase tracking-widest" style={{ color: "rgba(255,255,255,0.45)" }}>{label}</p>
+                  <p className="text-xl font-extrabold mt-1 leading-none text-white tabular-nums">{value}</p>
+                  <p className="text-[10px] mt-1.5" style={{ color: "rgba(255,255,255,0.35)" }}>{sub}</p>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
       </div>
 
