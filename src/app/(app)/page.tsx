@@ -107,6 +107,15 @@ function HomeContent() {
   const [activeCategory, setActiveCategory] = useState("");
   const [viewMode, setViewMode] = useState<"card" | "table">("table");
   const [sortOrder, setSortOrder] = useState<"asc" | "desc">("desc");
+
+  // 모바일(< 640px)에서 카드 뷰 자동 선택 + 리사이즈 반응
+  useEffect(() => {
+    const mql = window.matchMedia("(max-width: 639px)");
+    if (mql.matches) setViewMode("card");
+    const handler = (e: MediaQueryListEvent) => setViewMode(e.matches ? "card" : "table");
+    mql.addEventListener("change", handler);
+    return () => mql.removeEventListener("change", handler);
+  }, []);
   const handleTableSort = (col: string) => {
     if (sortBy === col) {
       setSortOrder((o) => (o === "desc" ? "asc" : "desc"));
@@ -671,10 +680,10 @@ function HomeContent() {
             return (
               <Link key={tender.id} href={`/tenders/${tender.id}`}>
                 <Card className={`group premium-card card-hover cursor-pointer overflow-hidden ${isUrgent ? "border-rose-500/20" : ""}`}>
-                  {isUrgent && <div className="h-0.5 w-full bg-linear-to-r from-rose-500/60 via-orange-400/60 to-rose-500/40" />}
-                  {!isUrgent && tender.status === "OPEN" && <div className="h-0.5 w-full bg-linear-to-r from-emerald-500/50 via-emerald-400/30 to-transparent" />}
-                  <CardContent className="py-4 px-6">
-                    <div className="flex items-start justify-between gap-4">
+                  {isUrgent && <div className="h-0.5 w-full" style={{ background: "linear-gradient(90deg, rgba(239,68,68,0.6), rgba(251,146,60,0.6), rgba(239,68,68,0.4))" }} />}
+                  {!isUrgent && tender.status === "OPEN" && <div className="h-0.5 w-full" style={{ background: "linear-gradient(90deg, rgba(34,197,94,0.5), rgba(52,211,153,0.3), transparent)" }} />}
+                  <CardContent className="py-4 px-4 sm:px-6">
+                    <div className="flex items-start justify-between gap-3">
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-1.5 mb-2 flex-wrap">
                           <Badge
@@ -700,36 +709,36 @@ function HomeContent() {
                             <span className="badge-new">신규</span>
                           )}
                         </div>
-                        <h3 className="font-semibold text-[15px] line-clamp-2 group-hover:text-primary transition-colors duration-200 leading-snug">
+                        <h3 className="font-semibold text-[14px] sm:text-[15px] line-clamp-2 group-hover:text-primary transition-colors duration-200 leading-snug">
                           {tender.title}
                         </h3>
-                        <div className="mt-2.5 flex flex-wrap gap-x-4 gap-y-1 text-sm text-muted-foreground">
+                        <div className="mt-2 flex flex-wrap gap-x-3 gap-y-1 text-xs sm:text-sm text-muted-foreground">
                           {(tender.agency as unknown as { name: string } | null)?.name && (
                             <span className="flex items-center gap-1.5">
-                              <Building className="h-3.5 w-3.5 opacity-55" />
-                              {(tender.agency as unknown as { name: string }).name}
+                              <Building className="h-3.5 w-3.5 opacity-55 shrink-0" />
+                              <span className="line-clamp-1">{(tender.agency as unknown as { name: string }).name}</span>
                             </span>
                           )}
                           {tender.region_name && (
                             <span className="flex items-center gap-1.5">
-                              <MapPin className="h-3.5 w-3.5 opacity-55" />
+                              <MapPin className="h-3.5 w-3.5 opacity-55 shrink-0" />
                               {tender.region_name}
                             </span>
                           )}
                           {tender.deadline_at && (
                             <span className={`flex items-center gap-1.5 ${isUrgent ? "text-rose-500 dark:text-rose-400 font-medium" : ""}`}>
-                              <Clock className="h-3.5 w-3.5 opacity-55" />
+                              <Clock className="h-3.5 w-3.5 opacity-55 shrink-0" />
                               마감: {formatRawDate(tender.raw_json, "bidClseDt", tender.deadline_at)}
                             </span>
                           )}
                         </div>
                       </div>
-                      <div className="text-right shrink-0 flex flex-col items-end gap-1">
-                        <p className="font-extrabold text-lg tracking-tight text-primary tabular-nums">
+                      <div className="text-right shrink-0 flex flex-col items-end gap-1 min-w-[80px] sm:min-w-[100px]">
+                        <p className="font-extrabold text-base sm:text-lg tracking-tight text-primary tabular-nums">
                           {formatKRW(tender.budget_amount)}
                         </p>
                         {tender.published_at && (
-                          <p className="text-xs text-muted-foreground">
+                          <p className="text-[11px] text-muted-foreground hidden sm:block">
                             공고: {formatRawDate(tender.raw_json, "bidNtceDt", tender.published_at)}
                           </p>
                         )}

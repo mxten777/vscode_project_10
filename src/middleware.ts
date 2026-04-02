@@ -1,7 +1,51 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
+import { rateLimit } from "@/lib/rate-limit";
+
+// Rate limit 설정
+const RATE_LIMITS = {
+  // 인증 엔드포인트: 5분에 10회 (브루트포스 방지)
+  auth: { windowMs: 5 * 60 * 1000, max: 10 },
+  // 일반 API: 1분에 60회
+  api:  { windowMs: 60 * 1000,      max: 60 },
+};
+
+function getClientIp(req: NextRequest): string {
+  return (
+    req.headers.get("x-forwarded-for")?.split(",")[0].trim() ??
+    req.headers.get("x-real-ip") ??
+    "unknown"
+  );
+}
 
 export async function middleware(request: NextRequest) {
+  const { pathname } = request.nextUrl;
+
+  // ── Rate Limiting ──────────────────────────────────────
+  if (pathname.startsWith("/api/")) {
+    const ip = getClientIp(request);
+    const isAuth = pathname.startsWith("/api/auth/");
+    const config = isAuth ? RATE_LIMITS.auth : RATE_LIMITS.api;
+    const key = `${isAuth ? "auth" : "api"}:${ip}`;
+
+    const result = rateLimit(key, config);
+    if (!result.success) {
+      return new NextResponse(
+        JSON.stringify({ code: "RATE_LIMIT", message: "요청이 너무 많습니다. 잠시 후 다시 시도해주세요." }),
+        {
+          status: 429,
+          headers: {
+            "Content-Type": "application/json",
+            "Retry-After": String(Math.ceil((result.resetAt - Date.now()) / 1000)),
+            "X-RateLimit-Limit": String(config.max),
+            "X-RateLimit-Remaining": "0",
+            "X-RateLimit-Reset": String(result.resetAt),
+          },
+        }
+      );
+    }
+  }
+
   let supabaseResponse = NextResponse.next({ request });
 
   const supabase = createServerClient(

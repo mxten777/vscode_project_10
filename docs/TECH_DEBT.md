@@ -6,22 +6,25 @@
 
 ---
 
-## 완료된 정비 작업 (2026-03-24)
+## 완료된 정비 작업 (2026-04-02)
 
 | # | 내용 | 파일 |
 |---|------|------|
-| ✅ | `float-slow` / `float-slow-rev` 고아 CSS 키프레임 제거 (구 히어로 배너 잔재) | `globals.css` |
+| ✅ | `float-slow` / `float-slow-rev` 고아 CSS 키프레임 제거 | `globals.css` |
 | ✅ | `/api/reports/summary` 인증 누락 수정 → `getAuthContext()` 추가 | `api/reports/summary/route.ts` |
 | ✅ | 나라장터 리포트 기관명 누락 수정 → LEFT JOIN + demand_agency_name | `011_fix_report_summary_agency.sql` |
+| ✅ | Rate Limiting — 인증 10회/5분, 일반 API 60회/1분 | `middleware.ts`, `lib/rate-limit.ts` |
+| ✅ | `/terms`, `/privacy` 정적 페이지 생성 | `app/terms/page.tsx`, `app/privacy/page.tsx` |
+| ✅ | 모바일 반응형 — 640px 미만 카드뷰 자동 전환, 리사이즈 대응 | `app/(app)/page.tsx` |
+| ✅ | 카드뷰 모바일 패딩·폰트·최소너비 개선, `bg-linear-to-r` inline style 교체 | `app/(app)/page.tsx` |
 
 ---
 
 ## 🔴 보안 — 즉시 조치 필요
 
-### 1. API Rate Limiting 없음
-- **문제**: 모든 API 엔드포인트에 요청 횟수 제한 없음. 비인증 경로(`/api/health`)도 무제한
-- **해결**: Vercel Edge Config + `@upstash/ratelimit` 적용 또는 middleware에서 IP 기반 제한
-- **우선순위**: HIGH (프로덕션 트래픽 발생 전)
+### ~~1. API Rate Limiting 없음~~ ✅ 완료
+- 인증 엔드포인트: 5분 10회, 일반 API: 1분 60회 (middleware + `lib/rate-limit.ts`)
+- **업그레이드 시**: Upstash Redis + `@upstash/ratelimit` 으로 교체 (다중 인스턴스 대응)
 
 ### 2. plan limit 우회 가능 —즐겨찾기
 - **문제**: `GET /api/favorites` 는 plan limit 검사를 안 함. `POST /api/favorites` 도 직접 호출 시 우회 가능
@@ -32,10 +35,8 @@
 - **문제**: 일부 GET 쿼리에서 `org_id` 필터 없이 전체 데이터를 읽을 수 있음 (RLS로 1차 보호되지만 방어 심화 필요)
 - **해결**: 모든 SELECT에 `.eq("org_id", ctx.orgId)` 명시적으로 추가
 
-### 4. 이용약관·개인정보처리방침 페이지 없음
-- **문제**: 푸터에 `/terms`, `/privacy` 링크가 있지만 해당 페이지가 존재하지 않음 → 404
-- **파일**: `src/app/(app)/layout.tsx` (footer 링크)
-- **해결**: 정적 `/terms/page.tsx`, `/privacy/page.tsx` 생성
+### ~~4. 이용약관·개인정보처리방침 페이지 없음~~ ✅ 완료
+- `/terms/page.tsx`, `/privacy/page.tsx` 정적 페이지 생성 완료
 
 ---
 
@@ -91,9 +92,9 @@
 - **파일**: `src/app/(app)/tenders/[id]/page.tsx`
 - **개선**: AI 분석 결과 표시, 유사 공고 사이드패널, 즐겨찾기 토글 개선
 
-### 15. 모바일 반응형 테이블 미흡
-- **문제**: 입찰 목록 테이블 뷰가 모바일에서 가로 스크롤 발생
-- **해결**: 480px 이하에서 카드 뷰로 자동 전환 (이미 뷰 토글 있음, 기본값 조정)
+### ~~15. 모바일 반응형 테이블 미흡~~ ✅ 완료
+- 640px 미만 자동 카드뷰 전환 (`matchMedia` + `useEffect`)
+- 카드뷰 패딩 `px-4 sm:px-6`, 폰트 크기 모바일 최적화, 공고일 `hidden sm:block`
 
 ### 16. Suspense 경계 세분화 필요
 - **문제**: page.tsx 전체를 `<Suspense>`로 감싸 → 부분 로딩 불가
