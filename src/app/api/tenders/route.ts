@@ -1,11 +1,11 @@
 import { NextRequest } from "next/server";
-import { createClient } from "@/lib/supabase/server";
 import { tenderSearchSchema } from "@/lib/validations";
 import {
   successResponse,
   errorResponse,
   internalErrorResponse,
 } from "@/lib/api-response";
+import { getAuthContext } from "@/lib/auth-context";
 
 /**
  * GET /api/tenders
@@ -13,6 +13,9 @@ import {
  */
 export async function GET(request: NextRequest) {
   try {
+    const ctx = await getAuthContext();
+    if ("error" in ctx) return ctx.error;
+
     const url = new URL(request.url);
     const params = Object.fromEntries(url.searchParams);
 
@@ -35,7 +38,7 @@ export async function GET(request: NextRequest) {
       pageSize,
     } = parsed.data;
 
-    const supabase = await createClient();
+    const { supabase } = ctx;
 
     // Count query
     let countQuery = supabase

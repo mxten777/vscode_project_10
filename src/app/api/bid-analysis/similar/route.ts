@@ -7,9 +7,13 @@ import { NextRequest } from "next/server";
 import { createServiceClient } from "@/lib/supabase/service";
 import { apiResponse } from "@/lib/api-response";
 import type { SimilarBid } from "@/lib/types";
+import { getAuthContext } from "@/lib/auth-context";
 
 export async function GET(request: NextRequest) {
   try {
+    const ctx = await getAuthContext();
+    if ("error" in ctx) return ctx.error;
+
     const tenderId = request.nextUrl.searchParams.get("tenderId");
     const limit = parseInt(request.nextUrl.searchParams.get("limit") || "20");
 

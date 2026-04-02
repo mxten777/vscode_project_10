@@ -8,9 +8,13 @@
 import { NextRequest } from "next/server";
 import { createServiceClient } from "@/lib/supabase/service";
 import { apiResponse } from "@/lib/api-response";
+import { getAuthContext } from "@/lib/auth-context";
 
 export async function GET(request: NextRequest) {
   try {
+    const ctx = await getAuthContext();
+    if ("error" in ctx) return ctx.error;
+
     const type = request.nextUrl.searchParams.get("type") || "overall";
     const value = request.nextUrl.searchParams.get("value") || null;
     const months = parseInt(request.nextUrl.searchParams.get("months") || "6");
