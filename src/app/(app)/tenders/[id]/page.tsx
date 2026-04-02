@@ -164,9 +164,10 @@ export default function TenderDetailPage({
       </div>
 
       {/* Title + D-day banner */}
-      <div className="relative overflow-hidden rounded-2xl bg-linear-to-br from-indigo-950 via-indigo-900 to-violet-950 px-8 py-7 sm:px-10">
+      <div className="relative overflow-hidden rounded-2xl px-8 py-7 sm:px-10" style={{ background: "linear-gradient(135deg, #1e1b4b 0%, #1e2d6b 50%, #2e1065 100%)" }}>
         <div className="noise-overlay" />
-        <div className="absolute top-[-15%] right-[-5%] h-50 w-50 rounded-full bg-indigo-500/25 blur-[80px] animate-mesh pointer-events-none" />
+        <div className="absolute top-[-15%] right-[-5%] h-50 w-50 rounded-full bg-indigo-500/30 blur-[80px] animate-mesh pointer-events-none" />
+        <div className="absolute top-0 left-0 right-0 h-px" style={{ background: "linear-gradient(90deg, transparent, rgba(129,140,248,0.7) 50%, transparent)" }} />
         <div className="relative z-10">
           <div className="flex items-start justify-between gap-4 flex-wrap">
             <div className="flex-1 min-w-0">

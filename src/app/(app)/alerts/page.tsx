@@ -119,18 +119,21 @@ export default function AlertsPage() {
   return (
     <div className="space-y-8 animate-fade-up">
       {/* Header */}
-      <div className="relative overflow-hidden rounded-2xl bg-linear-to-br from-rose-950 via-indigo-950 to-indigo-900 px-8 py-8 sm:px-10">
+      <div className="relative overflow-hidden rounded-2xl px-8 py-8 sm:px-10" style={{ background: "linear-gradient(135deg, #1a0a1e 0%, #1e1b4b 50%, #0f172a 100%)" }}>
         <div className="noise-overlay" />
-        <div className="absolute top-[-10%] right-[-5%] h-55 w-55 rounded-full bg-rose-500/20 blur-[80px] animate-mesh pointer-events-none" />
-        <div className="absolute bottom-[-10%] left-[10%] h-45 w-45 rounded-full bg-indigo-500/20 blur-[70px] animate-mesh pointer-events-none" style={{ animationDelay: "-5s" }} />
+        {/* Colour orbs */}
+        <div className="absolute top-[-10%] right-[-5%] h-55 w-55 rounded-full bg-rose-500/25 blur-[80px] animate-mesh pointer-events-none" />
+        <div className="absolute bottom-[-10%] left-[10%] h-45 w-45 rounded-full bg-indigo-500/25 blur-[70px] animate-mesh pointer-events-none" style={{ animationDelay: "-5s" }} />
+        {/* Top shimmer */}
+        <div className="absolute top-0 left-0 right-0 h-px" style={{ background: "linear-gradient(90deg, transparent, rgba(251,113,133,0.7) 50%, transparent)" }} />
         <div className="relative z-10 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div>
-            <div className="inline-flex items-center gap-2 rounded-full bg-white/10 border border-white/15 px-3 py-1 text-xs font-semibold text-white/80 mb-3">
+            <div className="inline-flex items-center gap-2 rounded-full bg-white/10 border border-white/20 px-3 py-1 text-xs font-semibold text-white/85 mb-3">
               <Bell className="h-3 w-3 text-rose-300" />
               매치 알림 시스템
             </div>
             <h1 className="text-3xl font-extrabold tracking-tight text-white">알림 관리</h1>
-            <p className="text-white/50 mt-1">키워드/필터 조건에 맞는 새 공고를 알림 받으세요</p>
+            <p className="text-white/65 mt-1">키워드/필터 조건에 맞는 새 공고를 알림 받으세요</p>
           </div>
           <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
             <DialogTrigger asChild>

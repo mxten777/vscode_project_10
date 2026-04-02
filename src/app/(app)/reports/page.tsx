@@ -56,24 +56,28 @@ export default function ReportsPage() {
   return (
     <div className="space-y-8 animate-fade-up">
       {/* Header */}
-      <div className="relative overflow-hidden rounded-2xl bg-linear-to-br from-violet-950 via-indigo-900 to-indigo-950 px-8 py-8 sm:px-10">
+      <div className="relative overflow-hidden rounded-2xl px-8 py-8 sm:px-10" style={{ background: "linear-gradient(135deg, #2e1065 0%, #1e1b4b 50%, #1e1b55 100%)" }}>
         <div className="noise-overlay" />
-        <div className="absolute top-[-20%] right-[-5%] h-60 w-60 rounded-full bg-violet-500/25 blur-[90px] animate-mesh pointer-events-none" />
+        {/* Colour orbs */}
+        <div className="absolute top-[-20%] right-[-5%] h-60 w-60 rounded-full bg-violet-500/30 blur-[90px] animate-mesh pointer-events-none" />
+        <div className="absolute bottom-[-20%] left-[5%] h-48 w-48 rounded-full bg-indigo-400/20 blur-[70px] pointer-events-none" />
+        {/* Top shimmer */}
+        <div className="absolute top-0 left-0 right-0 h-px" style={{ background: "linear-gradient(90deg, transparent, rgba(167,139,250,0.7) 50%, transparent)" }} />
         <div className="relative z-10 flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4">
           <div>
-            <div className="inline-flex items-center gap-2 rounded-full bg-white/10 border border-white/15 px-3 py-1 text-xs font-semibold text-white/80 mb-3">
+            <div className="inline-flex items-center gap-2 rounded-full bg-white/10 border border-white/20 px-3 py-1 text-xs font-semibold text-white/85 mb-3">
               <BarChart3 className="h-3 w-3 text-violet-300" />
               통계 분석 리포트
             </div>
             <h1 className="text-3xl font-extrabold tracking-tight text-white">리포트</h1>
-            <p className="text-white/50 mt-1">기간별 입찰 공고 통계를 확인하세요</p>
+            <p className="text-white/65 mt-1">기간별 입찰 공고 통계를 확인하세요</p>
           </div>
           {data && (
-            <div className="flex gap-3 flex-wrap">
+            <div className="flex gap-4 flex-wrap">
               {[{label: "총 공고", val: data.totalTenders.toLocaleString() + "건"}, {label: "기관 수", val: data.topAgencies.length + "개"}, {label: "업종 수", val: data.topIndustries.length + "개"}].map(({label, val}) => (
-                <div key={label} className="text-center">
-                  <p className="text-white/40 text-[10px] uppercase tracking-widest">{label}</p>
-                  <p className="text-white font-bold text-sm">{val}</p>
+                <div key={label} className="text-center px-3 py-1.5 rounded-xl" style={{ background: "rgba(255,255,255,0.08)", border: "1px solid rgba(255,255,255,0.14)" }}>
+                  <p className="text-white/55 text-[10px] uppercase tracking-widest">{label}</p>
+                  <p className="text-white font-bold text-base mt-0.5">{val}</p>
                 </div>
               ))}
             </div>
