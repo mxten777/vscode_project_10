@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useReportSummary } from "@/hooks/use-api";
 import { formatKRW } from "@/lib/helpers";
+import { useExportPdf } from "@/hooks/use-export-pdf";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -23,6 +24,7 @@ import {
   CalendarDays,
   TrendingUp,
   RotateCcw,
+  Download,
 } from "lucide-react";
 import {
   PieChart,
@@ -52,6 +54,12 @@ export default function ReportsPage() {
   const toISO = to ? new Date(to + "T23:59:59").toISOString() : undefined;
 
   const { data, isLoading } = useReportSummary(fromISO, toISO);
+  const { exportPdf, isExporting } = useExportPdf();
+
+  function handleExportPdf() {
+    const label = from && to ? `${from}_${to}` : "전체";
+    exportPdf({ elementId: "report-capture", filename: `입찰리포트_${label}` });
+  }
 
   return (
     <div className="space-y-8 animate-fade-up">
@@ -124,6 +132,14 @@ export default function ReportsPage() {
               <RotateCcw className="h-4 w-4" />
               초기화
             </Button>
+            <Button
+              className="gap-1.5 h-11 rounded-lg"
+              onClick={handleExportPdf}
+              disabled={isExporting || !data}
+            >
+              <Download className="h-4 w-4" />
+              {isExporting ? "생성 중..." : "PDF 저장"}
+            </Button>
           </div>
         </CardContent>
       </Card>
@@ -137,7 +153,7 @@ export default function ReportsPage() {
       )}
 
       {data && (
-        <>
+        <div id="report-capture">
           {/* Summary Cards */}
           <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4 stagger-children">
             <SummaryCard
@@ -324,7 +340,7 @@ export default function ReportsPage() {
               )}
             </CardContent>
           </Card>
-        </>
+        </div>
       )}
     </div>
   );

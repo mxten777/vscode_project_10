@@ -1,19 +1,21 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
+import { signInSchema } from "@/lib/validations";
 
 /**
  * POST /api/auth/signin
  */
 export async function POST(request: NextRequest) {
   try {
-    const { email, password } = await request.json();
-
-    if (!email || !password) {
+    const body = await request.json();
+    const parsed = signInSchema.safeParse(body);
+    if (!parsed.success) {
       return NextResponse.json(
-        { code: "VALIDATION_ERROR", message: "email, password 필수" },
+        { code: "VALIDATION_ERROR", message: parsed.error.issues[0]?.message ?? "입력값이 올바르지 않습니다" },
         { status: 400 }
       );
     }
+    const { email, password } = parsed.data;
 
     const supabase = await createClient();
     const { data, error } = await supabase.auth.signInWithPassword({

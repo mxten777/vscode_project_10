@@ -40,6 +40,7 @@ import {
   Eye,
   EyeOff,
   TrendingUp,
+  Users,
 } from "lucide-react";
 import { toast } from "sonner";
 import { BaikalLogo } from "@/components/baikal-logo";
@@ -50,6 +51,7 @@ const navItems = [
   { href: "/alerts", label: "알림 관리", icon: Bell },
   { href: "/analytics", label: "낙찰 분석", icon: TrendingUp },
   { href: "/reports", label: "리포트", icon: BarChart3 },
+  { href: "/team", label: "팀 관리", icon: Users },
 ];
 
 function ThemeToggle() {

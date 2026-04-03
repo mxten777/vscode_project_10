@@ -1,14 +1,25 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
-import { rateLimit } from "@/lib/rate-limit";
+import { Ratelimit } from "@upstash/ratelimit";
+import { Redis } from "@upstash/redis";
 
-// Rate limit 설정
-const RATE_LIMITS = {
-  // 인증 엔드포인트: 5분에 10회 (브루트포스 방지)
-  auth: { windowMs: 5 * 60 * 1000, max: 10 },
-  // 일반 API: 1분에 60회
-  api:  { windowMs: 60 * 1000,      max: 60 },
-};
+// Upstash Redis 기반 분산 Rate Limiter
+// 환경변수 미설정 시 rate limiting을 건너뜀 (개발 환경 대응)
+function buildRatelimiters() {
+  const url = process.env.UPSTASH_REDIS_REST_URL;
+  const token = process.env.UPSTASH_REDIS_REST_TOKEN;
+  if (!url || !token) return null;
+
+  const redis = new Redis({ url, token });
+  return {
+    // 인증 엔드포인트: 5분에 10회 (브루트포스 방지)
+    auth: new Ratelimit({ redis, limiter: Ratelimit.slidingWindow(10, "5 m"), prefix: "rl:auth" }),
+    // 일반 API: 1분에 60회
+    api:  new Ratelimit({ redis, limiter: Ratelimit.slidingWindow(60, "1 m"), prefix: "rl:api" }),
+  };
+}
+
+const limiters = buildRatelimiters();
 
 function getClientIp(req: NextRequest): string {
   return (
@@ -21,25 +32,25 @@ function getClientIp(req: NextRequest): string {
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
-  // ── Rate Limiting ──────────────────────────────────────
-  if (pathname.startsWith("/api/")) {
+  // ── Rate Limiting (Upstash Redis — 분산 환경 적용) ────────
+  if (limiters && pathname.startsWith("/api/")) {
     const ip = getClientIp(request);
     const isAuth = pathname.startsWith("/api/auth/");
-    const config = isAuth ? RATE_LIMITS.auth : RATE_LIMITS.api;
-    const key = `${isAuth ? "auth" : "api"}:${ip}`;
+    const limiter = isAuth ? limiters.auth : limiters.api;
+    const key = `${ip}`;
 
-    const result = rateLimit(key, config);
-    if (!result.success) {
+    const { success, limit, remaining, reset } = await limiter.limit(key);
+    if (!success) {
       return new NextResponse(
         JSON.stringify({ code: "RATE_LIMIT", message: "요청이 너무 많습니다. 잠시 후 다시 시도해주세요." }),
         {
           status: 429,
           headers: {
             "Content-Type": "application/json",
-            "Retry-After": String(Math.ceil((result.resetAt - Date.now()) / 1000)),
-            "X-RateLimit-Limit": String(config.max),
-            "X-RateLimit-Remaining": "0",
-            "X-RateLimit-Reset": String(result.resetAt),
+            "Retry-After": String(Math.ceil((reset - Date.now()) / 1000)),
+            "X-RateLimit-Limit": String(limit),
+            "X-RateLimit-Remaining": String(remaining),
+            "X-RateLimit-Reset": String(reset),
           },
         }
       );

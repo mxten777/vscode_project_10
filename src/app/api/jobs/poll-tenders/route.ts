@@ -13,7 +13,7 @@ const NARA_API_ENDPOINT = `${NARA_API_BASE}/ad/BidPublicInfoService/getBidPblanc
 
 /**
  * POST /api/jobs/poll-tenders
- * Vercel Cron에서 호출 — 나라장터 API로 신규 공고 수집
+ * Vercel Cron에서 호출 — 나라장터 API로 신규 공고 수집 (페이지네이션 루프)
  */
 
 export async function POST(request: NextRequest) {
@@ -23,102 +23,170 @@ export async function POST(request: NextRequest) {
   }
 
   const supabase = createServiceClient();
-  const results = { inserted: 0, updated: 0, errors: 0 };
+  const results = { inserted: 0, errors: 0, totalFetched: 0 };
+
+  // ── 수집 이력: 시작 기록 ──────────────────────────────────────
+  const { data: logEntry } = await supabase
+    .from("collection_logs")
+    .insert({ job_type: "tenders", status: "running" })
+    .select("id")
+    .single();
+  const logId: string | null = logEntry?.id ?? null;
 
   try {
-    // 나라장터 API 호출 (재시도 포함)
-    const rawItems = await retryWithBackoff(async () => {
-      const url = `${NARA_API_ENDPOINT}?serviceKey=${NARA_API_KEY}&pageNo=1&numOfRows=100&type=json&inqryDiv=1&inqryBgnDt=${getRecentDateStr()}&inqryEndDt=${getTodayStr()}`;
+    let pageNo = 1;
+    let totalCount = 0;
+    const MAX_PAGES = 50; // 안전 상한선 (5,000건)
 
-      const res = await fetch(url, { cache: "no-store" });
-      if (!res.ok) throw new Error(`나라장터 API 오류: ${res.status}`);
+    // ── 페이지네이션 루프 ────────────────────────────────────────
+    do {
+      const { items, total } = await retryWithBackoff(async () => {
+        const url = buildApiUrl(pageNo);
+        const res = await fetch(url, { cache: "no-store" });
+        if (!res.ok) throw new Error(`나라장터 API 오류: ${res.status}`);
 
-      const json = await res.json();
-      // 실제 응답 구조에 따라 파싱 경로 조정 필요
-      const items =
-        json?.response?.body?.items ?? json?.items ?? json?.data ?? [];
-      return Array.isArray(items) ? items : [];
-    }, 3);
+        const json = await res.json();
+        const items = json?.response?.body?.items ?? json?.items ?? json?.data ?? [];
+        const total = parseInt(json?.response?.body?.totalCount ?? "0", 10);
+        return { items: Array.isArray(items) ? items : [], total };
+      }, 3);
 
-    // ─── 1단계: 기관 배치 upsert (1회 쿼리) ───────────────────
-    const agencyMap = new Map<string, string>(); // code → id
+      totalCount = total;
+      results.totalFetched += items.length;
 
-    const uniqueAgencies = [
-      ...new Map(
-        rawItems
-          .map((item) => {
-            const code = (item.dminsttCd || item.ntceInsttCd || "") as string;
-            const name = (item.dminsttNm || item.ntceInsttNm || "알수없음") as string;
-            return [code, { code, name }] as [string, { code: string; name: string }];
+      if (items.length === 0) break;
+
+      // ─── 기관 배치 upsert ──────────────────────────────────────
+      const agencyMap = new Map<string, string>();
+      const uniqueAgencies = [
+        ...new Map(
+          items
+            .map((item: Record<string, unknown>) => {
+              const code = (item.dminsttCd || item.ntceInsttCd || "") as string;
+              const name = (item.dminsttNm || item.ntceInsttNm || "알수없음") as string;
+              return [code, { code, name }] as [string, { code: string; name: string }];
+            })
+            .filter(([code]: [string, unknown]) => !!code)
+        ).values(),
+      ];
+
+      if (uniqueAgencies.length) {
+        const { data: agencies } = await supabase
+          .from("agencies")
+          .upsert(uniqueAgencies, { onConflict: "code" })
+          .select("id, code");
+        agencies?.forEach((a: { id: string; code: string }) => agencyMap.set(a.code, a.id));
+      }
+
+      // ─── 공고 배치 upsert ──────────────────────────────────────
+      const tenderPayloads = items
+        .map((item: Record<string, unknown>) => {
+          const sourceTenderId = extractSourceId(item);
+          if (!sourceTenderId) return null;
+          const agencyCode = (item.dminsttCd || item.ntceInsttCd || "") as string;
+          return {
+            source_tender_id: sourceTenderId,
+            title: (item.bidNtceNm || item.prdctClsfcNoNm || "제목 없음") as string,
+            agency_id: agencyMap.get(agencyCode) ?? null,
+            demand_agency_name: (item.dminsttNm as string) || null,
+            budget_amount: parseFloat(item.presmptPrce as string) || null,
+            region_code: (item.bidNtceAreaCd as string) || null,
+            region_name: (item.bidNtceAreaNm as string) || null,
+            industry_code: (item.prdctClsfcNo as string) || null,
+            industry_name: (item.prdctClsfcNoNm as string) || null,
+            method_type: (item.cntrctMthdCd as string) || null,
+            published_at: latestDateIso(
+              parseDate(item.bidNtceDt as string),
+              parseDate(item.rgstDt as string)
+            ),
+            deadline_at: parseDate(item.bidClseDt as string),
+            status: determineTenderStatus(item),
+            raw_json: item,
+          };
+        })
+        .filter((p: unknown): p is NonNullable<typeof p> => p !== null);
+
+      const uniqueTenderPayloads = [
+        ...new Map(
+          (tenderPayloads as Array<{ source_tender_id: string }>).map((p) => [p.source_tender_id, p])
+        ).values(),
+      ];
+
+      if (uniqueTenderPayloads.length) {
+        const { data: upserted, error: upsertErr } = await supabase
+          .from("tenders")
+          .upsert(uniqueTenderPayloads, { onConflict: "source_tender_id" })
+          .select("id");
+        if (upsertErr) throw upsertErr;
+        results.inserted += upserted?.length ?? 0;
+      }
+
+      // 진행 상태 업데이트 (페이지마다 체크포인트 저장)
+      if (logId) {
+        await supabase
+          .from("collection_logs")
+          .update({
+            last_page_no: pageNo,
+            records_collected: results.inserted,
+            total_pages: Math.ceil(totalCount / 100),
           })
-          .filter(([code]) => !!code)
-      ).values(),
-    ];
+          .eq("id", logId);
+      }
 
-    if (uniqueAgencies.length) {
-      const { data: agencies } = await supabase
-        .from("agencies")
-        .upsert(uniqueAgencies, { onConflict: "code" })
-        .select("id, code");
-      agencies?.forEach((a: { id: string; code: string }) => agencyMap.set(a.code, a.id));
-    }
+      pageNo++;
+    } while (results.totalFetched < totalCount && pageNo <= MAX_PAGES);
 
-    // ─── 2단계: 공고 배치 upsert (1회 쿼리) ───────────────────
-    const tenderPayloads = rawItems
-      .map((item) => {
-        const sourceTenderId = extractSourceId(item);
-        if (!sourceTenderId) return null;
-        const agencyCode = (item.dminsttCd || item.ntceInsttCd || "") as string;
-        return {
-          source_tender_id: sourceTenderId,
-          title: (item.bidNtceNm || item.prdctClsfcNoNm || "제목 없음") as string,
-          agency_id: agencyMap.get(agencyCode) ?? null,
-          demand_agency_name: (item.dminsttNm as string) || null,
-          budget_amount: parseFloat(item.presmptPrce as string) || null,
-          region_code: (item.bidNtceAreaCd as string) || null,
-          region_name: (item.bidNtceAreaNm as string) || null,
-          industry_code: (item.prdctClsfcNo as string) || null,
-          industry_name: (item.prdctClsfcNoNm as string) || null,
-          method_type: (item.cntrctMthdCd as string) || null,
-          // published_at: use the latest of bidNtceDt and rgstDt to reduce UI freshness issues
-          published_at: latestDateIso(
-            parseDate(item.bidNtceDt as string),
-            parseDate(item.rgstDt as string)
-          ),
-          deadline_at: parseDate(item.bidClseDt as string),
-          status: determineTenderStatus(item),
-          raw_json: item,
-        };
-      })
-      .filter((p): p is NonNullable<typeof p> => p !== null);
-
-    // 배치 내 source_tender_id 중복 제거 (동일 배치 내 중복 시 PostgreSQL upsert 오류 방지)
-    const uniqueTenderPayloads = [
-      ...new Map(tenderPayloads.map((p) => [p.source_tender_id, p])).values(),
-    ];
-
-    if (uniqueTenderPayloads.length) {
-      const { data: upserted, error: upsertErr } = await supabase
-        .from("tenders")
-        .upsert(uniqueTenderPayloads, { onConflict: "source_tender_id" })
-        .select("id");
-
-      if (upsertErr) throw upsertErr;
-      results.inserted = upserted?.length ?? 0;
+    // ── 수집 이력: 완료 기록 ─────────────────────────────────────
+    if (logId) {
+      await supabase
+        .from("collection_logs")
+        .update({
+          status: "success",
+          finished_at: new Date().toISOString(),
+          records_collected: results.inserted,
+          total_pages: Math.ceil(totalCount / 100),
+        })
+        .eq("id", logId);
     }
 
     return successResponse({
       message: "수집 완료",
-      totalFetched: rawItems.length,
-      ...results,
+      totalFetched: results.totalFetched,
+      totalCount,
+      pagesProcessed: pageNo - 1,
+      inserted: results.inserted,
     });
   } catch (err) {
+    // ── 수집 이력: 실패 기록 ─────────────────────────────────────
+    if (logId) {
+      await supabase
+        .from("collection_logs")
+        .update({
+          status: "failed",
+          finished_at: new Date().toISOString(),
+          error_message: String(err),
+        })
+        .eq("id", logId);
+    }
     console.error("poll-tenders 전체 오류:", err);
     return internalErrorResponse();
   }
 }
 
 // ─── 유틸 ──────────────────────────────────────────────
+
+function buildApiUrl(pageNo: number): string {
+  const params = new URLSearchParams({
+    serviceKey: NARA_API_KEY,
+    pageNo: String(pageNo),
+    numOfRows: "100",
+    type: "json",
+    inqryDiv: "1",
+    inqryBgnDt: getRecentDateStr(),
+    inqryEndDt: getTodayStr(),
+  });
+  return `${NARA_API_ENDPOINT}?${params.toString()}`;
+}
 
 function extractSourceId(item: Record<string, unknown>): string | null {
   return (

@@ -37,6 +37,8 @@ interface NaramarketBidResult {
 }
 
 export async function GET(request: NextRequest) {
+  let logId: string | null = null;
+
   try {
     // Cron secret 검증
     if (!verifyCronSecret(request)) {
@@ -44,6 +46,18 @@ export async function GET(request: NextRequest) {
     }
 
     const supabase = createServiceClient();
+
+    // 수집 시작 기록
+    const { data: logRow } = await supabase
+      .from("collection_logs")
+      .insert({
+        job_type: "awards",
+        status: "started",
+        started_at: new Date().toISOString(),
+      })
+      .select("id")
+      .single();
+    logId = logRow?.id ?? null;
     const NARAMARKET_API_KEY = process.env.NARA_API_KEY;
 
     if (!NARAMARKET_API_KEY) {
@@ -133,6 +147,19 @@ export async function GET(request: NextRequest) {
 
     // 5) bid_price_features는 DB 트리거(trg_bid_awards_compute_features)가 자동 계산
 
+    // 수집 완료 기록
+    if (logId) {
+      await supabase
+        .from("collection_logs")
+        .update({
+          status: "completed",
+          completed_at: new Date().toISOString(),
+          records_collected: processedCount,
+          metadata: { errors: errorCount, date_range: { start: startDate, end: endDate } },
+        })
+        .eq("id", logId);
+    }
+
     return NextResponse.json({
       success: true,
       message: "낙찰 데이터 수집 완료",
@@ -143,6 +170,24 @@ export async function GET(request: NextRequest) {
   } catch (error) {
     const message = error instanceof Error ? error.message : "Unknown error";
     console.error("[collect-bid-awards] Error:", error);
+
+    // 수집 실패 기록
+    if (typeof logId === "string") {
+      try {
+        const supabase = createServiceClient();
+        await supabase
+          .from("collection_logs")
+          .update({
+            status: "failed",
+            completed_at: new Date().toISOString(),
+            error_message: message,
+          })
+          .eq("id", logId);
+      } catch {
+        // 로그 기록 실패는 무시
+      }
+    }
+
     return NextResponse.json(
       {
         success: false,
@@ -261,14 +306,14 @@ function parseNaramarketDate(dateStr: string): string {
     const day = cleaned.substring(6, 8);
     return new Date(`${year}-${month}-${day}T00:00:00Z`).toISOString();
   } else if (cleaned.length === 14) {
-    // YYYYMMDDHHmmss
+    // YYYYMMDDHHmmss — 나라장터 시각은 KST(+09:00)
     const year = cleaned.substring(0, 4);
     const month = cleaned.substring(4, 6);
     const day = cleaned.substring(6, 8);
     const hour = cleaned.substring(8, 10);
     const minute = cleaned.substring(10, 12);
     const second = cleaned.substring(12, 14);
-    return new Date(`${year}-${month}-${day}T${hour}:${minute}:${second}Z`).toISOString();
+    return new Date(`${year}-${month}-${day}T${hour}:${minute}:${second}+09:00`).toISOString();
   }
 
   return new Date().toISOString();

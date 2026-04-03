@@ -18,6 +18,14 @@
     {
       "path": "/api/jobs/collect-bid-awards",
       "schedule": "10 0 * * 1-5"
+    },
+    {
+      "path": "/api/jobs/cleanup",
+      "schedule": "0 1 * * 0"
+    },
+    {
+      "path": "/api/ai/embed-batch",
+      "schedule": "0 2 * * 1"
     }
   ],
   "headers": [
