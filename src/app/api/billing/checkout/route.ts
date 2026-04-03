@@ -4,13 +4,12 @@ import { getAuthContext } from "@/lib/auth-context";
 import { createServiceClient } from "@/lib/supabase/service";
 import { errorResponse, successResponse } from "@/lib/api-response";
 
-/**
- * POST /api/billing/checkout
- * Stripe Checkout Session 생성 → 클라이언트에 URL 반환
- *
- * Body: { plan: "pro" | "enterprise" }
- */
 export async function POST(request: NextRequest) {
+  // Stripe 환경변수 미설정 시 graceful 안내
+  if (!process.env.STRIPE_SECRET_KEY) {
+    return errorResponse("STRIPE_NOT_CONFIGURED", "결제 시스템을 준비 중입니다. 잔시 후 다시 시도해 주세요.", 503);
+  }
+
   const ctx = await getAuthContext();
   if ("error" in ctx) return ctx.error;
   const { user, orgId } = ctx;

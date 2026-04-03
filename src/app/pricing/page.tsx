@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { CheckCircle, Zap, Building2, Shield } from "lucide-react";
+import { CheckCircle, Zap, Building2, Shield, AlertCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
@@ -79,10 +79,12 @@ type PlanKey = "pro" | "enterprise";
 export default function PricingPage() {
   const router = useRouter();
   const [loading, setLoading] = useState<PlanKey | null>(null);
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
   async function handleUpgrade(plan: string) {
     if (plan === "free") return;
     setLoading(plan as PlanKey);
+    setErrorMsg(null);
     try {
       const res = await fetch("/api/billing/checkout", {
         method: "POST",
@@ -91,17 +93,25 @@ export default function PricingPage() {
       });
 
       if (res.status === 401) {
-        // 비로그인 → 로그인 후 pricing 리다이렉트
         router.push("/login?redirect=/pricing");
         return;
       }
 
       const data = await res.json();
-      if (!res.ok) throw new Error(data.message ?? "결제 세션 생성 실패");
+
+      if (data.code === "STRIPE_NOT_CONFIGURED") {
+        setErrorMsg("결제 시스템을 준비 중입니다. 븬로스 베타 기간에는 무료로 제공됩니다.");
+        return;
+      }
+
+      if (!res.ok) {
+        setErrorMsg(data.message ?? "일시적인 오류가 발생했습니다. 잠시 후 다시 시도해 주세요.");
+        return;
+      }
+
       if (data.url) window.location.href = data.url;
-    } catch (err) {
-      console.error("결제 이동 오류:", err);
-      alert("결제 페이지로 이동할 수 없습니다. 잠시 후 다시 시도해주세요.");
+    } catch {
+      setErrorMsg("네트워크 오류입니다. 인터넷 연결을 확인해 주세요.");
     } finally {
       setLoading(null);
     }
@@ -121,6 +131,14 @@ export default function PricingPage() {
           나라장터 공공 입찰을 더 스마트하게. 언제든 플랜을 변경할 수 있습니다.
         </p>
       </div>
+
+      {/* 오류 메시지 및 준비중 안내 */}
+      {errorMsg && (
+        <div className="mx-auto max-w-2xl mb-8 flex items-start gap-3 rounded-lg border border-amber-300 bg-amber-50 dark:bg-amber-950/30 dark:border-amber-700 px-5 py-4 text-sm text-amber-800 dark:text-amber-300">
+          <AlertCircle className="w-4 h-4 mt-0.5 shrink-0" />
+          <span>{errorMsg}</span>
+        </div>
+      )}
 
       {/* 플랜 카드 */}
       <div className="mx-auto max-w-5xl grid grid-cols-1 md:grid-cols-3 gap-6">
