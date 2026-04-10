@@ -149,12 +149,18 @@ export async function POST(request: NextRequest) {
         .eq("id", logId);
     }
 
+    // ── 만료 공고 CLOSED 갱신 ─────────────────────────────────────
+    // 7일 이전 수집 공고 중 deadline_at이 지난 것을 OPEN → CLOSED로 일괄 갱신
+    const { data: closedResult } = await supabase.rpc("close_expired_tenders");
+    const closedCount = (closedResult as { closed_count?: number }[] | null)?.[0]?.closed_count ?? 0;
+
     return successResponse({
       message: "수집 완료",
       totalFetched: results.totalFetched,
       totalCount,
       pagesProcessed: pageNo - 1,
       inserted: results.inserted,
+      expiredClosed: closedCount,
     });
   } catch (err) {
     // ── 수집 이력: 실패 기록 ─────────────────────────────────────
