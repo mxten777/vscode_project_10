@@ -6,6 +6,11 @@ import { errorResponse, successResponse, internalErrorResponse } from "@/lib/api
 // 나라장터 API는 한국 IP만 허용 → 서울 리전에서 실행
 export const preferredRegion = "icn1";
 
+// Vercel Cron은 GET으로 호출 → POST 핸들러로 위임
+export async function GET(request: NextRequest) {
+  return POST(request);
+}
+
 const NARA_API_BASE = process.env.NARA_API_BASE_URL || "https://apis.data.go.kr/1230000";
 const NARA_API_KEY = (process.env.NARA_API_KEY || "").trim(); // trim(): Vercel env 줄바꿈 방지
 // 운영계정 endpoint (개발계정과 다름)

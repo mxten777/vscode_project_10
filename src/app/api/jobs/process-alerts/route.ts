@@ -9,6 +9,12 @@ import type { AlertRuleJson } from "@/lib/types";
  * POST /api/jobs/process-alerts
  * 활성 alert_rules를 평가하여 매칭되는 신규 공고에 대해 알림 발송
  */
+
+// Vercel Cron은 GET으로 호출 → POST 핸들러로 위임
+export async function GET(request: NextRequest) {
+  return POST(request);
+}
+
 export async function POST(request: NextRequest) {
   if (!verifyCronSecret(request)) {
     return errorResponse("UNAUTHORIZED", "잘못된 인증 키", 401);
