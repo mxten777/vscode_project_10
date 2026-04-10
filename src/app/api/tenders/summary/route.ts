@@ -40,30 +40,20 @@ export async function GET() {
         .gte("deadline_at", `${todayStr}T00:00:00`)
         .lte("deadline_at", `${todayStr}T23:59:59`),
 
-      // 전체 예산 합계
-      supabase
-        .from("tenders")
-        .select("budget_amount")
-        .not("budget_amount", "is", null),
+      // 전체 예산 합계 — DB SUM으로 직접 집계 (행 개수 제한 우회)
+      supabase.rpc("sum_budget_all"),
 
-      // 진행중 예산 합계
-      supabase
-        .from("tenders")
-        .select("budget_amount")
-        .eq("status", "OPEN")
-        .not("budget_amount", "is", null),
+      // 진행중 예산 합계 — DB SUM으로 직접 집계
+      supabase.rpc("sum_budget_open"),
     ]);
-
-    const sumBudget = (rows: { budget_amount: number }[] | null) =>
-      (rows ?? []).reduce((s, r) => s + (r.budget_amount || 0), 0);
 
     return successResponse({
       total: total.count ?? 0,
       open_count: open.count ?? 0,
       urgent_count: urgent.count ?? 0,
       closing_today: closingToday.count ?? 0,
-      total_budget: sumBudget(budgetAll.data),
-      open_budget: sumBudget(budgetOpen.data),
+      total_budget: (budgetAll.data as number) ?? 0,
+      open_budget: (budgetOpen.data as number) ?? 0,
     });
   } catch (err) {
     console.error("GET /api/tenders/summary error:", err);
