@@ -12,8 +12,8 @@ import { createServiceClient } from "@/lib/supabase/service";
 import { verifyCronSecret } from "@/lib/helpers";
 
 export const preferredRegion = "icn1";
-// 백필은 실행 시간이 길 수 있으므로 최대 300초 허용
-export const maxDuration = 300;
+// Hobby 플랜 최대 60초 (Pro: 300초)
+export const maxDuration = 60;
 
 interface NaraAwardItem {
   bidNtceNo: string;
