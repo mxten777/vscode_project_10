@@ -35,9 +35,10 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const months = parseInt(request.nextUrl.searchParams.get("months") || "3");
-  if (![1, 3, 6, 12].includes(months)) {
-    return NextResponse.json({ error: "months must be 1, 3, 6, or 12" }, { status: 400 });
+  const months = parseInt(request.nextUrl.searchParams.get("months") || "1");
+  const startMonthsAgo = parseInt(request.nextUrl.searchParams.get("startMonthsAgo") || "0");
+  if (![1, 2, 3, 6, 12].includes(months)) {
+    return NextResponse.json({ error: "months must be 1, 2, 3, 6, or 12" }, { status: 400 });
   }
 
   const supabase = createServiceClient();
@@ -66,9 +67,10 @@ export async function POST(request: NextRequest) {
   let totalErrors = 0;
 
   try {
-    // 날짜 범위: 오늘 ~ N개월 전
+    // 날짜 범위: (오늘 - startMonthsAgo개월) ~ (오늘 - startMonthsAgo개월 - months개월)
     const endDate = new Date();
-    const startDate = new Date();
+    endDate.setMonth(endDate.getMonth() - startMonthsAgo);
+    const startDate = new Date(endDate);
     startDate.setMonth(startDate.getMonth() - months);
 
     const fmtFrom = (d: Date) => d.toISOString().slice(0, 10).replace(/-/g, "") + "0000";
