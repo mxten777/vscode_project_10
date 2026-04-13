@@ -264,19 +264,51 @@ export interface AIInsightTender {
   demand_agency_name: string | null;
   budget_amount: number | null;
   deadline_at: string | null;
-  ind_rate: number;   // 업종 낙찰률 (%)
-  agn_rate: number;   // 기관 낙찰률 (%)
-  rgn_rate: number;   // 지역 낙찰률 (%)
-  avg_bidders: number; // 평균 경쟁업체 수
-  win_probability: number; // 낙찰 가능성 점수 (0~100)
+  ind_avg_rate: number | null;  // 실제 업종 평균 낙찰률 (%)
+  agn_avg_rate: number | null;  // 실제 기관 평균 낙찰률 (%)
+  avg_bidders: number | null;   // 평균 경쟁업체 수 (null이면 데이터 없음)
+  comp_score: number;           // 경쟁 강도 점수 (0~100)
+  profile_score: number;        // 개인화 점수 (0~100)
+  win_probability: number;      // 낙찰 가능성 점수 (0~100)
+  total_score: number;          // 카테고리별 정렬 점수
+  reason: string;               // 추천 이유 1줄
+  data_quality: "real" | "partial" | "insufficient"; // 데이터 품질
+}
+
+export interface AIInsightsCoverage {
+  awards_count: number;
+  bor_count: number;
+  tenders_open_count: number;
+  industry_dimensions?: number;
 }
 
 export interface AIInsights {
-  recommended: AIInsightTender[];     // 종합 추천
-  high_probability: AIInsightTender[]; // 낙찰 가능성 높음
-  low_competition: AIInsightTender[]; // 경쟁 적음
-  high_profitability: AIInsightTender[]; // 수익성 높음
+  recommended: AIInsightTender[];
+  high_probability: AIInsightTender[];
+  low_competition: AIInsightTender[];
+  high_profitability: AIInsightTender[];
+  has_profile: boolean;
+  coverage: AIInsightsCoverage;
   computed_at: string;
   cached: boolean;
 }
+
+// ─── Company Profile 타입 ──────────────────────────────
+
+export interface CompanyProfile {
+  id: string;
+  user_id: string;
+  org_id: string | null;
+  company_name: string | null;
+  industry_codes: string[];
+  region_codes: string[];
+  preferred_agency_names: string[];
+  min_budget: number | null;
+  max_budget: number | null;
+  keywords: string[];
+  created_at: string;
+  updated_at: string;
+}
+
+export type CompanyProfileInput = Omit<CompanyProfile, "id" | "user_id" | "org_id" | "created_at" | "updated_at">;
 

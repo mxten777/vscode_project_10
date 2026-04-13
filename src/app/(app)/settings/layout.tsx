@@ -2,11 +2,12 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { User, CreditCard } from "lucide-react";
+import { User, CreditCard, Building } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const sidebarItems = [
   { href: "/settings/profile", label: "프로필", icon: User },
+  { href: "/settings/company", label: "회사 정보", icon: Building },
   { href: "/settings/billing", label: "요금제 & 결제", icon: CreditCard },
 ];
 

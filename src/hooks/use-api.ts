@@ -11,6 +11,8 @@ import type {
   BidRecommendation,
   SimilarBid,
   AIInsights,
+  CompanyProfile,
+  CompanyProfileInput,
 } from "@/lib/types";
 import type { TenderSearchParams } from "@/lib/validations";
 
@@ -210,3 +212,35 @@ export function useAIInsights(limit = 8) {
   });
 }
 
+// ─── Company Profile ───────────────────────────────────
+
+export function useCompanyProfile() {
+  return useQuery<CompanyProfile | null>({
+    queryKey: ["company-profile"],
+    queryFn: async () => {
+      const res = await fetch("/api/company-profile");
+      if (res.status === 404) return null;
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      return res.json();
+    },
+    staleTime: 1000 * 60 * 5, // 5분 캐시
+    retry: false,
+  });
+}
+
+export function useUpdateCompanyProfile() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (data: Partial<CompanyProfileInput>) =>
+      fetcher<CompanyProfile>("/api/company-profile", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(data),
+      }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["company-profile"] });
+      // 프로파일 변경 시 AI 인사이트 캐시 무효화
+      qc.invalidateQueries({ queryKey: ["ai-insights"] });
+    },
+  });
+}

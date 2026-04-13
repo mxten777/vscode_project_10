@@ -428,20 +428,18 @@ function HomeContent() {
             bgClass="bg-violet-500/10"
             items={aiInsights?.recommended ?? []}
             isLoading={aiLoading}
-            scoreKey="win_probability"
-            scoreUnit="%"
+            getScore={(item) => `${item.total_score ?? item.win_probability ?? 0}점`}
           />
           {/* 낙찰 가능성 높은 공고 */}
           <AIInsightCard
             title="낙찰 가능성 높음"
-            subtitle="승률 65% 이상"
+            subtitle="기회 점수 60 이상"
             icon={<Target className="h-4 w-4" />}
             colorClass="text-emerald-600 dark:text-emerald-400"
             bgClass="bg-emerald-500/10"
             items={aiInsights?.high_probability ?? []}
             isLoading={aiLoading}
-            scoreKey="win_probability"
-            scoreUnit="%"
+            getScore={(item) => `${item.win_probability ?? 0}점`}
           />
           {/* 경쟁 적은 공고 */}
           <AIInsightCard
@@ -452,21 +450,20 @@ function HomeContent() {
             bgClass="bg-blue-500/10"
             items={aiInsights?.low_competition ?? []}
             isLoading={aiLoading}
-            scoreKey="avg_bidders"
-            scoreUnit="개"
-            invertScore
+            getScore={(item) =>
+              item.avg_bidders != null ? `평균 ${item.avg_bidders}개` : "경쟁↓"
+            }
           />
           {/* 수익성 높은 공고 */}
           <AIInsightCard
             title="수익성 높은 공고"
-            subtitle="예산 × 낙찰 가능성"
+            subtitle="예산 × 기회 점수"
             icon={<Award className="h-4 w-4" />}
             colorClass="text-amber-600 dark:text-amber-400"
             bgClass="bg-amber-500/10"
             items={aiInsights?.high_profitability ?? []}
             isLoading={aiLoading}
-            scoreKey="win_probability"
-            scoreUnit="%"
+            getScore={(item) => `${item.total_score ?? item.win_probability ?? 0}점`}
           />
         </div>
       </div>
@@ -951,6 +948,12 @@ function HomeContent() {
 
 import type { AIInsightTender } from "@/lib/types";
 
+const DATA_QUALITY_BADGE = {
+  real:        { label: "실제 데이터", className: "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20" },
+  partial:     { label: "추정값",    className: "bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20" },
+  insufficient:{ label: "데이터 부족",className: "bg-muted/60 text-muted-foreground border-border/40" },
+} as const;
+
 interface AIInsightCardProps {
   title: string;
   subtitle: string;
@@ -959,9 +962,7 @@ interface AIInsightCardProps {
   bgClass: string;
   items: AIInsightTender[];
   isLoading: boolean;
-  scoreKey: keyof AIInsightTender;
-  scoreUnit: string;
-  invertScore?: boolean;
+  getScore: (item: AIInsightTender) => string;
 }
 
 function AIInsightCard({
@@ -972,9 +973,7 @@ function AIInsightCard({
   bgClass,
   items,
   isLoading,
-  scoreKey,
-  scoreUnit,
-  invertScore = false,
+  getScore,
 }: AIInsightCardProps) {
   return (
     <Card className="premium-card flex flex-col">
@@ -994,7 +993,7 @@ function AIInsightCard({
         {isLoading ? (
           <div className="space-y-2 flex-1">
             {[1, 2, 3].map((i) => (
-              <Skeleton key={i} className="h-12 rounded-lg" />
+              <Skeleton key={i} className="h-14 rounded-lg" />
             ))}
           </div>
         ) : items.length === 0 ? (
@@ -1007,7 +1006,7 @@ function AIInsightCard({
         ) : (
           <div className="space-y-1.5 flex-1">
             {items.slice(0, 4).map((item) => {
-              const score = item[scoreKey] as number;
+              const qBadge = DATA_QUALITY_BADGE[item.data_quality ?? "insufficient"];
               return (
                 <Link
                   key={item.id}
@@ -1019,22 +1018,24 @@ function AIInsightCard({
                       {item.title}
                     </p>
                     <span className={`shrink-0 text-[10px] font-bold ${colorClass} tabular-nums`}>
-                      {invertScore
-                        ? `${score}${scoreUnit}`
-                        : `${score}${scoreUnit}`}
+                      {getScore(item)}
                     </span>
                   </div>
-                  <div className="flex items-center gap-2 mt-1">
+                  {/* 추천 이유 */}
+                  {item.reason && (
+                    <p className="text-[10px] text-muted-foreground mt-0.5 leading-snug line-clamp-1">
+                      {item.reason}
+                    </p>
+                  )}
+                  <div className="flex items-center gap-1.5 mt-1">
                     {item.budget_amount && (
-                      <span className="text-[10px] text-muted-foreground tabular-nums">
+                      <span className="text-[10px] text-muted-foreground tabular-nums shrink-0">
                         {formatBudgetCompact(item.budget_amount)}
                       </span>
                     )}
-                    {item.demand_agency_name && (
-                      <span className="text-[10px] text-muted-foreground truncate">
-                        {item.demand_agency_name}
-                      </span>
-                    )}
+                    <span className={`inline-flex items-center rounded-full border px-1.5 py-px text-[9px] font-medium ${qBadge.className}`}>
+                      {qBadge.label}
+                    </span>
                   </div>
                 </Link>
               );
