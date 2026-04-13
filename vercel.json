@@ -9,7 +9,7 @@
   "crons": [
     {
       "path": "/api/jobs/poll-tenders",
-      "schedule": "0 0 * * 1-5"
+      "schedule": "0 0,9 * * 1-5"
     },
     {
       "path": "/api/jobs/process-alerts",
@@ -17,7 +17,11 @@
     },
     {
       "path": "/api/jobs/collect-bid-awards",
-      "schedule": "10 0 * * 1-5"
+      "schedule": "10 0,9 * * 1-5"
+    },
+    {
+      "path": "/api/jobs/rebuild-analysis",
+      "schedule": "0 20 * * *"
     },
     {
       "path": "/api/jobs/cleanup",

@@ -244,3 +244,114 @@ export function useUpdateCompanyProfile() {
     },
   });
 }
+
+// ─── Dashboard Summary (실데이터) ──────────────────────
+
+export interface DashboardKPI {
+  tender_stats: {
+    open_count: number;
+    closed_count: number;
+    result_count: number;
+    new_today: number;
+    new_this_week: number;
+    total_count: number;
+  };
+  award_stats: {
+    total_awards: number;
+    avg_award_rate: number | null;
+    total_awarded_amount: number | null;
+    awards_with_participants: number;
+    avg_participants: number | null;
+  };
+  collection_status: {
+    last_tender_collection: string | null;
+    last_award_collection: string | null;
+    recent_failures: number;
+  };
+  data_coverage: {
+    agencies_real: number;
+    industries_real: number;
+    regions_real: number;
+    awards_with_participants: number;
+  };
+  computed_at: string;
+}
+
+export function useDashboardSummary() {
+  return useQuery<{ data: DashboardKPI | null; quality: string; computed_at: string }>({
+    queryKey: ["dashboard-summary"],
+    queryFn: () => fetcher("/api/dashboard/summary"),
+    staleTime: 1000 * 60 * 5, // 5분 캐시
+  });
+}
+
+// ─── Ingestion Status (운영 상태) ──────────────────────
+
+export interface IngestionStatus {
+  tenders: {
+    last_success_at: string | null;
+    last_failure_at: string | null;
+    recent_count: number;
+    failure_count_24h: number;
+  };
+  awards: {
+    last_success_at: string | null;
+    last_failure_at: string | null;
+    recent_count: number;
+    failure_count_24h: number;
+  };
+  analysis_last_rebuilt: string | null;
+  computed_at: string;
+  system_ok: boolean;
+}
+
+export function useIngestionStatus() {
+  return useQuery<IngestionStatus>({
+    queryKey: ["ingestion-status"],
+    queryFn: () => fetcher("/api/dashboard/ingestion-status"),
+    staleTime: 1000 * 60 * 2, // 2분 캐시 (운영 상태는 자주 조회)
+    retry: false,
+  });
+}
+
+// ─── 분석 캐시 (기관/업종/지역) ──────────────────────────
+
+export interface AnalysisEntry {
+  // name 필드 - 타입에 따라 하나만 존재
+  agency_code?: string;
+  agency_name?: string;
+  industry_code?: string;
+  industry_name?: string;
+  region_code?: string;
+  region_name?: string;
+  data_quality: "real" | "partial" | "insufficient";
+  avg_award_rate: number | null;
+  avg_participants: number | null;
+  total_results: number;
+  avg_budget: number | null;
+  updated_at: string;
+}
+
+export function useAnalysisByType(type: "agency" | "industry" | "region", limit = 20) {
+  return useQuery<{ data: AnalysisEntry[] | null; quality: string; message?: string }>({
+    queryKey: ["analysis", type, limit],
+    queryFn: () => fetcher(`/api/analysis/${type}?limit=${limit}`),
+    staleTime: 1000 * 60 * 60, // 1시간 캐시
+  });
+}
+
+// ─── 트렌딩 키워드 (실데이터) ────────────────────────────
+
+export function useTrendingKeywords(days = 7, limit = 10) {
+  return useQuery<Array<{ keyword: string; count: number; type: string }>>({
+    queryKey: ["trending-keywords", days, limit],
+    queryFn: async () => {
+      const res = await fetch(`/api/bid-analysis/trending?days=${days}&limit=${limit}`);
+      if (!res.ok) return [];
+      const json = await res.json();
+      return json?.data ?? [];
+    },
+    staleTime: 1000 * 60 * 30, // 30분 캐시
+    retry: false,
+  });
+}

@@ -3,7 +3,7 @@
 import { Suspense, useCallback, useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
-import { useTenders, useTenderSummary, useAIInsights } from "@/hooks/use-api";
+import { useTenders, useTenderSummary, useAIInsights, useTrendingKeywords } from "@/hooks/use-api";
 import { formatKRW, tenderStatusLabel, formatRawDate, getDday, isNew, formatBudgetCompact } from "@/lib/helpers";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -25,6 +25,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+
 import {
   Search,
   ChevronLeft,
@@ -64,9 +65,6 @@ const CATEGORY_CHIPS = [
   { label: "물품·장비", value: "물품", icon: BarChart3 },
   { label: "시설관리", value: "시설", icon: Bell },
 ];
-
-// Trending keywords (swap with real analytics later)
-const TRENDING = ["AI 플랫폼", "정보화시스템", "시설유지보수", "SW개발", "디지털전환", "클라우드"];
 
 export default function HomePage() {
   return (
@@ -167,6 +165,13 @@ function HomeContent() {
 
   const { data: summary } = useTenderSummary();
   const { data: aiInsights, isLoading: aiLoading } = useAIInsights(6);
+  const { data: trendingKeywords } = useTrendingKeywords(7, 8);
+
+  // 실데이터 기반 트렌딩 키워드 (없으면 업종 카테고리 칩으로 대체)
+  const trendingLabels =
+    trendingKeywords && trendingKeywords.length > 0
+      ? trendingKeywords.map((k) => k.keyword)
+      : null;
 
   const totalPages = data ? Math.ceil(data.total / (viewMode === "table" ? PAGE_SIZE_TABLE : PAGE_SIZE_CARD)) : 0;
 
@@ -483,13 +488,13 @@ function HomeContent() {
         ))}
       </div>
 
-      {/* ─── Trending Keywords ─── */}
+      {/* ─── Trending Keywords (실데이터 기반) ─── */}
       <div className="flex items-center gap-2 flex-wrap">
         <span className="text-xs font-semibold text-muted-foreground shrink-0 flex items-center gap-1">
           <TrendingUp className="h-3 w-3 text-primary" />
-          인기 검색
+          {trendingLabels ? "이번 주 주목 업종" : "인기 검색"}
         </span>
-        {TRENDING.map((kw) => (
+        {(trendingLabels ?? ["AI 플랫폼", "정보화시스템", "시설유지보수", "SW개발", "디지털전환", "클라우드"]).map((kw) => (
           <button
             key={kw}
             onClick={() => { setQ(kw); setPage(1); setActiveCategory(""); }}
@@ -498,6 +503,9 @@ function HomeContent() {
             {kw}
           </button>
         ))}
+        {trendingLabels && (
+          <span className="text-[10px] text-muted-foreground/50 ml-1">최근 7일 공고 기준</span>
+        )}
       </div>
 
       {/* ─── Filter Panel ─── */}
@@ -847,7 +855,7 @@ function HomeContent() {
             </div>
             <div className="mt-6 flex flex-wrap justify-center gap-2">
               <p className="w-full text-xs text-muted-foreground mb-1">추천 검색어</p>
-              {TRENDING.map((kw) => (
+              {(trendingLabels ?? ["AI 플랫폼", "정보화시스템", "시설유지보수", "SW개발", "디지털전환", "클라우드"]).map((kw) => (
                 <button
                   key={kw}
                   onClick={() => { setQ(kw); setPage(1); }}

@@ -340,6 +340,41 @@ export default function CompanySettingsPage() {
         </CardContent>
       </Card>
 
+      {/* AI 점수 계산 방식 설명 패널 */}
+      <Card className="border-violet-500/20 bg-violet-500/5">
+        <CardHeader className="pb-2">
+          <CardTitle className="text-sm flex items-center gap-2">
+            <Info className="h-4 w-4 text-violet-500" />
+            AI 점수 계산 방식 안내
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-2 text-xs text-muted-foreground">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+            {[
+              { label: "주력 업종 설정 시", desc: "해당 업종의 낙찰 패턴 가중치 +30%", source: "실데이터" },
+              { label: "활동 지역 설정 시", desc: "해당 지역의 낙찰 패턴 가중치 +15%", source: "실데이터" },
+              { label: "선호 기관 설정 시", desc: "해당 기관의 낙찰률 평균 가중치 +25%", source: "실데이터" },
+              { label: "목표 예산 범위 설정 시", desc: "예산 범위 내 공고에 우선순위 부여", source: "설정값" },
+            ].map((item) => (
+              <div key={item.label} className="flex items-start gap-2 rounded-lg border border-violet-200/30 bg-background/50 p-2">
+                <span className={`shrink-0 rounded px-1 py-0.5 text-[9px] font-bold ${
+                  item.source === "실데이터"
+                    ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400"
+                    : "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400"
+                }`}>{item.source}</span>
+                <div>
+                  <p className="font-medium text-foreground">{item.label}</p>
+                  <p>{item.desc}</p>
+                </div>
+              </div>
+            ))}
+          </div>
+          <p className="pt-1 text-[11px] text-muted-foreground/60">
+            ※ 설정 후 AI 추천 점수가 자동으로 재계산됩니다. 낙찰 데이터가 부족한 항목은 "분석 준비 중"으로 표시됩니다.
+          </p>
+        </CardContent>
+      </Card>
+
       <Button type="submit" disabled={updateProfile.isPending} className="w-full">
         {updateProfile.isPending ? (
           <>

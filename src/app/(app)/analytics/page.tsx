@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { useBidAnalytics, useAIInsights } from "@/hooks/use-api";
+import { useBidAnalytics, useAIInsights, useAnalysisByType, useIngestionStatus } from "@/hooks/use-api";
 import { formatKRW, formatBudgetCompact, getDday } from "@/lib/helpers";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -14,6 +14,8 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { DataQualityBadge, AnalysisNotReady } from "@/components/data-quality-badge";
+import { IngestionStatusCard } from "@/components/ingestion-status";
 import {
   BarChart3,
   TrendingUp,
@@ -135,6 +137,10 @@ export default function AnalyticsPage() {
   );
 
   const { data: aiInsights, isLoading: aiLoading } = useAIInsights(10);
+  const { data: agencyAnalysis } = useAnalysisByType("agency", 10);
+  const { data: industryAnalysis } = useAnalysisByType("industry", 10);
+  const { data: regionAnalysis } = useAnalysisByType("region", 10);
+  void useIngestionStatus(); // 상태 프리패치 (배너용)
 
   // 모의 데이터 (실제로는 analytics에서 가져옴)
   const kpiData = {
@@ -324,23 +330,60 @@ export default function AnalyticsPage() {
           </div>
         </TabsContent>
 
-        {/* Agency/Industry/Region Analysis */}
-        {["agency", "industry", "region"].map((type) => (
+        {/* Agency/Industry/Region Analysis — 실데이터 분석 캐시 */}
+        {(["agency", "industry", "region"] as const).map((type) => {
+          const analysisResult =
+            type === "agency" ? agencyAnalysis
+            : type === "industry" ? industryAnalysis
+            : regionAnalysis;
+
+          const entries = analysisResult?.data ?? [];
+          const qualityLabel = (analysisResult?.quality ?? "insufficient") as "real" | "partial" | "insufficient";
+          const fallbackTopData =
+            analysisType === type && topData.length > 0 ? topData : [];
+
+          const chartData =
+            entries.length > 0
+              ? entries.map((e) => ({
+                  name: (
+                    e.agency_name ?? e.industry_name ?? e.region_name ?? "기타"
+                  ).substring(0, 15),
+                  count: e.total_results ?? 0,
+                  avg_rate: e.avg_award_rate ?? 0,
+                  avg_participants: e.avg_participants ?? null,
+                  data_quality: e.data_quality,
+                }))
+              : fallbackTopData.map((d) => ({ ...d, avg_participants: null, data_quality: "partial" }));
+
+          return (
           <TabsContent key={type} value={type} className="space-y-4">
+            {/* 데이터 신뢰성 배지 */}
+                  {entries.length > 0 && (
+              <div className="flex items-center gap-2">
+                <DataQualityBadge quality={qualityLabel} />
+                <span className="text-xs text-muted-foreground">
+                  {entries.length}개 {type === "agency" ? "기관" : type === "industry" ? "업종" : "지역"} 분석 결과
+                  {analysisResult?.data?.[0]?.updated_at
+                    ? ` · 최근 갱신: ${new Date(analysisResult.data[0].updated_at).toLocaleDateString("ko-KR")}`
+                    : ""}
+                </span>
+              </div>
+            )}
+
             <Card className="premium-card">
               <CardHeader>
                 <CardTitle className="text-base font-semibold flex items-center gap-2">
                   <BarChart3 className="h-4 w-4 text-primary" />
-                  {type === "agency" ? "기관별" : type === "industry" ? "업종별" : "지역별"} Top 10
+                  {type === "agency" ? "기관별" : type === "industry" ? "업종별" : "지역별"} 낙찰 건수 Top 10
                 </CardTitle>
-                <CardDescription>낙찰 건수 기준 상위 10개</CardDescription>
+                <CardDescription>누적 낙찰 건수 기준 상위 10개</CardDescription>
               </CardHeader>
               <CardContent>
                 {isLoading ? (
                   <Skeleton className="h-96 rounded-xl" />
-                ) : topData.length > 0 ? (
+                ) : chartData.length > 0 ? (
                   <ResponsiveContainer width="100%" height={400}>
-                    <BarChart data={topData} layout="vertical">
+                    <BarChart data={chartData} layout="vertical">
                       <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
                       <XAxis type="number" stroke="#6b7280" fontSize={12} tickLine={false} />
                       <YAxis
@@ -353,7 +396,7 @@ export default function AnalyticsPage() {
                       />
                       <Tooltip
                         contentStyle={{
-                          backgroundColor: "rgba(255, 255, 255, 0.95)",
+                          backgroundColor: "rgba(255,255,255,0.95)",
                           border: "1px solid #e5e7eb",
                           borderRadius: "8px",
                           fontSize: "12px",
@@ -361,21 +404,19 @@ export default function AnalyticsPage() {
                       />
                       <Legend wrapperStyle={{ fontSize: "12px" }} />
                       <Bar dataKey="count" fill="#3b82f6" name="낙찰 건수" radius={[0, 8, 8, 0]}>
-                        {topData.map((_entry, index: number) => (
+                        {chartData.map((_entry, index: number) => (
                           <Cell key={`cell-${index}`} fill={CHART_COLORS[index % CHART_COLORS.length]} />
                         ))}
                       </Bar>
                     </BarChart>
                   </ResponsiveContainer>
                 ) : (
-                  <div className="flex items-center justify-center h-96 text-muted-foreground">
-                    <p className="text-sm">데이터가 수집 중입니다</p>
-                  </div>
+                  <AnalysisNotReady message="낙찰 데이터 분석 캐시 구성 중" />
                 )}
               </CardContent>
             </Card>
 
-            {/* Bid Rate Distribution */}
+            {/* 평균 낙찰률 비교 */}
             <Card className="premium-card">
               <CardHeader>
                 <CardTitle className="text-base font-semibold flex items-center gap-2">
@@ -383,22 +424,23 @@ export default function AnalyticsPage() {
                   평균 낙찰률 비교
                 </CardTitle>
                 <CardDescription>
-                  {type === "agency" ? "기관별" : type === "industry" ? "업종별" : "지역별"} 평균 낙찰률
+                  {type === "agency" ? "기관별" : type === "industry" ? "업종별" : "지역별"} 실데이터 기반 평균 낙찰률
                 </CardDescription>
               </CardHeader>
               <CardContent>
                 {isLoading ? (
                   <Skeleton className="h-96 rounded-xl" />
-                ) : topData.length > 0 ? (
+                ) : chartData.filter((d) => d.avg_rate > 0).length > 0 ? (
                   <ResponsiveContainer width="100%" height={400}>
-                    <BarChart data={topData} layout="vertical">
+                    <BarChart data={chartData.filter((d) => d.avg_rate > 0)} layout="vertical">
                       <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
                       <XAxis
                         type="number"
                         stroke="#6b7280"
                         fontSize={12}
                         tickLine={false}
-                        domain={[85, 100]}
+                        domain={[80, 100]}
+                        tickFormatter={(v) => `${v}%`}
                       />
                       <YAxis
                         dataKey="name"
@@ -410,30 +452,61 @@ export default function AnalyticsPage() {
                       />
                       <Tooltip
                         contentStyle={{
-                          backgroundColor: "rgba(255, 255, 255, 0.95)",
+                          backgroundColor: "rgba(255,255,255,0.95)",
                           border: "1px solid #e5e7eb",
                           borderRadius: "8px",
                           fontSize: "12px",
                         }}
-                        formatter={(value) => `${value ?? 0}%`}
+                        formatter={(value) => [`${value ?? 0}%`, "평균 낙찰률"]}
                       />
-                      <Legend wrapperStyle={{ fontSize: "12px" }} />
                       <Bar dataKey="avg_rate" fill="#10b981" name="평균 낙찰률 (%)" radius={[0, 8, 8, 0]}>
-                        {topData.map((_entry, index: number) => (
+                        {chartData.map((_entry, index: number) => (
                           <Cell key={`cell-${index}`} fill={CHART_COLORS[index % CHART_COLORS.length]} />
                         ))}
                       </Bar>
                     </BarChart>
                   </ResponsiveContainer>
                 ) : (
-                  <div className="flex items-center justify-center h-96 text-muted-foreground">
-                    <p className="text-sm">데이터가 수집 중입니다</p>
-                  </div>
+                  <AnalysisNotReady message="낙찰률 집계 데이터 수집 중" />
                 )}
               </CardContent>
             </Card>
+
+            {/* 평균 참여업체 수 (participant_count 기반) */}
+            {entries.some((e) => e.avg_participants != null) && (
+              <Card className="premium-card">
+                <CardHeader>
+                  <CardTitle className="text-base font-semibold flex items-center gap-2">
+                    <Users className="h-4 w-4 text-primary" />
+                    평균 경쟁 업체 수
+                  </CardTitle>
+                  <CardDescription>
+                    나라장터 prtcptCnum 기반 · NULL이면 데이터 미수집
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <ResponsiveContainer width="100%" height={300}>
+                    <BarChart data={chartData.filter((d) => d.avg_participants != null)} layout="vertical">
+                      <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
+                      <XAxis type="number" stroke="#6b7280" fontSize={12} tickLine={false} />
+                      <YAxis
+                        dataKey="name"
+                        type="category"
+                        stroke="#6b7280"
+                        fontSize={12}
+                        tickLine={false}
+                        width={120}
+                      />
+                      <Tooltip contentStyle={{ fontSize: "12px", borderRadius: "8px" }} formatter={(v) => [v, "평균 참여업체 수"]} />
+                      <Bar dataKey="avg_participants" fill="#f59e0b" name="평균 참여업체 수" radius={[0, 8, 8, 0]} />
+                    </BarChart>
+                  </ResponsiveContainer>
+                </CardContent>
+              </Card>
+            )}
           </TabsContent>
-        ))}
+          );
+        })}
       </Tabs>
 
       {/* Data Collection Notice */}
@@ -539,6 +612,9 @@ export default function AnalyticsPage() {
           />
         </div>
       </div>
+
+      {/* 운영 상태 카드 */}
+      <IngestionStatusCard />
     </div>
   );
 }

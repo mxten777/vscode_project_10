@@ -15,22 +15,24 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 
 // 나라장터 API 타입
 interface NaramarketBidResult {
-  bidNtceNo: string; // 입찰공고번호
-  bidNtceOrd: string; // 입찰공고차수
-  dminsttNm: string; // 수요기관명
-  rbidNo: string; // 재입찰번호
-  
+  bidNtceNo: string;       // 입찰공고번호
+  bidNtceOrd: string;      // 입찰공고차수
+  bidNtceNm: string;       // 입찰공고명
+  dminsttNm: string;       // 수요기관명
+  rbidNo: string;          // 재입찰번호
+
   // 개찰 결과
-  opengDt: string; // 개찰일시
-  prtcptCnum: number; // 참가업체수
-  
+  opengDt: string;         // 개찰일시
+  prtcptCnum: number;      // 참가업체수
+  vldCnum: number;         // 유효업체수
+
   // 낙찰 결과
-  bsnmNm: string; // 낙찰업체명
-  bsnmRgstNo: string; // 사업자등록번호
-  scsbidAmt: number; // 낙찰금액
-  scsbidRate: number; // 낙찰률
-  presmptPrce: number; // 예정가격
-  
+  bsnmNm: string;          // 낙찰업체명
+  bsnmRgstNo: string;      // 사업자등록번호
+  scsbidAmt: number;       // 낙찰금액
+  scsbidRate: number;      // 낙찰률
+  presmptPrce: number;     // 예정가격
+
   // 기타
   cntrctCnclsMthdNm: string; // 계약체결방법명
   [key: string]: unknown;
@@ -247,9 +249,12 @@ async function processOpenResult(supabase: SupabaseClient, item: NaramarketBidRe
 
 /**
  * 낙찰정보 처리
+ * bid_awards(bid_notices 연결) + awards(tenders 연결) 양쪽 모두 저장
  */
 async function processAwardResult(supabase: SupabaseClient, item: NaramarketBidResult) {
   const sourceBidNoticeId = `${item.bidNtceNo}-${item.bidNtceOrd || "00"}`;
+  const participantCount = item.prtcptCnum ? Number(item.prtcptCnum) : null;
+  const awardedAt = item.opengDt ? parseNaramarketDate(item.opengDt) : new Date().toISOString();
 
   // bid_notices 먼저 확인/생성
   const { data: bidNotice, error: noticeError } = await supabase
@@ -271,7 +276,7 @@ async function processAwardResult(supabase: SupabaseClient, item: NaramarketBidR
 
   if (noticeError) throw noticeError;
 
-  // bid_awards upsert
+  // bid_awards upsert (bid_notices 연결)
   const { error: awardError } = await supabase.from("bid_awards").upsert(
     {
       bid_notice_id: bidNotice.id,
@@ -279,8 +284,8 @@ async function processAwardResult(supabase: SupabaseClient, item: NaramarketBidR
       winner_business_number: item.bsnmRgstNo,
       winner_bid_rate: item.scsbidRate,
       winner_bid_amount: item.scsbidAmt,
-      contract_amount: item.scsbidAmt, // 낙찰금액과 동일한 경우가 많음
-      awarded_at: item.opengDt ? parseNaramarketDate(item.opengDt) : new Date().toISOString(),
+      contract_amount: item.scsbidAmt,
+      awarded_at: awardedAt,
       is_final: true,
       raw_json: item,
       updated_at: new Date().toISOString(),
@@ -289,6 +294,39 @@ async function processAwardResult(supabase: SupabaseClient, item: NaramarketBidR
   );
 
   if (awardError) throw awardError;
+
+  // awards 테이블도 동기화 (tenders 연결, get_ai_insights_v2에서 사용)
+  // source_tender_id로 tenders 찾기 (공고번호 기반 매칭)
+  const { data: tender } = await supabase
+    .from("tenders")
+    .select("id")
+    .or(`source_tender_id.eq.${item.bidNtceNo},source_tender_id.eq.${sourceBidNoticeId}`)
+    .maybeSingle();
+
+  if (tender?.id && item.scsbidRate) {
+    await supabase.from("awards").upsert(
+      {
+        tender_id: tender.id,
+        winner_company_name: item.bsnmNm || null,
+        bidder_registration_no: item.bsnmRgstNo || null,
+        awarded_amount: item.scsbidAmt ? Number(item.scsbidAmt) : null,
+        awarded_rate: item.scsbidRate ? Number(item.scsbidRate) : null,
+        opened_at: awardedAt,
+        // Migration 026에서 추가된 컬럼
+        participant_count: participantCount,
+        reserve_price: item.presmptPrce ? Number(item.presmptPrce) : null,
+        bid_notice_no: item.bidNtceNo,
+        bid_notice_ord: item.bidNtceOrd || "00",
+        result_status: "awarded",
+        raw_json: item,
+        updated_at: new Date().toISOString(),
+      },
+      {
+        onConflict: "tender_id,bidder_registration_no,sequence_no",
+        ignoreDuplicates: false,
+      }
+    );
+  }
 }
 
 /**

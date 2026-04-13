@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Header } from "@/components/header";
+import { IngestionStatusBanner } from "@/components/ingestion-status";
 
 export const metadata: Metadata = {
   title: {
@@ -13,6 +14,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
     <div className="min-h-screen flex flex-col bg-background page-mesh">
       <Header />
       <main className="flex-1 mx-auto w-full max-w-7xl px-4 sm:px-6 py-8">
+        <IngestionStatusBanner />
         {children}
       </main>
       <footer className="border-t border-border/40 py-8">
