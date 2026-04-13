@@ -13,28 +13,25 @@ import { createServiceClient } from "@/lib/supabase/service";
 import { verifyCronSecret } from "@/lib/helpers";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
-// 나라장터 API 타입
+// 나라장터 API 타입 (getScsbidListSttusServc 기준)
 interface NaramarketBidResult {
   bidNtceNo: string;       // 입찰공고번호
   bidNtceOrd: string;      // 입찰공고차수
   bidNtceNm: string;       // 입찰공고명
   dminsttNm: string;       // 수요기관명
+  dminsttCd: string;       // 수요기관코드
   rbidNo: string;          // 재입찰번호
 
   // 개찰 결과
-  opengDt: string;         // 개찰일시
+  rlOpengDt: string;       // 개찰일시
   prtcptCnum: number;      // 참가업체수
-  vldCnum: number;         // 유효업체수
 
   // 낙찰 결과
-  bsnmNm: string;          // 낙찰업체명
-  bsnmRgstNo: string;      // 사업자등록번호
-  scsbidAmt: number;       // 낙찰금액
-  scsbidRate: number;      // 낙찰률
-  presmptPrce: number;     // 예정가격
+  bidwinnrNm: string;      // 낙찰자명
+  bidwinnrBizno: string;   // 낙찰자 사업자번호
+  sucsfbidAmt: number;     // 낙찰금액
+  sucsfbidRate: number;    // 낙찰률
 
-  // 기타
-  cntrctCnclsMthdNm: string; // 계약체결방법명
   [key: string]: unknown;
 }
 
@@ -100,15 +97,15 @@ export async function GET(request: NextRequest) {
 
     // 1) 낙찰결과 API (물품/용역)
     const openResultsRawUrl =
-      `https://apis.data.go.kr/1230000/ScsbidInfoService/getScsbidListInfoServc` +
+      `https://apis.data.go.kr/1230000/as/ScsbidInfoService/getScsbidListSttusServc` +
       `?serviceKey=${NARAMARKET_API_KEY}&numOfRows=${PAGE_SIZE}&inqryDiv=1` +
       `&inqryBgnDt=${startDate}&inqryEndDt=${endDate}&type=json`;
 
     const openItems = await fetchAllPages(openResultsRawUrl);
 
-    // 2) 낙찰정보 API (공사 업종)
+    // 2) 공사 낙찰정보 API (같은 서비스, 공사 업종 포함)
     const awardRawUrl =
-      `https://apis.data.go.kr/1230000/ScsbidInfoService/getScsbidListInfoCnstwk` +
+      `https://apis.data.go.kr/1230000/as/ScsbidInfoService/getScsbidListSttusServc` +
       `?serviceKey=${NARAMARKET_API_KEY}&numOfRows=${PAGE_SIZE}&inqryDiv=1` +
       `&inqryBgnDt=${startDate}&inqryEndDt=${endDate}&type=json`;
 
@@ -209,7 +206,7 @@ async function processOpenResult(supabase: SupabaseClient, item: NaramarketBidRe
         demand_organization: item.dminsttNm,
         contract_type: item.cntrctCnclsMthdNm,
         estimated_price: item.presmptPrce,
-        open_datetime: item.opengDt ? parseNaramarketDate(item.opengDt) : null,
+        open_datetime: item.rlOpengDt ? parseNaramarketDate(item.rlOpengDt) : null,
         raw_json: item,
         updated_at: new Date().toISOString(),
       },
@@ -226,9 +223,9 @@ async function processOpenResult(supabase: SupabaseClient, item: NaramarketBidRe
     .upsert(
       {
         bid_notice_id: bidNotice.id,
-        opened_at: item.opengDt ? parseNaramarketDate(item.opengDt) : new Date().toISOString(),
+        opened_at: item.rlOpengDt ? parseNaramarketDate(item.rlOpengDt) : new Date().toISOString(),
         total_bidders: item.prtcptCnum || 0,
-        valid_bidders: item.prtcptCnum || 0, // API에 따라 조정 필요
+        valid_bidders: item.prtcptCnum || 0,
         is_successful: true,
         raw_json: item,
         updated_at: new Date().toISOString(),
@@ -246,7 +243,7 @@ async function processOpenResult(supabase: SupabaseClient, item: NaramarketBidRe
 async function processAwardResult(supabase: SupabaseClient, item: NaramarketBidResult) {
   const sourceBidNoticeId = `${item.bidNtceNo}-${item.bidNtceOrd || "00"}`;
   const participantCount = item.prtcptCnum ? Number(item.prtcptCnum) : null;
-  const awardedAt = item.opengDt ? parseNaramarketDate(item.opengDt) : new Date().toISOString();
+  const awardedAt = item.rlOpengDt ? parseNaramarketDate(item.rlOpengDt) : new Date().toISOString();
 
   // bid_notices 먼저 확인/생성
   const { data: bidNotice, error: noticeError } = await supabase
@@ -272,11 +269,11 @@ async function processAwardResult(supabase: SupabaseClient, item: NaramarketBidR
   const { error: awardError } = await supabase.from("bid_awards").upsert(
     {
       bid_notice_id: bidNotice.id,
-      winner_company_name: item.bsnmNm,
-      winner_business_number: item.bsnmRgstNo,
-      winner_bid_rate: item.scsbidRate,
-      winner_bid_amount: item.scsbidAmt,
-      contract_amount: item.scsbidAmt,
+      winner_company_name: item.bidwinnrNm,
+      winner_business_number: item.bidwinnrBizno,
+      winner_bid_rate: item.sucsfbidRate,
+      winner_bid_amount: item.sucsfbidAmt,
+      contract_amount: item.sucsfbidAmt,
       awarded_at: awardedAt,
       is_final: true,
       raw_json: item,
@@ -295,18 +292,18 @@ async function processAwardResult(supabase: SupabaseClient, item: NaramarketBidR
     .or(`source_tender_id.eq.${item.bidNtceNo},source_tender_id.eq.${sourceBidNoticeId}`)
     .maybeSingle();
 
-  if (tender?.id && item.scsbidRate) {
+  if (tender?.id && item.sucsfbidRate) {
     await supabase.from("awards").upsert(
       {
         tender_id: tender.id,
-        winner_company_name: item.bsnmNm || null,
-        bidder_registration_no: item.bsnmRgstNo || null,
-        awarded_amount: item.scsbidAmt ? Number(item.scsbidAmt) : null,
-        awarded_rate: item.scsbidRate ? Number(item.scsbidRate) : null,
+        winner_company_name: item.bidwinnrNm || null,
+        bidder_registration_no: item.bidwinnrBizno || null,
+        awarded_amount: item.sucsfbidAmt ? Number(item.sucsfbidAmt) : null,
+        awarded_rate: item.sucsfbidRate ? Number(item.sucsfbidRate) : null,
         opened_at: awardedAt,
         // Migration 026에서 추가된 컬럼
         participant_count: participantCount,
-        reserve_price: item.presmptPrce ? Number(item.presmptPrce) : null,
+        reserve_price: null,
         bid_notice_no: item.bidNtceNo,
         bid_notice_ord: item.bidNtceOrd || "00",
         result_status: "awarded",

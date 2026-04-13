@@ -20,13 +20,13 @@ interface NaraAwardItem {
   bidNtceOrd: string;
   bidNtceNm: string;
   dminsttNm: string;
-  opengDt: string;
-  prtcptCnum: number;
-  bsnmNm: string;
-  bsnmRgstNo: string;
-  scsbidAmt: number;
-  scsbidRate: number;
-  presmptPrce: number;
+  rlOpengDt: string;       // 개찰일시 (getScsbidListSttusServc)
+  prtcptCnum: number;      // 참여업체수
+  bidwinnrNm: string;      // 낙찰자명
+  bidwinnrBizno: string;   // 낙찰자 사업자번호
+  sucsfbidAmt: number;     // 낙찰금액
+  sucsfbidRate: number;    // 낙찰률
+  dminsttCd: string;       // 발주기관 코드
   [key: string]: unknown;
 }
 
@@ -155,7 +155,7 @@ async function fetchAwardBatch(
     // serviceKey를 searchParams.set()으로 전달하면 이미 인코딩된 키가 이중 인코딩될 수 있으므로
     // 문자열 직접 결합 방식 사용 (data.go.kr 키 권장 패턴)
     const rawUrl =
-      `https://apis.data.go.kr/1230000/ScsbidInfoService/getScsbidListInfoServc` +
+      `https://apis.data.go.kr/1230000/as/ScsbidInfoService/getScsbidListSttusServc` +
       `?serviceKey=${apiKey}` +
       `&numOfRows=${PAGE_SIZE}&pageNo=${page}&inqryDiv=1` +
       `&inqryBgnDt=${fromDate}&inqryEndDt=${toDate}&type=json`;
@@ -186,10 +186,10 @@ async function upsertAwardToTenders(
   supabase: ReturnType<typeof createServiceClient>,
   item: NaraAwardItem
 ) {
-  if (!item.scsbidRate || !item.bidNtceNo) return;
+  if (!item.sucsfbidRate || !item.bidNtceNo) return;
 
   const sourceBidNoticeId = `${item.bidNtceNo}-${item.bidNtceOrd || "00"}`;
-  const awardedAt = item.opengDt ? parseNaraDate(item.opengDt) : new Date().toISOString();
+  const awardedAt = item.rlOpengDt ? parseNaraDate(item.rlOpengDt) : new Date().toISOString();
 
   // tenders 매칭
   const { data: tender } = await supabase
@@ -203,13 +203,13 @@ async function upsertAwardToTenders(
   await supabase.from("awards").upsert(
     {
       tender_id: tender.id,
-      winner_company_name: item.bsnmNm || null,
-      bidder_registration_no: item.bsnmRgstNo || null,
-      awarded_amount: item.scsbidAmt ? Number(item.scsbidAmt) : null,
-      awarded_rate: Number(item.scsbidRate),
+      winner_company_name: item.bidwinnrNm || null,
+      bidder_registration_no: item.bidwinnrBizno || null,
+      awarded_amount: item.sucsfbidAmt ? Number(item.sucsfbidAmt) : null,
+      awarded_rate: Number(item.sucsfbidRate),
       opened_at: awardedAt,
       participant_count: item.prtcptCnum ? Number(item.prtcptCnum) : null,
-      reserve_price: item.presmptPrce ? Number(item.presmptPrce) : null,
+      reserve_price: null,
       bid_notice_no: item.bidNtceNo,
       bid_notice_ord: item.bidNtceOrd || "00",
       result_status: "awarded",
