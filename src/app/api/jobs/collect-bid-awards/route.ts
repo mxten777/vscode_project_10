@@ -84,7 +84,10 @@ export async function GET(request: NextRequest) {
         const res = await fetch(`${baseRawUrl}&pageNo=${page}`);
         const json = await res.json();
         const body = json?.response?.body;
-        const rawItems = body?.items?.item;
+        // body.items may be an array directly OR wrapped as { item: [...] }
+        const rawItems = Array.isArray(body?.items)
+          ? body?.items
+          : body?.items?.item;
         if (!rawItems) break;
         const items: NaramarketBidResult[] = Array.isArray(rawItems) ? rawItems : [rawItems];
         results.push(...items);

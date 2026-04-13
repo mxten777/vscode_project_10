@@ -179,9 +179,8 @@ async function fetchAwardBatch(
     } catch {
       throw new Error(`NARA API [HTTP ${res.status}] raw response: ${rawText.slice(0, 300)}`);
     }
-    const body = (json as { response?: { body?: { items?: { item?: unknown }; totalCount?: number } } })?.response?.body;
+    const body = (json as { response?: { body?: { items?: unknown; totalCount?: number } } })?.response?.body;
     if (page === 1) {
-      // 응답 구조를 debug에 노출 (items 실제 값 확인)
       firstBodyDebug = JSON.stringify({
         totalCount: body?.totalCount,
         itemsType: typeof body?.items,
@@ -189,7 +188,10 @@ async function fetchAwardBatch(
         httpStatus: res.status,
       });
     }
-    const rawItems = body?.items?.item;
+    // body.items may be an array directly OR wrapped as { item: [...] }
+    const rawItems = Array.isArray(body?.items)
+      ? body?.items
+      : (body?.items as { item?: unknown } | undefined)?.item;
 
     if (!rawItems) break;
     const items: NaraAwardItem[] = Array.isArray(rawItems) ? rawItems : [rawItems];
