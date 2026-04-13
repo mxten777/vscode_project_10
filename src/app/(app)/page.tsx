@@ -3,7 +3,7 @@
 import { Suspense, useCallback, useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
-import { useTenders, useTenderSummary } from "@/hooks/use-api";
+import { useTenders, useTenderSummary, useAIInsights } from "@/hooks/use-api";
 import { formatKRW, tenderStatusLabel, formatRawDate, getDday, isNew, formatBudgetCompact } from "@/lib/helpers";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -47,6 +47,9 @@ import {
   Table2,
   Banknote,
   Activity,
+  Target,
+  Users,
+  Award,
 } from "lucide-react";
 
 const PAGE_SIZE_CARD = 20;
@@ -163,6 +166,7 @@ function HomeContent() {
   });
 
   const { data: summary } = useTenderSummary();
+  const { data: aiInsights, isLoading: aiLoading } = useAIInsights(6);
 
   const totalPages = data ? Math.ceil(data.total / (viewMode === "table" ? PAGE_SIZE_TABLE : PAGE_SIZE_CARD)) : 0;
 
@@ -395,6 +399,77 @@ function HomeContent() {
           </div>
         </div>
       )}
+
+      {/* ─── AI 인사이트 섹션 ─── */}
+      <div className="space-y-3">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-violet-500/15">
+              <Sparkles className="h-4 w-4 text-violet-600 dark:text-violet-400" />
+            </div>
+            <h2 className="text-base font-bold">AI 입찰 인사이트</h2>
+            <span className="inline-flex items-center rounded-full bg-violet-500/10 border border-violet-500/20 px-2 py-0.5 text-[10px] font-semibold text-violet-600 dark:text-violet-400">
+              Beta
+            </span>
+          </div>
+          <Link href="/analytics" className="text-xs text-muted-foreground hover:text-primary transition-colors flex items-center gap-1">
+            전체 분석 <ArrowUpRight className="h-3 w-3" />
+          </Link>
+        </div>
+
+        {/* 4개 AI 카드 탭 */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+          {/* 추천 공고 */}
+          <AIInsightCard
+            title="AI 추천 공고"
+            subtitle="종합 점수 상위"
+            icon={<Sparkles className="h-4 w-4" />}
+            colorClass="text-violet-600 dark:text-violet-400"
+            bgClass="bg-violet-500/10"
+            items={aiInsights?.recommended ?? []}
+            isLoading={aiLoading}
+            scoreKey="win_probability"
+            scoreUnit="%"
+          />
+          {/* 낙찰 가능성 높은 공고 */}
+          <AIInsightCard
+            title="낙찰 가능성 높음"
+            subtitle="승률 65% 이상"
+            icon={<Target className="h-4 w-4" />}
+            colorClass="text-emerald-600 dark:text-emerald-400"
+            bgClass="bg-emerald-500/10"
+            items={aiInsights?.high_probability ?? []}
+            isLoading={aiLoading}
+            scoreKey="win_probability"
+            scoreUnit="%"
+          />
+          {/* 경쟁 적은 공고 */}
+          <AIInsightCard
+            title="경쟁 적은 공고"
+            subtitle="평균 경쟁업체 최소"
+            icon={<Users className="h-4 w-4" />}
+            colorClass="text-blue-600 dark:text-blue-400"
+            bgClass="bg-blue-500/10"
+            items={aiInsights?.low_competition ?? []}
+            isLoading={aiLoading}
+            scoreKey="avg_bidders"
+            scoreUnit="개"
+            invertScore
+          />
+          {/* 수익성 높은 공고 */}
+          <AIInsightCard
+            title="수익성 높은 공고"
+            subtitle="예산 × 낙찰 가능성"
+            icon={<Award className="h-4 w-4" />}
+            colorClass="text-amber-600 dark:text-amber-400"
+            bgClass="bg-amber-500/10"
+            items={aiInsights?.high_profitability ?? []}
+            isLoading={aiLoading}
+            scoreKey="win_probability"
+            scoreUnit="%"
+          />
+        </div>
+      </div>
 
       {/* ─── Category Chips ─── */}
       <div className="flex items-center gap-2 flex-wrap">
@@ -869,5 +944,104 @@ function HomeContent() {
         </div>
       )}
     </div>
+  );
+}
+
+// ─── AIInsightCard 컴포넌트 ─────────────────────────────────────────────────
+
+import type { AIInsightTender } from "@/lib/types";
+
+interface AIInsightCardProps {
+  title: string;
+  subtitle: string;
+  icon: React.ReactNode;
+  colorClass: string;
+  bgClass: string;
+  items: AIInsightTender[];
+  isLoading: boolean;
+  scoreKey: keyof AIInsightTender;
+  scoreUnit: string;
+  invertScore?: boolean;
+}
+
+function AIInsightCard({
+  title,
+  subtitle,
+  icon,
+  colorClass,
+  bgClass,
+  items,
+  isLoading,
+  scoreKey,
+  scoreUnit,
+  invertScore = false,
+}: AIInsightCardProps) {
+  return (
+    <Card className="premium-card flex flex-col">
+      <CardContent className="pt-4 pb-3 px-4 flex flex-col flex-1">
+        {/* 헤더 */}
+        <div className="flex items-center gap-2 mb-3">
+          <div className={`flex h-7 w-7 items-center justify-center rounded-lg ${bgClass}`}>
+            <span className={colorClass}>{icon}</span>
+          </div>
+          <div className="min-w-0">
+            <p className="text-xs font-bold leading-none">{title}</p>
+            <p className="text-[10px] text-muted-foreground mt-0.5">{subtitle}</p>
+          </div>
+        </div>
+
+        {/* 리스트 */}
+        {isLoading ? (
+          <div className="space-y-2 flex-1">
+            {[1, 2, 3].map((i) => (
+              <Skeleton key={i} className="h-12 rounded-lg" />
+            ))}
+          </div>
+        ) : items.length === 0 ? (
+          <div className="flex-1 flex items-center justify-center min-h-25">
+            <p className="text-xs text-muted-foreground text-center leading-relaxed">
+              낙찰 데이터 수집 중<br />
+              <span className="text-[10px]">데이터 누적 후 표시됩니다</span>
+            </p>
+          </div>
+        ) : (
+          <div className="space-y-1.5 flex-1">
+            {items.slice(0, 4).map((item) => {
+              const score = item[scoreKey] as number;
+              return (
+                <Link
+                  key={item.id}
+                  href={`/tenders/${item.id}`}
+                  className="block rounded-lg border border-border/40 bg-muted/20 hover:bg-muted/50 hover:border-primary/20 transition-all p-2 group"
+                >
+                  <div className="flex items-start justify-between gap-1.5">
+                    <p className="text-[11px] font-medium leading-snug line-clamp-2 group-hover:text-primary transition-colors flex-1 min-w-0">
+                      {item.title}
+                    </p>
+                    <span className={`shrink-0 text-[10px] font-bold ${colorClass} tabular-nums`}>
+                      {invertScore
+                        ? `${score}${scoreUnit}`
+                        : `${score}${scoreUnit}`}
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-2 mt-1">
+                    {item.budget_amount && (
+                      <span className="text-[10px] text-muted-foreground tabular-nums">
+                        {formatBudgetCompact(item.budget_amount)}
+                      </span>
+                    )}
+                    {item.demand_agency_name && (
+                      <span className="text-[10px] text-muted-foreground truncate">
+                        {item.demand_agency_name}
+                      </span>
+                    )}
+                  </div>
+                </Link>
+              );
+            })}
+          </div>
+        )}
+      </CardContent>
+    </Card>
   );
 }

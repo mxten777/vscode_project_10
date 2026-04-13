@@ -10,6 +10,7 @@ import type {
   ReportSummary,
   BidRecommendation,
   SimilarBid,
+  AIInsights,
 } from "@/lib/types";
 import type { TenderSearchParams } from "@/lib/validations";
 
@@ -197,6 +198,15 @@ export function useBidAnalytics(
     queryKey: ["bid-analytics", qs],
     queryFn: () => fetcher(`/api/bid-analysis/stats?${qs}`),
     staleTime: 1000 * 60 * 60, // 1시간 캐시 (통계는 자주 변하지 않음)
+  });
+}
+
+export function useAIInsights(limit = 8) {
+  return useQuery<AIInsights>({
+    queryKey: ["ai-insights", limit],
+    queryFn: () => fetcher(`/api/bid-analysis/insights?limit=${limit}`),
+    staleTime: 1000 * 60 * 60 * 6, // 6시간 캐시
+    retry: 1,
   });
 }
 

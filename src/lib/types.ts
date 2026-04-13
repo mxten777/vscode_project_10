@@ -251,3 +251,32 @@ export interface BidAnalytics {
   };
 }
 
+// ─── AI Insights 타입 ──────────────────────────────────
+
+export interface AIInsightTender {
+  id: string;
+  source_tender_id: string;
+  title: string;
+  industry_code: string | null;
+  industry_name: string | null;
+  region_code: string | null;
+  region_name: string | null;
+  demand_agency_name: string | null;
+  budget_amount: number | null;
+  deadline_at: string | null;
+  ind_rate: number;   // 업종 낙찰률 (%)
+  agn_rate: number;   // 기관 낙찰률 (%)
+  rgn_rate: number;   // 지역 낙찰률 (%)
+  avg_bidders: number; // 평균 경쟁업체 수
+  win_probability: number; // 낙찰 가능성 점수 (0~100)
+}
+
+export interface AIInsights {
+  recommended: AIInsightTender[];     // 종합 추천
+  high_probability: AIInsightTender[]; // 낙찰 가능성 높음
+  low_competition: AIInsightTender[]; // 경쟁 적음
+  high_profitability: AIInsightTender[]; // 수익성 높음
+  computed_at: string;
+  cached: boolean;
+}
+

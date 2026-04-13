@@ -1,8 +1,9 @@
 "use client";
 
 import { useState } from "react";
-import { useBidAnalytics } from "@/hooks/use-api";
-import { formatKRW } from "@/lib/helpers";
+import Link from "next/link";
+import { useBidAnalytics, useAIInsights } from "@/hooks/use-api";
+import { formatKRW, formatBudgetCompact, getDday } from "@/lib/helpers";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
@@ -25,6 +26,8 @@ import {
   Target,
   DollarSign,
   FileText,
+  Users,
+  Sparkles,
 } from "lucide-react";
 import {
   BarChart,
@@ -130,6 +133,8 @@ export default function AnalyticsPage() {
     analysisType === "overall" ? undefined : undefined,
     months
   );
+
+  const { data: aiInsights, isLoading: aiLoading } = useAIInsights(10);
 
   // 모의 데이터 (실제로는 analytics에서 가져옴)
   const kpiData = {
@@ -449,6 +454,188 @@ export default function AnalyticsPage() {
           </div>
         </CardContent>
       </Card>
+
+      {/* ─── AI 인사이트 섹션 ─── */}
+      <div className="space-y-4">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-violet-500/15">
+              <Sparkles className="h-4 w-4 text-violet-600 dark:text-violet-400" />
+            </div>
+            <h2 className="text-lg font-bold">AI 입찰 의사결정</h2>
+            <span className="inline-flex items-center rounded-full bg-violet-500/10 border border-violet-500/20 px-2 py-0.5 text-[10px] font-semibold text-violet-600 dark:text-violet-400">
+              Beta
+            </span>
+          </div>
+          {aiInsights?.computed_at && (
+            <p className="text-xs text-muted-foreground">
+              업데이트: {new Date(aiInsights.computed_at).toLocaleString("ko-KR", { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" })}
+            </p>
+          )}
+        </div>
+
+        {/* 낙찰 가능성 공식 설명 */}
+        <Card className="premium-card border-violet-500/20 bg-violet-50/30 dark:bg-violet-950/20">
+          <CardContent className="py-4">
+            <div className="flex items-start gap-3">
+              <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-violet-500/10 shrink-0">
+                <Target className="h-4 w-4 text-violet-600 dark:text-violet-400" />
+              </div>
+              <div>
+                <p className="text-sm font-semibold text-violet-900 dark:text-violet-100 mb-1">낙찰 가능성 계산 공식</p>
+                <p className="text-xs text-violet-700 dark:text-violet-300 font-mono">
+                  낙찰 가능성 = <span className="font-semibold">(업종 낙찰률 × 0.4)</span> + (기관 낙찰률 × 0.3) + (지역 낙찰률 × 0.2) + (경쟁강도 × 0.1)
+                </p>
+                <p className="text-[11px] text-violet-600 dark:text-violet-400 mt-1">
+                  * 역사 데이터가 없는 차원은 50% 중립값 적용 | 경쟁강도 = max(0, 100 - 평균참여업체수 × 5)
+                </p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* 4열 그리드 */}
+        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
+          <AIDetailCard
+            title="AI 추천 공고"
+            subtitle="종합 점수 1~10위"
+            icon={<Sparkles className="h-4 w-4" />}
+            colorClass="text-violet-600 dark:text-violet-400"
+            bgClass="bg-violet-500/10"
+            borderClass="border-violet-500/20"
+            items={aiInsights?.recommended ?? []}
+            isLoading={aiLoading}
+          />
+          <AIDetailCard
+            title="낙찰 가능성 높음"
+            subtitle="승률 65% 이상 공고"
+            icon={<Target className="h-4 w-4" />}
+            colorClass="text-emerald-600 dark:text-emerald-400"
+            bgClass="bg-emerald-500/10"
+            borderClass="border-emerald-500/20"
+            items={aiInsights?.high_probability ?? []}
+            isLoading={aiLoading}
+          />
+          <AIDetailCard
+            title="경쟁 적은 공고"
+            subtitle="평균 경쟁업체 수 최소"
+            icon={<Users className="h-4 w-4" />}
+            colorClass="text-blue-600 dark:text-blue-400"
+            bgClass="bg-blue-500/10"
+            borderClass="border-blue-500/20"
+            items={aiInsights?.low_competition ?? []}
+            isLoading={aiLoading}
+            showBidders
+          />
+          <AIDetailCard
+            title="수익성 높은 공고"
+            subtitle="예산 × 낙찰 가능성 최대"
+            icon={<Award className="h-4 w-4" />}
+            colorClass="text-amber-600 dark:text-amber-400"
+            bgClass="bg-amber-500/10"
+            borderClass="border-amber-500/20"
+            items={aiInsights?.high_profitability ?? []}
+            isLoading={aiLoading}
+          />
+        </div>
+      </div>
     </div>
+  );
+}
+
+// ─── AI Detail Card ──────────────────────────────────────────────────────────
+
+import type { AIInsightTender } from "@/lib/types";
+
+interface AIDetailCardProps {
+  title: string;
+  subtitle: string;
+  icon: React.ReactNode;
+  colorClass: string;
+  bgClass: string;
+  borderClass: string;
+  items: AIInsightTender[];
+  isLoading: boolean;
+  showBidders?: boolean;
+}
+
+function AIDetailCard({
+  title,
+  subtitle,
+  icon,
+  colorClass,
+  bgClass,
+  borderClass,
+  items,
+  isLoading,
+  showBidders = false,
+}: AIDetailCardProps) {
+  return (
+    <Card className={`premium-card flex flex-col border ${borderClass}`}>
+      <CardHeader className="pb-2 pt-4 px-4">
+        <CardTitle className="text-sm font-bold flex items-center gap-2">
+          <span className={`flex h-6 w-6 items-center justify-center rounded-md ${bgClass}`}>
+            <span className={colorClass}>{icon}</span>
+          </span>
+          {title}
+        </CardTitle>
+        <CardDescription className="text-[11px]">{subtitle}</CardDescription>
+      </CardHeader>
+      <CardContent className="px-4 pb-4 flex-1">
+        {isLoading ? (
+          <div className="space-y-2">
+            {[1, 2, 3, 4, 5].map((i) => <Skeleton key={i} className="h-14 rounded-lg" />)}
+          </div>
+        ) : items.length === 0 ? (
+          <div className="flex items-center justify-center h-40">
+            <p className="text-xs text-muted-foreground text-center leading-relaxed">
+              낙찰 데이터 수집 중<br />
+              <span className="text-[10px]">데이터 누적 후 표시됩니다</span>
+            </p>
+          </div>
+        ) : (
+          <div className="space-y-2">
+            {items.map((item, idx) => {
+              const dday = getDday(item.deadline_at);
+              return (
+                <Link
+                  key={item.id}
+                  href={`/tenders/${item.id}`}
+                  className="block rounded-lg border border-border/40 bg-muted/20 hover:bg-muted/50 hover:border-primary/20 transition-all p-2.5 group"
+                >
+                  <div className="flex items-start gap-2">
+                    <span className={`shrink-0 text-[10px] font-extrabold w-5 text-right tabular-nums ${colorClass}`}>
+                      {idx + 1}.
+                    </span>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-[11px] font-medium leading-snug line-clamp-2 group-hover:text-primary transition-colors">
+                        {item.title}
+                      </p>
+                      <div className="flex items-center gap-2 mt-1 flex-wrap">
+                        <span className={`text-[10px] font-bold tabular-nums ${colorClass}`}>
+                          {showBidders
+                            ? `경쟁 ${item.avg_bidders}개사`
+                            : `승률 ${item.win_probability}%`}
+                        </span>
+                        {item.budget_amount && (
+                          <span className="text-[10px] text-muted-foreground">
+                            {formatBudgetCompact(item.budget_amount)}
+                          </span>
+                        )}
+                        {dday && (
+                          <span className={`text-[10px] font-semibold ${dday.urgent ? "text-rose-500" : "text-muted-foreground"}`}>
+                            {dday.label}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                </Link>
+              );
+            })}
+          </div>
+        )}
+      </CardContent>
+    </Card>
   );
 }
