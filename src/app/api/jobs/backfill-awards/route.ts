@@ -148,7 +148,7 @@ async function fetchAwardBatch(
 
   for (let page = 1; page <= 20; page++) {
     const url = new URL(
-      "https://apis.data.go.kr/1230000/ScsbidInfoService04/getScsbidList04"
+      "https://apis.data.go.kr/1230000/BidPublicInfoService04/getBidPblancListInfoThngCnstwk"
     );
     url.searchParams.set("serviceKey", apiKey);
     url.searchParams.set("numOfRows", String(PAGE_SIZE));
@@ -164,8 +164,7 @@ async function fetchAwardBatch(
     try {
       json = JSON.parse(rawText);
     } catch {
-      // raw 응답 텍스트를 에러에 포함
-      throw new Error(`NARA API raw response: ${rawText.slice(0, 200)}`);
+      throw new Error(`NARA API [HTTP ${res.status}] raw response: ${rawText.slice(0, 300)}`);
     }
     const body = (json as { response?: { body?: { items?: { item?: unknown }; totalCount?: number } } })?.response?.body;
     const rawItems = body?.items?.item;
