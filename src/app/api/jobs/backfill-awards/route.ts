@@ -86,7 +86,7 @@ export async function POST(request: NextRequest) {
 
     for (const batch of batches) {
       try {
-        const items = await fetchAwardBatch(NARA_AWARD_API_KEY, batch.from, batch.to);
+        const items = await fetchAwardBatch(NARA_API_KEY, batch.from, batch.to);
         for (const item of items) {
           try {
             await upsertAwardToTenders(supabase, item);
