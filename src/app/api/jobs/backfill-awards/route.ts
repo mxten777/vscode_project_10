@@ -91,8 +91,11 @@ export async function POST(request: NextRequest) {
 
     for (const batch of batches) {
       try {
-        const items = await fetchAwardBatch(NARA_API_KEY, batch.from, batch.to);
+        const { items, firstBodyDebug } = await fetchAwardBatch(NARA_API_KEY, batch.from, batch.to);
         totalFetched += items.length;
+        if (items.length === 0 && batchErrors.length < 3) {
+          batchErrors.push(`batch[${batch.from}]: fetched=0 body=${firstBodyDebug}`);
+        }
         for (const item of items) {
           try {
             const result = await upsertAwardToTenders(supabase, item);
@@ -156,13 +159,12 @@ async function fetchAwardBatch(
   apiKey: string,
   fromDate: string,
   toDate: string
-): Promise<NaraAwardItem[]> {
+): Promise<{ items: NaraAwardItem[]; firstBodyDebug: string }> {
   const PAGE_SIZE = 100;
   const results: NaraAwardItem[] = [];
+  let firstBodyDebug = "";
 
   for (let page = 1; page <= 20; page++) {
-    // serviceKey를 searchParams.set()으로 전달하면 이미 인코딩된 키가 이중 인코딩될 수 있으므로
-    // 문자열 직접 결합 방식 사용 (data.go.kr 키 권장 패턴)
     const rawUrl =
       `https://apis.data.go.kr/1230000/as/ScsbidInfoService/getScsbidListSttusServc` +
       `?serviceKey=${apiKey}` +
@@ -178,6 +180,15 @@ async function fetchAwardBatch(
       throw new Error(`NARA API [HTTP ${res.status}] raw response: ${rawText.slice(0, 300)}`);
     }
     const body = (json as { response?: { body?: { items?: { item?: unknown }; totalCount?: number } } })?.response?.body;
+    if (page === 1) {
+      // 응답 구조를 debug에 노출 (items 실제 값 확인)
+      firstBodyDebug = JSON.stringify({
+        totalCount: body?.totalCount,
+        itemsType: typeof body?.items,
+        itemsValue: JSON.stringify(body?.items)?.slice(0, 100),
+        httpStatus: res.status,
+      });
+    }
     const rawItems = body?.items?.item;
 
     if (!rawItems) break;
@@ -188,7 +199,7 @@ async function fetchAwardBatch(
     if (results.length >= totalCount || items.length < PAGE_SIZE) break;
   }
 
-  return results;
+  return { items: results, firstBodyDebug };
 }
 
 async function upsertAwardToTenders(
