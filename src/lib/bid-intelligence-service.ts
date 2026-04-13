@@ -146,9 +146,7 @@ export async function getIngestionStatus(): Promise<IngestionStatus> {
     if (error) throw error;
 
     const status = data as Omit<IngestionStatus, "system_ok">;
-    const tenderOk =
-      status.tenders.failure_count_24h === 0 &&
-      status.tenders.last_success_at !== null;
+    const tenderOk = status.tenders.failure_count_24h === 0;
     const awardsOk = status.awards.failure_count_24h === 0;
 
     return {
