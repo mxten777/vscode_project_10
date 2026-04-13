@@ -96,19 +96,12 @@ export async function POST(request: NextRequest) {
         if (items.length === 0 && batchErrors.length < 3) {
           batchErrors.push(`batch[${batch.from}]: fetched=0 body=${firstBodyDebug}`);
         }
-        for (const item of items) {
-          try {
-            const result = await upsertAwardToTenders(supabase, item);
-            if (result === "skipped") {
-              totalSkipped++;
-            } else {
-              totalProcessed++;
-            }
-          } catch (e) {
-            totalErrors++;
-            const msg = e instanceof Error ? e.message : String(e);
-            if (batchErrors.length < 3) batchErrors.push(`upsert: ${msg}`);
-          }
+        if (items.length > 0) {
+          const { processed, skipped, errors, errMsg } = await bulkUpsertAwards(supabase, items);
+          totalProcessed += processed;
+          totalSkipped += skipped;
+          totalErrors += errors;
+          if (errMsg && batchErrors.length < 3) batchErrors.push(errMsg);
         }
       } catch (err) {
         const msg = err instanceof Error ? err.message : String(err);
@@ -203,6 +196,66 @@ async function fetchAwardBatch(
   }
 
   return { items: results, firstBodyDebug };
+}
+
+async function bulkUpsertAwards(
+  supabase: ReturnType<typeof createServiceClient>,
+  items: NaraAwardItem[]
+): Promise<{ processed: number; skipped: number; errors: number; errMsg?: string }> {
+  // 1. 유효한 항목만 필터 (낙찰률, 공고번호 필수)
+  const validItems = items.filter(i => i.sucsfbidRate && i.bidNtceNo);
+  if (validItems.length === 0) return { processed: 0, skipped: items.length, errors: 0 };
+
+  // 2. bidNtceNo 목록으로 tenders 일괄 조회 (N개 SELECT → 1개 IN 쿼리)
+  const noticeNos = [...new Set(validItems.map(i => i.bidNtceNo))];
+  const { data: tenders, error: tErr } = await supabase
+    .from("tenders")
+    .select("id, source_tender_id")
+    .in("source_tender_id", noticeNos);
+
+  if (tErr) return { processed: 0, skipped: validItems.length, errors: 1, errMsg: `tender lookup: ${tErr.message}` };
+
+  // 3. source_tender_id → tender.id 맵 구성
+  const tenderMap = new Map<string, string>();
+  for (const t of tenders ?? []) {
+    if (t.source_tender_id) tenderMap.set(t.source_tender_id, t.id);
+  }
+
+  // 4. 매칭된 항목을 award 레코드 배열로 변환
+  const rows = [];
+  let skipped = items.length - validItems.length;
+  for (const item of validItems) {
+    const tenderId = tenderMap.get(item.bidNtceNo);
+    if (!tenderId) { skipped++; continue; }
+    const awardedAt = item.rlOpengDt ? parseNaraDate(item.rlOpengDt) : new Date().toISOString();
+    rows.push({
+      tender_id: tenderId,
+      winner_company_name: item.bidwinnrNm || null,
+      bidder_registration_no: item.bidwinnrBizno || null,
+      awarded_amount: item.sucsfbidAmt ? Number(item.sucsfbidAmt) : null,
+      awarded_rate: Number(item.sucsfbidRate),
+      opened_at: awardedAt,
+      participant_count: item.prtcptCnum ? Number(item.prtcptCnum) : null,
+      reserve_price: null,
+      bid_notice_no: item.bidNtceNo,
+      bid_notice_ord: item.bidNtceOrd || "00",
+      result_status: "awarded" as const,
+      raw_json: item,
+      updated_at: new Date().toISOString(),
+    });
+  }
+
+  if (rows.length === 0) return { processed: 0, skipped: items.length, errors: 0 };
+
+  // 5. 한 번의 bulk upsert
+  const { error: uErr } = await supabase.from("awards").upsert(rows, {
+    onConflict: "tender_id,bid_notice_no,bid_notice_ord",
+    ignoreDuplicates: false,
+  });
+
+  if (uErr) return { processed: 0, skipped, errors: rows.length, errMsg: `bulk upsert: ${uErr.message}` };
+
+  return { processed: rows.length, skipped, errors: 0 };
 }
 
 async function upsertAwardToTenders(
