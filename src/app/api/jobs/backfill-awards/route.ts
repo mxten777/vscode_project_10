@@ -149,7 +149,7 @@ async function fetchAwardBatch(
 
   for (let page = 1; page <= 20; page++) {
     const url = new URL(
-      "https://apis.data.go.kr/1230000/as/ScsbidInfoService/getScsbidListInfoServc"
+      "https://apis.data.go.kr/1230000/ScsbidInfoService/getScsbidListInfoServc"
     );
     url.searchParams.set("serviceKey", apiKey);
     url.searchParams.set("numOfRows", String(PAGE_SIZE));

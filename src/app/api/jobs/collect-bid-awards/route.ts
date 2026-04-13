@@ -99,7 +99,7 @@ export async function GET(request: NextRequest) {
 
     // 1) 낙찰결과 API (개발계정 /as/ 경로)
     const openResultsUrl = new URL(
-      "https://apis.data.go.kr/1230000/as/ScsbidInfoService/getScsbidListInfoServc"
+      "https://apis.data.go.kr/1230000/ScsbidInfoService/getScsbidListInfoServc"
     );
     openResultsUrl.searchParams.set("serviceKey", NARAMARKET_API_KEY);
     openResultsUrl.searchParams.set("numOfRows", String(PAGE_SIZE));
@@ -112,7 +112,7 @@ export async function GET(request: NextRequest) {
 
     // 2) 낙찰정보 API (공사 업종)
     const awardUrl = new URL(
-      "https://apis.data.go.kr/1230000/as/ScsbidInfoService/getScsbidListInfoCnstwk"
+      "https://apis.data.go.kr/1230000/ScsbidInfoService/getScsbidListInfoCnstwk"
     );
     awardUrl.searchParams.set("serviceKey", NARAMARKET_API_KEY);
     awardUrl.searchParams.set("numOfRows", String(PAGE_SIZE));
