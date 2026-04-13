@@ -67,7 +67,8 @@ export async function POST(request: NextRequest) {
     const startDate = new Date();
     startDate.setMonth(startDate.getMonth() - months);
 
-    const fmt = (d: Date) => d.toISOString().slice(0, 10).replace(/-/g, "");
+    const fmtFrom = (d: Date) => d.toISOString().slice(0, 10).replace(/-/g, "") + "0000";
+    const fmtTo   = (d: Date) => d.toISOString().slice(0, 10).replace(/-/g, "") + "2359";
 
     // 월별로 분할 수집 (한 번에 너무 많은 API 호출 방지)
     const batches: Array<{ from: string; to: string }> = [];
@@ -76,7 +77,7 @@ export async function POST(request: NextRequest) {
       const batchEnd = new Date(cur);
       batchEnd.setDate(batchEnd.getDate() + 14); // 2주 단위
       if (batchEnd > endDate) batchEnd.setTime(endDate.getTime());
-      batches.push({ from: fmt(cur), to: fmt(batchEnd) });
+      batches.push({ from: fmtFrom(cur), to: fmtTo(batchEnd) });
       cur.setDate(cur.getDate() + 15);
     }
 

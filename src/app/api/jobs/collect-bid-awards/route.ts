@@ -69,8 +69,8 @@ export async function GET(request: NextRequest) {
     // 최근 7일간 개찰된 공고 조회 (나라장터 API 호출)
     const targetDate = new Date();
     targetDate.setDate(targetDate.getDate() - 7);
-    const startDate = targetDate.toISOString().split("T")[0].replace(/-/g, "");
-    const endDate = new Date().toISOString().split("T")[0].replace(/-/g, "");
+    const startDate = targetDate.toISOString().split("T")[0].replace(/-/g, "") + "0000";
+    const endDate = new Date().toISOString().split("T")[0].replace(/-/g, "") + "2359";
 
     const PAGE_SIZE = 100;
     const MAX_PAGES = 10; // 최대 1,000건 (과도한 API 호출 방지)
