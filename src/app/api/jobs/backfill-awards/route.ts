@@ -232,6 +232,7 @@ async function bulkUpsertAwards(
       tender_id: tenderId,
       winner_company_name: item.bidwinnrNm || null,
       bidder_registration_no: item.bidwinnrBizno || null,
+      bidder_company_name: item.bidwinnrNm || null,
       awarded_amount: item.sucsfbidAmt ? Number(item.sucsfbidAmt) : null,
       awarded_rate: Number(item.sucsfbidRate),
       opened_at: awardedAt,
@@ -240,6 +241,7 @@ async function bulkUpsertAwards(
       bid_notice_no: item.bidNtceNo,
       bid_notice_ord: item.bidNtceOrd || "00",
       result_status: "awarded" as const,
+      sequence_no: 1,
       raw_json: item,
       updated_at: new Date().toISOString(),
     });
@@ -249,7 +251,7 @@ async function bulkUpsertAwards(
 
   // 5. 한 번의 bulk upsert
   const { error: uErr } = await supabase.from("awards").upsert(rows, {
-    onConflict: "tender_id,bid_notice_no,bid_notice_ord",
+    onConflict: "tender_id,bidder_registration_no,sequence_no",
     ignoreDuplicates: false,
   });
 
