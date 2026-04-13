@@ -41,9 +41,10 @@ export async function POST(request: NextRequest) {
   }
 
   const supabase = createServiceClient();
-  const NARA_API_KEY = (process.env.NARA_API_KEY || "").trim();
+  // 낙찰정보서비스는 별도 키 사용 (NARA_AWARD_API_KEY), 없으면 NARA_API_KEY fallback
+  const NARA_API_KEY = (process.env.NARA_AWARD_API_KEY || process.env.NARA_API_KEY || "").trim();
   if (!NARA_API_KEY) {
-    return NextResponse.json({ error: "NARA_API_KEY not configured" }, { status: 500 });
+    return NextResponse.json({ error: "NARA_AWARD_API_KEY not configured" }, { status: 500 });
   }
 
   const { data: logRow } = await supabase
@@ -85,7 +86,7 @@ export async function POST(request: NextRequest) {
 
     for (const batch of batches) {
       try {
-        const items = await fetchAwardBatch(NARA_API_KEY, batch.from, batch.to);
+        const items = await fetchAwardBatch(NARA_AWARD_API_KEY, batch.from, batch.to);
         for (const item of items) {
           try {
             await upsertAwardToTenders(supabase, item);
@@ -146,10 +147,9 @@ async function fetchAwardBatch(
   const PAGE_SIZE = 100;
   const results: NaraAwardItem[] = [];
 
-  const NARA_API_BASE = (process.env.NARA_API_BASE_URL || "https://apis.data.go.kr/1230000").replace(/\/$/, "");
   for (let page = 1; page <= 20; page++) {
     const url = new URL(
-      `${NARA_API_BASE}/ad/ScsbidInfoService/getScsbidListServc`
+      "https://apis.data.go.kr/1230000/as/ScsbidInfoService/getScsbidListInfoServc"
     );
     url.searchParams.set("serviceKey", apiKey);
     url.searchParams.set("numOfRows", String(PAGE_SIZE));

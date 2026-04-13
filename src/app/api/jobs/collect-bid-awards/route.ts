@@ -60,7 +60,8 @@ export async function GET(request: NextRequest) {
       .select("id")
       .single();
     logId = logRow?.id ?? null;
-    const NARAMARKET_API_KEY = process.env.NARA_API_KEY;
+    // 낙찰정보서비스는 별도 키 사용 (NARA_AWARD_API_KEY), 없으면 NARA_API_KEY fallback
+    const NARAMARKET_API_KEY = process.env.NARA_AWARD_API_KEY || process.env.NARA_API_KEY;
 
     if (!NARAMARKET_API_KEY) {
       throw new Error("NARA_API_KEY not configured");
@@ -96,11 +97,9 @@ export async function GET(request: NextRequest) {
       return results;
     }
 
-    const NARA_API_BASE = (process.env.NARA_API_BASE_URL || "https://apis.data.go.kr/1230000").replace(/\/$/, "");
-
-    // 1) 낙찰결과 API (운영계정 /ad/ 경로)
+    // 1) 낙찰결과 API (개발계정 /as/ 경로)
     const openResultsUrl = new URL(
-      `${NARA_API_BASE}/ad/ScsbidInfoService/getScsbidListServc`
+      "https://apis.data.go.kr/1230000/as/ScsbidInfoService/getScsbidListInfoServc"
     );
     openResultsUrl.searchParams.set("serviceKey", NARAMARKET_API_KEY);
     openResultsUrl.searchParams.set("numOfRows", String(PAGE_SIZE));
@@ -111,9 +110,9 @@ export async function GET(request: NextRequest) {
 
     const openItems = await fetchAllPages(openResultsUrl);
 
-    // 2) 낙찰정보 API (동일 서비스, 다른 업종 - 공사)
+    // 2) 낙찰정보 API (공사 업종)
     const awardUrl = new URL(
-      `${NARA_API_BASE}/ad/ScsbidInfoService/getScsbidListCnstwk`
+      "https://apis.data.go.kr/1230000/as/ScsbidInfoService/getScsbidListInfoCnstwk"
     );
     awardUrl.searchParams.set("serviceKey", NARAMARKET_API_KEY);
     awardUrl.searchParams.set("numOfRows", String(PAGE_SIZE));
