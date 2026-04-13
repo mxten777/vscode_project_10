@@ -42,9 +42,12 @@ export async function POST(request: NextRequest) {
 
   const supabase = createServiceClient();
   // 낙찰정보서비스는 별도 키 사용 (NARA_AWARD_API_KEY), 없으면 NARA_API_KEY fallback
-  const NARA_API_KEY = (process.env.NARA_AWARD_API_KEY || process.env.NARA_API_KEY || "").trim();
+  const awardKey = (process.env.NARA_AWARD_API_KEY || "").trim();
+  const fallbackKey = (process.env.NARA_API_KEY || "").trim();
+  const NARA_API_KEY = awardKey || fallbackKey;
+  const keySource = awardKey ? "NARA_AWARD_API_KEY" : fallbackKey ? "NARA_API_KEY(fallback)" : "none";
   if (!NARA_API_KEY) {
-    return NextResponse.json({ error: "NARA_AWARD_API_KEY not configured" }, { status: 500 });
+    return NextResponse.json({ error: "NARA_AWARD_API_KEY not configured", keySource }, { status: 500 });
   }
 
   const { data: logRow } = await supabase
@@ -120,6 +123,7 @@ export async function POST(request: NextRequest) {
       months,
       processed: totalProcessed,
       errors: totalErrors,
+      keySource,
       debug: batchErrors,
     });
   } catch (err) {
