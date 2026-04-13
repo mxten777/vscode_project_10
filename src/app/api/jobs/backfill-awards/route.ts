@@ -86,14 +86,21 @@ export async function POST(request: NextRequest) {
     }
 
     const batchErrors: string[] = [];
+    let totalFetched = 0;
+    let totalSkipped = 0;
 
     for (const batch of batches) {
       try {
         const items = await fetchAwardBatch(NARA_API_KEY, batch.from, batch.to);
+        totalFetched += items.length;
         for (const item of items) {
           try {
-            await upsertAwardToTenders(supabase, item);
-            totalProcessed++;
+            const result = await upsertAwardToTenders(supabase, item);
+            if (result === "skipped") {
+              totalSkipped++;
+            } else {
+              totalProcessed++;
+            }
           } catch (e) {
             totalErrors++;
             const msg = e instanceof Error ? e.message : String(e);
@@ -121,7 +128,9 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({
       success: true,
       months,
+      fetched: totalFetched,
       processed: totalProcessed,
+      skipped: totalSkipped,
       errors: totalErrors,
       keySource,
       debug: batchErrors,
@@ -185,8 +194,8 @@ async function fetchAwardBatch(
 async function upsertAwardToTenders(
   supabase: ReturnType<typeof createServiceClient>,
   item: NaraAwardItem
-) {
-  if (!item.sucsfbidRate || !item.bidNtceNo) return;
+): Promise<"ok" | "skipped"> {
+  if (!item.sucsfbidRate || !item.bidNtceNo) return "skipped";
 
   const sourceBidNoticeId = `${item.bidNtceNo}-${item.bidNtceOrd || "00"}`;
   const awardedAt = item.rlOpengDt ? parseNaraDate(item.rlOpengDt) : new Date().toISOString();
@@ -198,7 +207,7 @@ async function upsertAwardToTenders(
     .or(`source_tender_id.eq.${item.bidNtceNo},source_tender_id.eq.${sourceBidNoticeId}`)
     .maybeSingle();
 
-  if (!tender?.id) return; // 공고 연결 불가 시 스킵
+  if (!tender?.id) return "skipped"; // 공고 연결 불가 시 스킵
 
   await supabase.from("awards").upsert(
     {
@@ -221,6 +230,7 @@ async function upsertAwardToTenders(
       ignoreDuplicates: false,
     }
   );
+  return "ok";
 }
 
 function parseNaraDate(dateStr: string): string {
