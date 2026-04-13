@@ -42,6 +42,7 @@ import {
   TrendingUp,
   Users,
   CreditCard,
+  Building2,
 } from "lucide-react";
 import { toast } from "sonner";
 import { BaikalLogo } from "@/components/baikal-logo";
@@ -200,6 +201,12 @@ export function Header() {
                   <Link href="/settings/profile">
                     <User className="h-4 w-4" />
                     프로필 설정
+                  </Link>
+                </DropdownMenuItem>
+                <DropdownMenuItem className="gap-2 rounded-lg cursor-pointer" asChild>
+                  <Link href="/settings/company">
+                    <Building2 className="h-4 w-4" />
+                    회사 정보
                   </Link>
                 </DropdownMenuItem>
                 <DropdownMenuItem className="gap-2 rounded-lg cursor-pointer" asChild>
