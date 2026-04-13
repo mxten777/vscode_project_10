@@ -159,8 +159,15 @@ async function fetchAwardBatch(
     url.searchParams.set("type", "json");
 
     const res = await fetch(url.toString(), { cache: "no-store" });
-    const json = await res.json();
-    const body = json?.response?.body;
+    const rawText = await res.text();
+    let json: unknown;
+    try {
+      json = JSON.parse(rawText);
+    } catch {
+      // raw 응답 텍스트를 에러에 포함
+      throw new Error(`NARA API raw response: ${rawText.slice(0, 200)}`);
+    }
+    const body = (json as { response?: { body?: { items?: { item?: unknown }; totalCount?: number } } })?.response?.body;
     const rawItems = body?.items?.item;
 
     if (!rawItems) break;
