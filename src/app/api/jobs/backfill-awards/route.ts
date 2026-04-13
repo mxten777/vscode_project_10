@@ -36,8 +36,8 @@ export async function POST(request: NextRequest) {
   }
 
   const months = parseInt(request.nextUrl.searchParams.get("months") || "3");
-  if (![3, 6, 12].includes(months)) {
-    return NextResponse.json({ error: "months must be 3, 6, or 12" }, { status: 400 });
+  if (![1, 3, 6, 12].includes(months)) {
+    return NextResponse.json({ error: "months must be 1, 3, 6, or 12" }, { status: 400 });
   }
 
   const supabase = createServiceClient();
@@ -75,10 +75,10 @@ export async function POST(request: NextRequest) {
     const cur = new Date(startDate);
     while (cur < endDate) {
       const batchEnd = new Date(cur);
-      batchEnd.setDate(batchEnd.getDate() + 14); // 2주 단위
+      batchEnd.setDate(batchEnd.getDate() + 7); // 1주 단위 (NARA API 범위 제한 대응)
       if (batchEnd > endDate) batchEnd.setTime(endDate.getTime());
       batches.push({ from: fmtFrom(cur), to: fmtTo(batchEnd) });
-      cur.setDate(cur.getDate() + 15);
+      cur.setDate(cur.getDate() + 8);
     }
 
     const batchErrors: string[] = [];
