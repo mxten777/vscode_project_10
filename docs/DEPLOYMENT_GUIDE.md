@@ -138,6 +138,8 @@ cp .env.example .env.local
 NEXT_PUBLIC_SUPABASE_URL=https://xxxxx.supabase.co
 NEXT_PUBLIC_SUPABASE_ANON_KEY=eyJ...
 SUPABASE_SERVICE_ROLE_KEY=eyJ...
+# 서버 전용 런타임 URL (NEXT_PUBLIC_ 는 빌드 타임에 고정됨 — DB 교체 시 필수)
+SUPABASE_URL=https://xxxxx.supabase.co
 
 # ── Cron Secret ──
 CRON_SECRET=your-random-secret-string-here
@@ -297,6 +299,9 @@ npx vercel logs --follow --url /api/jobs/poll-tenders
 | 이메일 미발송 | Resend API 키 오류 또는 도메인 미검증 | Resend 대시보드에서 키/도메인 확인 |
 | RLS 에러 | 서비스 롤 키 누락 (Jobs) | `SUPABASE_SERVICE_ROLE_KEY` 확인 |
 | 빌드 실패 | Node.js 버전 불일치 | `engines.node` 확인, Vercel Node 설정 |
+| poll-tenders "Invalid API key" | DB 교체 후 `NEXT_PUBLIC_SUPABASE_URL` 빌드 타임 고정 — 구 URL vs 신 SERVICE_ROLE_KEY 불일치 | Vercel에 `SUPABASE_URL` 서버 전용 런타임 변수 추가 |
+| `.env.local` 환경변수에 `\r\n` 포함 | Windows 줄바꿈 문자 리터럴 삽입 | 파일 직접 열어 수작업 제거 (`.trim()`으로 처리 불가) |
+| Next.js `middleware` deprecation warning | Next.js 16에서 `middleware.ts` → `proxy.ts` 필요 | 파일명 `proxy.ts`, 함수명 `proxy()` 로 변경 |
 
 ### 8.2 나라장터 API 문제
 

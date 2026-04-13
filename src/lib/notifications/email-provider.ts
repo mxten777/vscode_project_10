@@ -6,12 +6,12 @@ export class EmailProvider implements NotificationProvider {
   private from: string;
 
   constructor() {
-    this.from = process.env.ALERT_FROM_EMAIL || "noreply@bidplatform.com";
+    this.from = (process.env.ALERT_FROM_EMAIL || "noreply@bidplatform.com").trim();
   }
 
   private getClient(): Resend | null {
     if (!this.resend) {
-      const apiKey = process.env.RESEND_API_KEY;
+      const apiKey = (process.env.RESEND_API_KEY || "").trim();
       if (!apiKey || apiKey === "YOUR_RESEND_API_KEY") return null;
       this.resend = new Resend(apiKey);
     }

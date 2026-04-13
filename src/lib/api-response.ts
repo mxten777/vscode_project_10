@@ -40,7 +40,4 @@ export const apiResponse = {
   success: <T>(data: T, status = 200) => successResponse(data, status),
   error: (message: string, status = 500, details?: unknown) =>
     errorResponse("ERROR", message, status, details),
-  unauthorized: unauthorizedResponse,
-  forbidden: forbiddenResponse,
-  notFound: notFoundResponse,
 };

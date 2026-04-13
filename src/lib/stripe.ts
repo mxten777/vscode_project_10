@@ -15,13 +15,6 @@ export function getStripe(): Stripe {
   return _stripe;
 }
 
-/** @deprecated getStripe() 사용 권장. 하위 호환용 */
-export const stripe = new Proxy({} as Stripe, {
-  get(_target, prop) {
-    return (getStripe() as unknown as Record<string | symbol, unknown>)[prop];
-  },
-});
-
 /**
  * Stripe Price ID 매핑
  * Stripe 대시보드에서 상품/가격 생성 후 실제 Price ID로 교체

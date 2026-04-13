@@ -41,6 +41,7 @@ import {
   EyeOff,
   TrendingUp,
   Users,
+  CreditCard,
 } from "lucide-react";
 import { toast } from "sonner";
 import { BaikalLogo } from "@/components/baikal-logo";
@@ -195,9 +196,17 @@ export function Header() {
                   </div>
                 </DropdownMenuLabel>
                 <DropdownMenuSeparator />
-                <DropdownMenuItem className="gap-2 rounded-lg cursor-pointer">
-                  <User className="h-4 w-4" />
-                  프로필
+                <DropdownMenuItem className="gap-2 rounded-lg cursor-pointer" asChild>
+                  <Link href="/settings/profile">
+                    <User className="h-4 w-4" />
+                    프로필 설정
+                  </Link>
+                </DropdownMenuItem>
+                <DropdownMenuItem className="gap-2 rounded-lg cursor-pointer" asChild>
+                  <Link href="/settings/billing">
+                    <CreditCard className="h-4 w-4" />
+                    요금제 & 결제
+                  </Link>
                 </DropdownMenuItem>
                 <DropdownMenuItem className="gap-2 rounded-lg cursor-pointer" onClick={() => setPwDialogOpen(true)}>
                   <KeyRound className="h-4 w-4" />

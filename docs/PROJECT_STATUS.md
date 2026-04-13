@@ -1,6 +1,6 @@
 # AI 입찰·조달 분석 플랫폼 — 프로젝트 현황 보고서
 
-> 최초 작성: 2026-02-27 / 최종 업데이트: 2026-04-03  
+> 최초 작성: 2026-02-27 / 최종 업데이트: 2026-04-13  
 > 프로젝트: bid-platform  
 > 버전: 1.0.0
 
@@ -14,12 +14,12 @@
 |------|-----|
 | 프로덕션 URL | https://bid-platform.vercel.app |
 | GitHub | https://github.com/mxten777/vscode_project_10 |
-| Supabase | `pdxjwpskwiinustgzhmb` (Seoul 리전) |
+| Supabase | `viimjutggzxruabraozb` (Seoul 리전) |
 | 기술 스택 | Next.js 16.1.6, React 19, TypeScript, Tailwind CSS v4 |
 | UI 라이브러리 | shadcn/ui (Radix UI) + recharts |
 | DB/Auth | Supabase (PostgreSQL + Auth) |
 | 배포 | Vercel (Hobby Plan, icn1 Seoul 리전) |
-| 총 커밋 | 37개 |
+| 총 커밋 | 40개 이상 |
 
 ---
 
@@ -212,6 +212,34 @@
 - [x] `src/components/header.tsx` — 팀 관리 nav 항목 + Users 아이콘 추가
 - [x] `get_errors` 전체 검증 → `bid-platform/src` No errors found ✅
 
+### Phase 16: Settings + Billing 관리 UI (2026-04-04)
+- [x] `src/app/api/billing/portal/route.ts` — Stripe Customer Portal Session 생성 (POST)
+- [x] `src/app/api/billing/subscription/route.ts` — 현재 구독 상태 조회 (GET)
+- [x] `src/app/(app)/settings/layout.tsx` — 설정 사이드바 레이아웃 (프로필 / 요금제&결제 탭)
+- [x] `src/app/(app)/settings/page.tsx` — `/settings/profile` redirect
+- [x] `src/app/(app)/settings/profile/page.tsx` — 이메일 표시 + 비밀번호 변경 폼 (8자 검증)
+- [x] `src/app/(app)/settings/billing/page.tsx` — 현재 플랜 뱃지 + 갱신일 + Portal 버튼 + 업그레이드 카드 (free만 표시)
+- [x] `src/app/(app)/settings/billing/layout.tsx` — Suspense 래퍼 (useSearchParams 대응)
+- [x] `src/components/header.tsx` — 드롭다운에 "프로필 설정" → `/settings/profile`, "요금제 & 결제" → `/settings/billing` 링크 추가
+
+### Phase 17: Supabase DB 교체 + 기술부채 정리 (2026-04-13)
+- [x] Supabase 프로젝트 교체: `pdxjwpskwiinustgzhmb` → `viimjutggzxruabraozb`
+  - `.env.local` 신규 JWT 키로 교체 (로컬 로그인 복구)
+  - Vercel 환경변수 전체 업데이트 (NEXT_PUBLIC_SUPABASE_URL, ANON_KEY, SERVICE_ROLE_KEY)
+- [x] **근본 원인 수정**: `NEXT_PUBLIC_SUPABASE_URL` 빌드-타임 고정 문제 해소
+  - `SUPABASE_URL` 서버-전용 런타임 변수 추가 → `service.ts`에서 우선 참조
+  - poll-tenders "Invalid API key" 오류 해결 (4,900건 정상 수집 확인)
+- [x] Dead code 삭제
+  - `.env.production`, `.env.production.local`, `.env.local.example` 삭제
+  - `src/lib/rate-limit.ts` 삭제 (어디에도 import 없음)
+- [x] `email-provider.ts` `.trim()` 버그 수정 — `ALERT_FROM_EMAIL`, `RESEND_API_KEY`
+- [x] `.env.local` 리터럴 `\r\n` 제거 — `ALERT_FROM_EMAIL`, `NARA_API_KEY`
+- [x] `stripe.ts` `@deprecated stripe` Proxy export 제거
+- [x] `api-response.ts` 미사용 `.unauthorized/.forbidden/.notFound` shortcut 제거
+- [x] `middleware.ts` → `proxy.ts` Next.js 16 마이그레이션 (파일명 + 함수명 `proxy()`)
+- [x] 테스트 56/56 전부 통과 (`npx vitest run`)
+- [x] 프로덕션 배포 완료 (`bid-platform.vercel.app`) — health/landing/login/cron 200 확인
+
 ---
 
 ## 3. 해결된 이슈 전체 목록
@@ -239,6 +267,10 @@
 | accept/page.tsx hoisting 오류 | 함수 사용 전 선언 위치 문제 | 함수 선언 순서 조정 + eslint-disable |
 | Stripe 빌드 오류 | `stripe.ts` 모듈 로드 시 `throw` 즉시 실행 | lazy-init (`getStripe()` 함수) + Proxy 패턴으로 해소 |
 | team/page.tsx 타입 오류 | 미사용 Separator import | import 제거 |
+| 로그인 불가 (DB 교체 후) | 신 Supabase 키 미적용 | `.env.local` + Vercel 환경변수 교체 |
+| poll-tenders "Invalid API key" | `NEXT_PUBLIC_SUPABASE_URL` 빌드 타임 고정 — 구 URL vs 신 SERVICE_ROLE_KEY 불일치 | `SUPABASE_URL` 서버 전용 런타임 var 추가, `service.ts` 우선 참조 |
+| 이메일 발신자 `\r\n` 포함 | `.env.local` 리터럴 `\r\n` (4글자), `.trim()`으로 제거 불가 | `.env.local` 파일 직접 수정 |
+| Next.js deprecation warning | `middleware.ts` — Next.js 16은 `proxy.ts` 요구 | 파일명 `proxy.ts` + 함수명 `proxy()` 변경 |
 
 ---
 
@@ -247,8 +279,8 @@
 ```
 ┌─────────────────────┐    ┌──────────────────┐    ┌────────────────────┐
 │   Vercel (Hobby)    │    │  Supabase        │    │ 나라장터 API       │
-│   리전: icn1 (Seoul)│    │  (Seoul, Free)   │    │ (data.go.kr)      │
-│                     │    │                  │    │                    │
+│   리전: icn1 (Seoul)│    │  viimjutggzxru   │    │ (data.go.kr)      │
+│                     │    │  abraozb (Seoul) │    │                    │
 │ ├ Next.js App       │◄──►│ ├ PostgreSQL 16  │◄───│ ├ 입찰공고목록조회  │
 │ ├ API Routes (30+)  │    │ ├ Auth (GoTrue)  │    │ └ 개찰결과조회      │
 │ ├ Cron Jobs (5)     │───►│ ├ RLS (전 테이블)│    │                    │
@@ -274,7 +306,8 @@
 
 | 변수명 | 용도 | 상태 |
 |--------|------|------|
-| `NEXT_PUBLIC_SUPABASE_URL` | Supabase 프로젝트 URL | ✅ 등록 |
+| `NEXT_PUBLIC_SUPABASE_URL` | Supabase 프로젝트 URL (빌드 타임) | ✅ 등록 (`viimjutggzxruabraozb`) |
+| `SUPABASE_URL` | Supabase URL 서버 전용 런타임 (service.ts 우선 참조) | ✅ 등록 |
 | `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Supabase 공개 키 | ✅ 등록 |
 | `SUPABASE_SERVICE_ROLE_KEY` | Supabase 서비스 키 | ✅ 등록 |
 | `CRON_SECRET` | Cron Job 인증 | ✅ 등록 |

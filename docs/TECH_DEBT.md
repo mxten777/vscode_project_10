@@ -1,22 +1,30 @@
 # 기술 부채 및 개선 로드맵
 
-> 작성일: 2026-03-24  
-> 현재 완성도: 약 75–80%  
+> 작성일: 2026-03-24 / 최종 업데이트: 2026-04-13  
+> 현재 완성도: 약 85–90%  
 > 스택: Next.js 16 · React 19 · TypeScript · Supabase · Vercel (Hobby) · Tailwind v4 · Vitest
 
 ---
 
-## 완료된 정비 작업 (2026-04-02)
+## 완료된 정비 작업 (2026-04-02 ~ 2026-04-13)
 
 | # | 내용 | 파일 |
 |---|------|------|
 | ✅ | `float-slow` / `float-slow-rev` 고아 CSS 키프레임 제거 | `globals.css` |
 | ✅ | `/api/reports/summary` 인증 누락 수정 → `getAuthContext()` 추가 | `api/reports/summary/route.ts` |
 | ✅ | 나라장터 리포트 기관명 누락 수정 → LEFT JOIN + demand_agency_name | `011_fix_report_summary_agency.sql` |
-| ✅ | Rate Limiting — 인증 10회/5분, 일반 API 60회/1분 | `middleware.ts`, `lib/rate-limit.ts` |
+| ✅ | Rate Limiting — 인증 10회/5분, 일반 API 60회/1분 | `proxy.ts`, (구 `middleware.ts`) |
 | ✅ | `/terms`, `/privacy` 정적 페이지 생성 | `app/terms/page.tsx`, `app/privacy/page.tsx` |
 | ✅ | 모바일 반응형 — 640px 미만 카드뷰 자동 전환, 리사이즈 대응 | `app/(app)/page.tsx` |
-| ✅ | 카드뷰 모바일 패딩·폰트·최소너비 개선, `bg-linear-to-r` inline style 교체 | `app/(app)/page.tsx` |
+| ✅ | 카드뷰 모바일 패딩·폰트·최소너비 개선 | `app/(app)/page.tsx` |
+| ✅ | Dead code 삭제 — `src/lib/rate-limit.ts` (import 없음) | 파일 삭제 |
+| ✅ | 불필요 env 파일 삭제 — `.env.production`, `.env.production.local`, `.env.local.example` | 파일 삭제 |
+| ✅ | `stripe.ts` `@deprecated stripe` Proxy export 제거 | `src/lib/stripe.ts` |
+| ✅ | `api-response.ts` 미사용 `.unauthorized/.forbidden/.notFound` shortcut 제거 | `src/lib/api-response.ts` |
+| ✅ | `email-provider.ts` `.trim()` 버그 수정 | `src/lib/notifications/email-provider.ts` |
+| ✅ | `.env.local` 리터럴 `\r\n` 제거 (ALERT_FROM_EMAIL, NARA_API_KEY) | `.env.local` |
+| ✅ | `middleware.ts` → `proxy.ts` Next.js 16 마이그레이션 (함수명 `proxy()`) | `src/proxy.ts` |
+| ✅ | Supabase `NEXT_PUBLIC_` 빌드 고정 문제 해소 → `SUPABASE_URL` 런타임 var 추가 | `src/lib/supabase/service.ts` |
 
 ---
 
@@ -122,7 +130,8 @@
 ## 환경변수 체크리스트 (프로덕션 배포 전)
 
 ```
-NEXT_PUBLIC_SUPABASE_URL         ✅ 설정됨
+NEXT_PUBLIC_SUPABASE_URL         ✅ 설정됨 (viimjutggzxruabraozb)
+SUPABASE_URL                     ✅ 설정됨 (서버 런타임 전용, service.ts 우선 참조)
 NEXT_PUBLIC_SUPABASE_ANON_KEY    ✅ 설정됨
 SUPABASE_SERVICE_ROLE_KEY        ✅ 설정됨
 NARA_API_KEY                     ✅ 설정됨
@@ -134,9 +143,9 @@ CRON_SECRET                      ✅ 설정됨 (vercel.json cron 보호)
 
 ## 완료 기준 — v1.0 정식 출시
 
-- [ ] Rate limiting 적용
-- [ ] `/terms`, `/privacy` 페이지 생성
+- [x] Rate limiting 적용 (proxy.ts + Upstash Redis)
+- [x] `/terms`, `/privacy` 페이지 생성
 - [ ] plan limit 즐겨찾기 POST 보호
-- [ ] 사용자 설정 페이지
-- [ ] API 라우트 테스트 10개 이상
+- [x] 사용자 설정 페이지 (`/settings/profile`, `/settings/billing`)
+- [ ] API 라우트 테스트 10개 이상 (현재 유닛 56개, API 통합 테스트 없음)
 - [ ] E2E smoke test 통과
