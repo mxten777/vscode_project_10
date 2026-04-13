@@ -81,6 +81,8 @@ export async function POST(request: NextRequest) {
       cur.setDate(cur.getDate() + 15);
     }
 
+    const batchErrors: string[] = [];
+
     for (const batch of batches) {
       try {
         const items = await fetchAwardBatch(NARA_API_KEY, batch.from, batch.to);
@@ -88,13 +90,17 @@ export async function POST(request: NextRequest) {
           try {
             await upsertAwardToTenders(supabase, item);
             totalProcessed++;
-          } catch {
+          } catch (e) {
             totalErrors++;
+            const msg = e instanceof Error ? e.message : String(e);
+            if (batchErrors.length < 3) batchErrors.push(`upsert: ${msg}`);
           }
         }
       } catch (err) {
+        const msg = err instanceof Error ? err.message : String(err);
         console.error(`[backfill] batch ${batch.from}-${batch.to} failed:`, err);
         totalErrors++;
+        if (batchErrors.length < 3) batchErrors.push(`${batch.from}-${batch.to}: ${msg}`);
       }
     }
 
@@ -113,6 +119,7 @@ export async function POST(request: NextRequest) {
       months,
       processed: totalProcessed,
       errors: totalErrors,
+      debug: batchErrors,
     });
   } catch (err) {
     const message = err instanceof Error ? err.message : "Unknown error";
