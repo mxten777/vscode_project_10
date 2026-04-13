@@ -146,9 +146,10 @@ async function fetchAwardBatch(
   const PAGE_SIZE = 100;
   const results: NaraAwardItem[] = [];
 
+  const NARA_API_BASE = (process.env.NARA_API_BASE_URL || "https://apis.data.go.kr/1230000").replace(/\/$/, "");
   for (let page = 1; page <= 20; page++) {
     const url = new URL(
-      "https://apis.data.go.kr/1230000/BidPublicInfoService04/getBidPblancListInfoThngCnstwk"
+      `${NARA_API_BASE}/ad/ScsbidInfoService/getScsbidListServc`
     );
     url.searchParams.set("serviceKey", apiKey);
     url.searchParams.set("numOfRows", String(PAGE_SIZE));

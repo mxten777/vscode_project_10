@@ -96,22 +96,24 @@ export async function GET(request: NextRequest) {
       return results;
     }
 
-    // 1) 개찰결과 API — 전체 페이지 수집
+    const NARA_API_BASE = (process.env.NARA_API_BASE_URL || "https://apis.data.go.kr/1230000").replace(/\/$/, "");
+
+    // 1) 낙찰결과 API (운영계정 /ad/ 경로)
     const openResultsUrl = new URL(
-      "https://apis.data.go.kr/1230000/BidPublicInfoService04/getBidPblancListInfoThngCnstwk"
+      `${NARA_API_BASE}/ad/ScsbidInfoService/getScsbidListServc`
     );
     openResultsUrl.searchParams.set("serviceKey", NARAMARKET_API_KEY);
     openResultsUrl.searchParams.set("numOfRows", String(PAGE_SIZE));
-    openResultsUrl.searchParams.set("inqryDiv", "1"); // 조회구분 (1: 개찰일자)
+    openResultsUrl.searchParams.set("inqryDiv", "1");
     openResultsUrl.searchParams.set("inqryBgnDt", startDate);
     openResultsUrl.searchParams.set("inqryEndDt", endDate);
     openResultsUrl.searchParams.set("type", "json");
 
     const openItems = await fetchAllPages(openResultsUrl);
 
-    // 2) 낙찰정보 API — 전체 페이지 수집
+    // 2) 낙찰정보 API (동일 서비스, 다른 업종 - 공사)
     const awardUrl = new URL(
-      "https://apis.data.go.kr/1230000/ScsbidInfoService04/getScsbidList04"
+      `${NARA_API_BASE}/ad/ScsbidInfoService/getScsbidListCnstwk`
     );
     awardUrl.searchParams.set("serviceKey", NARAMARKET_API_KEY);
     awardUrl.searchParams.set("numOfRows", String(PAGE_SIZE));
