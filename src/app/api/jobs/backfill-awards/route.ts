@@ -152,18 +152,15 @@ async function fetchAwardBatch(
   const results: NaraAwardItem[] = [];
 
   for (let page = 1; page <= 20; page++) {
-    const url = new URL(
-      "https://apis.data.go.kr/1230000/ScsbidInfoService/getScsbidListInfoServc"
-    );
-    url.searchParams.set("serviceKey", apiKey);
-    url.searchParams.set("numOfRows", String(PAGE_SIZE));
-    url.searchParams.set("pageNo", String(page));
-    url.searchParams.set("inqryDiv", "1");
-    url.searchParams.set("inqryBgnDt", fromDate);
-    url.searchParams.set("inqryEndDt", toDate);
-    url.searchParams.set("type", "json");
+    // serviceKey를 searchParams.set()으로 전달하면 이미 인코딩된 키가 이중 인코딩될 수 있으므로
+    // 문자열 직접 결합 방식 사용 (data.go.kr 키 권장 패턴)
+    const rawUrl =
+      `https://apis.data.go.kr/1230000/ScsbidInfoService/getScsbidListInfoServc` +
+      `?serviceKey=${apiKey}` +
+      `&numOfRows=${PAGE_SIZE}&pageNo=${page}&inqryDiv=1` +
+      `&inqryBgnDt=${fromDate}&inqryEndDt=${toDate}&type=json`;
 
-    const res = await fetch(url.toString(), { cache: "no-store" });
+    const res = await fetch(rawUrl, { cache: "no-store" });
     const rawText = await res.text();
     let json: unknown;
     try {

@@ -78,12 +78,13 @@ export async function GET(request: NextRequest) {
 
     /**
      * 나라장터 API 전체 페이지 수집 헬퍼
+     * serviceKey를 searchParams.set()으로 전달하면 이미 인코딩된 키가 이중 인코딩될 수 있으므로
+     * 문자열 직접 결합 방식 사용 (data.go.kr 키 권장 패턴)
      */
-    async function fetchAllPages(baseUrl: URL): Promise<NaramarketBidResult[]> {
+    async function fetchAllPages(baseRawUrl: string): Promise<NaramarketBidResult[]> {
       const results: NaramarketBidResult[] = [];
       for (let page = 1; page <= MAX_PAGES; page++) {
-        baseUrl.searchParams.set("pageNo", String(page));
-        const res = await fetch(baseUrl.toString());
+        const res = await fetch(`${baseRawUrl}&pageNo=${page}`);
         const json = await res.json();
         const body = json?.response?.body;
         const rawItems = body?.items?.item;
@@ -97,31 +98,21 @@ export async function GET(request: NextRequest) {
       return results;
     }
 
-    // 1) 낙찰결과 API (개발계정 /as/ 경로)
-    const openResultsUrl = new URL(
-      "https://apis.data.go.kr/1230000/ScsbidInfoService/getScsbidListInfoServc"
-    );
-    openResultsUrl.searchParams.set("serviceKey", NARAMARKET_API_KEY);
-    openResultsUrl.searchParams.set("numOfRows", String(PAGE_SIZE));
-    openResultsUrl.searchParams.set("inqryDiv", "1");
-    openResultsUrl.searchParams.set("inqryBgnDt", startDate);
-    openResultsUrl.searchParams.set("inqryEndDt", endDate);
-    openResultsUrl.searchParams.set("type", "json");
+    // 1) 낙찰결과 API (물품/용역)
+    const openResultsRawUrl =
+      `https://apis.data.go.kr/1230000/ScsbidInfoService/getScsbidListInfoServc` +
+      `?serviceKey=${NARAMARKET_API_KEY}&numOfRows=${PAGE_SIZE}&inqryDiv=1` +
+      `&inqryBgnDt=${startDate}&inqryEndDt=${endDate}&type=json`;
 
-    const openItems = await fetchAllPages(openResultsUrl);
+    const openItems = await fetchAllPages(openResultsRawUrl);
 
     // 2) 낙찰정보 API (공사 업종)
-    const awardUrl = new URL(
-      "https://apis.data.go.kr/1230000/ScsbidInfoService/getScsbidListInfoCnstwk"
-    );
-    awardUrl.searchParams.set("serviceKey", NARAMARKET_API_KEY);
-    awardUrl.searchParams.set("numOfRows", String(PAGE_SIZE));
-    awardUrl.searchParams.set("inqryDiv", "1");
-    awardUrl.searchParams.set("inqryBgnDt", startDate);
-    awardUrl.searchParams.set("inqryEndDt", endDate);
-    awardUrl.searchParams.set("type", "json");
+    const awardRawUrl =
+      `https://apis.data.go.kr/1230000/ScsbidInfoService/getScsbidListInfoCnstwk` +
+      `?serviceKey=${NARAMARKET_API_KEY}&numOfRows=${PAGE_SIZE}&inqryDiv=1` +
+      `&inqryBgnDt=${startDate}&inqryEndDt=${endDate}&type=json`;
 
-    const awardItems = await fetchAllPages(awardUrl);
+    const awardItems = await fetchAllPages(awardRawUrl);
 
     let processedCount = 0;
     let errorCount = 0;
