@@ -161,10 +161,11 @@ async function fetchAwardBatch(
   toDate: string
 ): Promise<{ items: NaraAwardItem[]; firstBodyDebug: string }> {
   const PAGE_SIZE = 100;
+  const MAX_PAGES = 5; // 배치당 최대 500건 (60초 제한 대응)
   const results: NaraAwardItem[] = [];
   let firstBodyDebug = "";
 
-  for (let page = 1; page <= 20; page++) {
+  for (let page = 1; page <= MAX_PAGES; page++) {
     const rawUrl =
       `https://apis.data.go.kr/1230000/as/ScsbidInfoService/getScsbidListSttusServc` +
       `?serviceKey=${apiKey}` +
