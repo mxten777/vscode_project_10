@@ -44,6 +44,9 @@ export interface Tender {
   raw_json: Record<string, unknown> | null;
   created_at: string;
   updated_at: string;
+  analysis_level?: 1 | 2 | 3;
+  participants_collected?: boolean;
+  participants_collected_at?: string | null;
   // joined
   agency?: Agency;
   award?: Award;

@@ -27,7 +27,7 @@ export async function GET(
         id, source_tender_id, title, demand_agency_name,
         budget_amount, region_code, region_name, industry_code, industry_name,
         method_type, published_at, deadline_at, status, created_at, updated_at,
-        raw_json,
+        raw_json, analysis_level, participants_collected, participants_collected_at,
         agency:agencies(id, code, name),
         award:awards(id, winner_company_name, awarded_amount, awarded_rate, opened_at)
       `)

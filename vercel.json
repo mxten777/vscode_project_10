@@ -24,6 +24,10 @@
       "schedule": "0 20 * * *"
     },
     {
+      "path": "/api/jobs/collect-participants",
+      "schedule": "0 18 * * *"
+    },
+    {
       "path": "/api/jobs/cleanup",
       "schedule": "0 1 * * 0"
     },

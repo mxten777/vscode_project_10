@@ -39,8 +39,10 @@ export async function POST(request: NextRequest) {
 
     // Supabase RPC: 분석 캐시 전체 재구성
     const { data, error } = await supabase.rpc("rebuild_all_analysis");
-
     if (error) throw error;
+
+    // analysis_level 재계산 (레벨 2/3 자동 승격)
+    const { data: levelResult } = await supabase.rpc("compute_analysis_levels");
 
     await supabase
       .from("collection_logs")
@@ -48,11 +50,11 @@ export async function POST(request: NextRequest) {
         status: "completed",
         finished_at: new Date().toISOString(),
         records_collected: 0,
-        metadata: data,
+        metadata: { ...((data as Record<string, unknown>) ?? {}), level_updates: levelResult },
       })
       .eq("id", logId!);
 
-    return NextResponse.json({ success: true, result: data });
+    return NextResponse.json({ success: true, result: data, level_updates: levelResult });
   } catch (err) {
     const message = err instanceof Error ? err.message : "Unknown error";
     console.error("[rebuild-analysis]", err);

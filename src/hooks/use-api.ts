@@ -70,6 +70,38 @@ export function useTender(id: string | undefined) {
   });
 }
 
+export interface BidParticipant {
+  id: string;
+  tender_id: string;
+  notice_no: string;
+  notice_ord: string;
+  company_name: string;
+  bid_rank: number | null;
+  bid_amount: number | null;
+  bid_rate: number | null;
+  is_winner: boolean;
+  created_at: string;
+}
+
+export interface TenderParticipantsResult {
+  participants: BidParticipant[];
+  data_quality: "real" | "partial" | "insufficient";
+  analysis_level: 1 | 2 | 3;
+  participant_count?: number | null;
+  message?: string;
+  source: "cache" | "live" | "none";
+}
+
+export function useTenderParticipants(tenderId: string | undefined, enabled = true) {
+  return useQuery<TenderParticipantsResult>({
+    queryKey: ["tender-participants", tenderId],
+    queryFn: () => fetcher(`/api/tenders/${tenderId}/participants`),
+    enabled: !!tenderId && enabled,
+    staleTime: 1000 * 60 * 15, // 15분 캐시 (온디맨드 수집이므로 짧게)
+    retry: false,
+  });
+}
+
 // ─── Favorites ─────────────────────────────────────────
 
 export function useFavorites() {

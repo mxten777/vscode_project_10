@@ -2,7 +2,7 @@
 
 import { use } from "react";
 import { useRouter } from "next/navigation";
-import { useTender, useToggleFavorite, useBidRecommendation, useSimilarBids } from "@/hooks/use-api";
+import { useTender, useToggleFavorite, useBidRecommendation, useSimilarBids, useTenderParticipants } from "@/hooks/use-api";
 import { formatKRW, tenderStatusLabel, formatRawDate, getDday } from "@/lib/helpers";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -30,7 +30,11 @@ import {
   Zap,
   Shield,
   Target,
+  Users,
+  Microscope,
+  Info,
 } from "lucide-react";
+import { DataQualityBadge } from "@/components/data-quality-badge";
 import { toast } from "sonner";
 
 export default function TenderDetailPage({
@@ -44,6 +48,12 @@ export default function TenderDetailPage({
   const { addFavorite, removeFavorite } = useToggleFavorite();
   const { data: recommendation, isLoading: recLoading } = useBidRecommendation(id);
   const { data: similarBids, isLoading: similarLoading } = useSimilarBids(id, 5);
+  // 정밀 분석: CLOSED/RESULT 공고 또는 즐겨찾기 공고에서 자동 수집
+  const canLoadParticipants =
+    !!tender && (tender.status !== "OPEN" || !!tender.is_favorited ||
+      (tender.analysis_level !== undefined && tender.analysis_level >= 2));
+  const { data: participantsResult, isLoading: participantsLoading } =
+    useTenderParticipants(id, canLoadParticipants);
 
   const handleToggleFavorite = async () => {
     if (!tender) return;
@@ -183,8 +193,16 @@ export default function TenderDetailPage({
                 </Badge>
                 {tender.method_type && (
                   <Badge variant="outline" className="text-xs border-white/30 text-white/85 bg-white/10">{tender.method_type}</Badge>
-                )}
-                {dday && (
+                )}                {/* 분석 레벨 배지 */}
+                {(tender.analysis_level ?? 1) >= 3 ? (
+                  <Badge variant="outline" className="text-xs border-emerald-400/50 text-emerald-200 bg-emerald-500/15">
+                    <Microscope className="h-3 w-3 mr-1" />정밀 분석
+                  </Badge>
+                ) : (tender.analysis_level ?? 1) >= 2 ? (
+                  <Badge variant="outline" className="text-xs border-blue-400/50 text-blue-200 bg-blue-500/15">
+                    <TrendingUp className="h-3 w-3 mr-1" />후보군
+                  </Badge>
+                ) : null}                {dday && (
                   <span className={`${dday.urgent ? "dday-urgent" : "dday-warning"}`}>{dday.label}</span>
                 )}
               </div>
@@ -503,6 +521,111 @@ export default function TenderDetailPage({
                     </div>
                   ))}
                 </div>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      )}
+
+      {/* 정밀 분석 섹션 — bid_participants 기반 */}
+      {(canLoadParticipants || (tender.analysis_level ?? 1) >= 2) && (
+        <Card className="premium-card overflow-hidden border-emerald-500/20">
+          <CardHeader className="pb-4 bg-emerald-500/5">
+            <div className="flex items-start justify-between gap-3 flex-wrap">
+              <CardTitle className="text-lg font-bold flex items-center gap-2">
+                <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-emerald-500/15">
+                  <Microscope className="h-5 w-5 text-emerald-600 dark:text-emerald-400" />
+                </div>
+                정밀 분석
+              </CardTitle>
+              {participantsResult && (
+                <DataQualityBadge quality={participantsResult.data_quality as "real" | "partial" | "insufficient"} />
+              )}
+            </div>
+            <CardDescription className="text-xs">
+              실데이터 기반 참여업체 및 경쟁 분석
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4 pt-4">
+            {participantsLoading ? (
+              <div className="space-y-3">
+                <Skeleton className="h-14 rounded-xl" />
+                <Skeleton className="h-14 rounded-xl" />
+              </div>
+            ) : !participantsResult || participantsResult.data_quality === "insufficient" ? (
+              <div className="flex flex-col items-center justify-center py-6 text-muted-foreground">
+                <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-muted mb-3">
+                  <Info className="h-5 w-5 opacity-50" />
+                </div>
+                <p className="text-sm font-medium text-foreground">기본 분석 대상</p>
+                <p className="text-xs mt-1 text-center max-w-xs">
+                  {participantsResult?.message ?? "즐겨찾기 추가 시 정밀 분석이 시작됩니다."}
+                </p>
+                {!tender.is_favorited && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="mt-4 gap-1.5 rounded-xl"
+                    onClick={handleToggleFavorite}
+                    disabled={addFavorite.isPending}
+                  >
+                    <Star className="h-3.5 w-3.5" />
+                    즐겨찾기 추가하여 정밀 분석 시작
+                  </Button>
+                )}
+              </div>
+            ) : participantsResult.participants.length === 0 ? (
+              <div className="flex flex-col items-center justify-center py-6 text-muted-foreground">
+                <AlertTriangle className="h-8 w-8 opacity-40 mb-3" />
+                <p className="text-sm">
+                  {participantsResult.message ?? "낙찰 결과 데이터가 아직 없습니다."}
+                </p>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {/* 참여업체 수 요약 */}
+                {participantsResult.participant_count != null && (
+                  <div className="flex items-center gap-2 rounded-xl bg-muted/40 px-4 py-3">
+                    <Users className="h-4 w-4 text-muted-foreground" />
+                    <span className="text-sm">
+                      <span className="font-semibold text-foreground">{participantsResult.participant_count}개 업체</span>
+                      <span className="text-muted-foreground ml-1">참여</span>
+                    </span>
+                    {participantsResult.source === "live" && (
+                      <Badge variant="secondary" className="text-xs ml-auto">실시간 수집</Badge>
+                    )}
+                  </div>
+                )}
+                {/* 참여업체 리스트 */}
+                {participantsResult.participants.map((p) => (
+                  <div key={p.id} className="flex items-center justify-between gap-3 rounded-xl border border-border/50 bg-muted/20 px-4 py-3">
+                    <div className="flex items-center gap-3 min-w-0">
+                      <div className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-xs font-bold ${
+                        p.bid_rank === 1
+                          ? "bg-amber-500/20 text-amber-700 dark:text-amber-400"
+                          : "bg-muted text-muted-foreground"
+                      }`}>
+                        {p.bid_rank ?? "-"}
+                      </div>
+                      <div className="min-w-0">
+                        <p className="text-sm font-medium truncate">{p.company_name}</p>
+                        {p.is_winner && (
+                          <Badge variant="outline" className="text-[10px] mt-0.5 border-amber-500/30 text-amber-700 dark:text-amber-400">
+                            <Trophy className="h-2.5 w-2.5 mr-1" />낙찰
+                          </Badge>
+                        )}
+                      </div>
+                    </div>
+                    <div className="text-right shrink-0">
+                      {p.bid_rate != null && (
+                        <p className="text-sm font-semibold text-primary">{p.bid_rate.toFixed(2)}%</p>
+                      )}
+                      {p.bid_amount != null && (
+                        <p className="text-xs text-muted-foreground">{formatKRW(p.bid_amount)}</p>
+                      )}
+                    </div>
+                  </div>
+                ))}
               </div>
             )}
           </CardContent>
