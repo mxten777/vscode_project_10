@@ -33,15 +33,15 @@ export async function GET(request: NextRequest) {
     // 1. 먼저 analysis_level 재계산
     const { data: levelData } = await supabase.rpc("compute_analysis_levels");
 
-    // 2. 대상 공고 조회: analysis_level >= 2 + participants 미수집 + awards 있음
+    // 2. 대상 공고 조회
+    //    - OPEN: analysis_level >= 2 (마감 7일 이내 / 예산 1억+) + participants 미수집
+    //    - CLOSED/RESULT: 레벨 무관 + awards 있음 + participants 미수집
     const { data: targets, error: tErr } = await supabase
       .from("tenders")
-      .select("id, source_tender_id, analysis_level, budget_amount, deadline_at")
-      .lte("analysis_level", 3)
-      .gte("analysis_level", 2)
+      .select("id, source_tender_id, status, analysis_level, budget_amount, deadline_at")
       .eq("participants_collected", false)
-      .in("status", ["CLOSED", "RESULT"])
-      .order("analysis_level", { ascending: false }) // 레벨 3 우선
+      .or("status.in.(CLOSED,RESULT),and(status.eq.OPEN,analysis_level.gte.2)")
+      .order("status", { ascending: true }) // CLOSED/RESULT 먼저
       .order("budget_amount", { ascending: false, nullsFirst: false })
       .limit(limit);
 

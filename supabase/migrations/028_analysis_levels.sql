@@ -37,14 +37,25 @@ DECLARE
   upgraded3 int := 0;
 BEGIN
   -- ── 레벨 2: 후보군 ─────────────────────────────────────────────────────
-  -- 조건: 마감 7일 이내 OR 예산 1억 이상
+  -- 조건: OPEN + (마감 7일 이내 OR 예산 1억 이상)
+  --       또는 CLOSED/RESULT + awards 존재
   UPDATE public.tenders
   SET analysis_level = 2
   WHERE analysis_level = 1
-    AND status = 'OPEN'
     AND (
-      (deadline_at IS NOT NULL AND deadline_at <= now_ts + INTERVAL '7 days')
-      OR (budget_amount IS NOT NULL AND budget_amount >= 100000000)
+      (
+        status = 'OPEN'
+        AND (
+          (deadline_at IS NOT NULL AND deadline_at <= now_ts + INTERVAL '7 days')
+          OR (budget_amount IS NOT NULL AND budget_amount >= 100000000)
+        )
+      )
+      OR (
+        status IN ('CLOSED', 'RESULT')
+        AND EXISTS (
+          SELECT 1 FROM public.awards a WHERE a.tender_id = tenders.id LIMIT 1
+        )
+      )
     );
   GET DIAGNOSTICS upgraded2 = ROW_COUNT;
 
