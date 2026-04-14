@@ -10,7 +10,7 @@
 
 import { NextRequest, NextResponse } from "next/server";
 import { createServiceClient } from "@/lib/supabase/service";
-import { verifyCronSecret } from "@/lib/helpers";
+import { verifyCronSecret, parseNaraDate } from "@/lib/helpers";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 // 나라장터 API 타입 (getScsbidListSttusServc 기준)
@@ -98,21 +98,14 @@ export async function GET(request: NextRequest) {
       return results;
     }
 
-    // 1) 낙찰결과 API (물품/용역)
-    const openResultsRawUrl =
-      `https://apis.data.go.kr/1230000/as/ScsbidInfoService/getScsbidListSttusServc` +
-      `?serviceKey=${NARAMARKET_API_KEY}&numOfRows=${PAGE_SIZE}&inqryDiv=1` +
-      `&inqryBgnDt=${startDate}&inqryEndDt=${endDate}&type=json`;
-
-    const openItems = await fetchAllPages(openResultsRawUrl);
-
-    // 2) 공사 낙찰정보 API (같은 서비스, 공사 업종 포함)
+    // 낙찰결과 API 수집 (1회 fetch 후 개찰결과·낙찰정보 양쪽 처리)
     const awardRawUrl =
       `https://apis.data.go.kr/1230000/as/ScsbidInfoService/getScsbidListSttusServc` +
       `?serviceKey=${NARAMARKET_API_KEY}&numOfRows=${PAGE_SIZE}&inqryDiv=1` +
       `&inqryBgnDt=${startDate}&inqryEndDt=${endDate}&type=json`;
 
-    const awardItems = await fetchAllPages(awardRawUrl);
+    const openItems = await fetchAllPages(awardRawUrl);
+    const awardItems = openItems; // 같은 데이터를 개찰결과·낙찰정보 양쪽 파이프라인으로 처리
 
     let processedCount = 0;
     let errorCount = 0;
@@ -209,7 +202,7 @@ async function processOpenResult(supabase: SupabaseClient, item: NaramarketBidRe
         demand_organization: item.dminsttNm,
         contract_type: item.cntrctCnclsMthdNm,
         estimated_price: item.presmptPrce,
-        open_datetime: item.rlOpengDt ? parseNaramarketDate(item.rlOpengDt) : null,
+        open_datetime: item.rlOpengDt ? parseNaraDate(item.rlOpengDt) : null,
         raw_json: item,
         updated_at: new Date().toISOString(),
       },
@@ -226,7 +219,7 @@ async function processOpenResult(supabase: SupabaseClient, item: NaramarketBidRe
     .upsert(
       {
         bid_notice_id: bidNotice.id,
-        opened_at: item.rlOpengDt ? parseNaramarketDate(item.rlOpengDt) : new Date().toISOString(),
+        opened_at: item.rlOpengDt ? parseNaraDate(item.rlOpengDt) : new Date().toISOString(),
         total_bidders: item.prtcptCnum || 0,
         valid_bidders: item.prtcptCnum || 0,
         is_successful: true,
@@ -246,7 +239,7 @@ async function processOpenResult(supabase: SupabaseClient, item: NaramarketBidRe
 async function processAwardResult(supabase: SupabaseClient, item: NaramarketBidResult) {
   const sourceBidNoticeId = `${item.bidNtceNo}-${item.bidNtceOrd || "00"}`;
   const participantCount = item.prtcptCnum ? Number(item.prtcptCnum) : null;
-  const awardedAt = item.rlOpengDt ? parseNaramarketDate(item.rlOpengDt) : new Date().toISOString();
+  const awardedAt = item.rlOpengDt ? parseNaraDate(item.rlOpengDt) : new Date().toISOString();
 
   // bid_notices 먼저 확인/생성
   const { data: bidNotice, error: noticeError } = await supabase
@@ -341,30 +334,3 @@ async function processAwardResult(supabase: SupabaseClient, item: NaramarketBidR
   }
 }
 
-/**
- * 나라장터 날짜 파싱 (YYYYMMDD 또는 YYYYMMDDHHmmss)
- */
-function parseNaramarketDate(dateStr: string): string {
-  if (!dateStr) return new Date().toISOString();
-
-  const cleaned = dateStr.replace(/[^0-9]/g, "");
-
-  if (cleaned.length === 8) {
-    // YYYYMMDD
-    const year = cleaned.substring(0, 4);
-    const month = cleaned.substring(4, 6);
-    const day = cleaned.substring(6, 8);
-    return new Date(`${year}-${month}-${day}T00:00:00Z`).toISOString();
-  } else if (cleaned.length === 14) {
-    // YYYYMMDDHHmmss — 나라장터 시각은 KST(+09:00)
-    const year = cleaned.substring(0, 4);
-    const month = cleaned.substring(4, 6);
-    const day = cleaned.substring(6, 8);
-    const hour = cleaned.substring(8, 10);
-    const minute = cleaned.substring(10, 12);
-    const second = cleaned.substring(12, 14);
-    return new Date(`${year}-${month}-${day}T${hour}:${minute}:${second}+09:00`).toISOString();
-  }
-
-  return new Date().toISOString();
-}

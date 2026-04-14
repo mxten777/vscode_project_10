@@ -9,7 +9,7 @@
  */
 import { NextRequest, NextResponse } from "next/server";
 import { createServiceClient } from "@/lib/supabase/service";
-import { verifyCronSecret } from "@/lib/helpers";
+import { verifyCronSecret, parseNaraDate } from "@/lib/helpers";
 
 export const preferredRegion = "icn1";
 // Hobby 플랜 최대 60초 (Pro: 300초)
@@ -282,62 +282,4 @@ async function bulkUpsertAwards(
   }
 
   return { processed: rows.length, skipped, errors: 0 };
-}
-
-async function upsertAwardToTenders(
-  supabase: ReturnType<typeof createServiceClient>,
-  item: NaraAwardItem
-): Promise<"ok" | "skipped"> {
-  if (!item.sucsfbidRate || !item.bidNtceNo) return "skipped";
-
-  const sourceBidNoticeId = `${item.bidNtceNo}-${item.bidNtceOrd || "00"}`;
-  const awardedAt = item.rlOpengDt ? parseNaraDate(item.rlOpengDt) : new Date().toISOString();
-
-  // tenders 매칭
-  const { data: tender } = await supabase
-    .from("tenders")
-    .select("id")
-    .or(`source_tender_id.eq.${item.bidNtceNo},source_tender_id.eq.${sourceBidNoticeId}`)
-    .maybeSingle();
-
-  if (!tender?.id) return "skipped"; // 공고 연결 불가 시 스킵
-
-  await supabase.from("awards").upsert(
-    {
-      tender_id: tender.id,
-      winner_company_name: item.bidwinnrNm || null,
-      bidder_registration_no: item.bidwinnrBizno || null,
-      awarded_amount: item.sucsfbidAmt ? Number(item.sucsfbidAmt) : null,
-      awarded_rate: Number(item.sucsfbidRate),
-      opened_at: awardedAt,
-      participant_count: item.prtcptCnum ? Number(item.prtcptCnum) : null,
-      reserve_price: null,
-      bid_notice_no: item.bidNtceNo,
-      bid_notice_ord: item.bidNtceOrd || "00",
-      result_status: "awarded",
-      raw_json: item,
-      updated_at: new Date().toISOString(),
-    },
-    {
-      onConflict: "tender_id,bidder_registration_no,sequence_no",
-      ignoreDuplicates: false,
-    }
-  );
-  return "ok";
-}
-
-function parseNaraDate(dateStr: string): string {
-  const cleaned = dateStr.replace(/[^0-9]/g, "");
-  if (cleaned.length === 8) {
-    return new Date(
-      `${cleaned.slice(0, 4)}-${cleaned.slice(4, 6)}-${cleaned.slice(6, 8)}T00:00:00+09:00`
-    ).toISOString();
-  }
-  if (cleaned.length === 14) {
-    return new Date(
-      `${cleaned.slice(0, 4)}-${cleaned.slice(4, 6)}-${cleaned.slice(6, 8)}` +
-      `T${cleaned.slice(8, 10)}:${cleaned.slice(10, 12)}:${cleaned.slice(12, 14)}+09:00`
-    ).toISOString();
-  }
-  return new Date().toISOString();
 }

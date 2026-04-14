@@ -9,7 +9,6 @@
  */
 
 import { createServiceClient } from "@/lib/supabase/service";
-import type { CompanyProfileInput } from "@/lib/types";
 
 // ─── 공통 타입 ────────────────────────────────────────────────────────────────
 
@@ -331,84 +330,6 @@ export async function getRegionAnalysis(
   return { data, quality, computed_at: new Date().toISOString() };
 }
 
-// ─── 회사 프로파일 ────────────────────────────────────────────────────────────
-
-/**
- * 회사 프로파일 조회
- */
-export async function getCompanyProfile(
-  userId: string
-): Promise<AnalysisResult<Record<string, unknown>>> {
-  const supabase = createServiceClient();
-
-  const { data, error } = await supabase
-    .from("company_profiles")
-    .select("*")
-    .eq("user_id", userId)
-    .maybeSingle();
-
-  if (error) {
-    return {
-      data: null,
-      quality: "insufficient",
-      message: "프로파일 조회 실패",
-      computed_at: new Date().toISOString(),
-    };
-  }
-
-  return {
-    data: data ?? null,
-    quality: data ? "real" : "insufficient",
-    message: data ? undefined : "회사 프로파일이 등록되지 않았습니다.",
-    computed_at: new Date().toISOString(),
-  };
-}
-
-/**
- * 회사 프로파일 저장/갱신
- */
-export async function upsertCompanyProfile(
-  userId: string,
-  orgId: string,
-  payload: CompanyProfileInput
-): Promise<{ success: boolean; error?: string }> {
-  const supabase = createServiceClient();
-
-  const { error } = await supabase.from("company_profiles").upsert(
-    {
-      user_id: userId,
-      org_id: orgId,
-      company_name: payload.company_name ?? null,
-      industry_codes: payload.industry_codes ?? [],
-      region_codes: payload.region_codes ?? [],
-      preferred_agency_names: payload.preferred_agency_names ?? [],
-      min_budget: payload.min_budget ?? null,
-      max_budget: payload.max_budget ?? null,
-      keywords: payload.keywords ?? [],
-      updated_at: new Date().toISOString(),
-    },
-    { onConflict: "user_id" }
-  );
-
-  if (error) return { success: false, error: error.message };
-  return { success: true };
-}
-
-// ─── 데이터 커버리지 감사 ─────────────────────────────────────────────────────
-
-/**
- * 데이터 커버리지 감사 결과 조회
- * 관리자 페이지 / 운영 상태 확인용
- */
-export async function auditDataCoverage(): Promise<Record<string, unknown>> {
-  const supabase = createServiceClient();
-
-  const { data, error } = await supabase.rpc("audit_data_coverage");
-  if (error) throw error;
-
-  return data as Record<string, unknown>;
-}
-
 // ─── 트렌딩 키워드 ────────────────────────────────────────────────────────────
 
 /**
@@ -427,17 +348,4 @@ export async function getTrendingKeywords(
 
   if (error || !data) return [];
   return data as Array<{ keyword: string; count: number; type: string }>;
-}
-
-// ─── 분석 재구성 트리거 ───────────────────────────────────────────────────────
-
-/**
- * 분석 캐시 전체 재구성 (수동 트리거)
- */
-export async function rebuildAllAnalysis(): Promise<{ success: boolean; result?: unknown; error?: string }> {
-  const supabase = createServiceClient();
-
-  const { data, error } = await supabase.rpc("rebuild_all_analysis");
-  if (error) return { success: false, error: error.message };
-  return { success: true, result: data };
 }

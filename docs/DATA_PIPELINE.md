@@ -1,6 +1,6 @@
 # 나라장터 데이터 수집·저장 파이프라인
 
-> 작성일: 2026-03-10  
+> 작성일: 2026-03-10 / 최종 업데이트: 2026-04-14  
 > 대상: 개발팀 / 고객 설명용
 
 ---
@@ -9,17 +9,93 @@
 
 ```
 [나라장터 공공API]
-      │  매일 KST 09:00 (평일)
-      ▼
-[poll-tenders Job]  → 공고 100건 수집 → Supabase DB 저장
       │
-      │  1시간 후 KST 10:00 (평일)
+      │  KST 09:00 (평일)  ─────────────────────────────────────────────────────────────────
       ▼
-[process-alerts Job] → 신규 공고 분류 → 이메일 알림 발송
+[poll-tenders]  →  tenders 테이블 upsert  →  analysis_level = 1 (기본)
       │
+      │  KST 09:10 (평일)
       ▼
-[사용자 이메일 수신]
+[collect-bid-awards]  →  awards + bid_notices + bid_awards upsert
+      │                   bid_participants (낙찰자 rank=1) upsert
+      │
+      │  KST 11:00 (평일)
+      ▼
+[process-alerts]  →  신규 공고 알림 규칙 매칭  →  이메일 발송
+      │
+      │  KST 03:00 (매일)
+      ▼
+[collect-participants]  →  level2+ CLOSED/RESULT 공고 선별
+      │                    awards에서 참여업체 전체 bid_participants upsert
+      │                    tenders.participants_collected = true
+      │
+      │  KST 05:00 (매일)
+      ▼
+[rebuild-analysis]  →  agency/industry/region_analysis 캐시 재구성
+      │                compute_analysis_levels() 실행
+      │                 └→ level2 승격: OPEN(마감≤7일 or 예산≥1억) + CLOSED/RESULT(+awards)
+      │                 └→ level3 승격: favorites 또는 participants_collected=true
+      │
+      │  온디맨드 (사용자가 공고 상세 조회 시)
+      ▼
+[GET /api/tenders/:id/participants]  →  즐겨찾기/마감임박/예산조건 만족 시
+                                        awards에서 참여업체 수집 + analysis_level → 3
 ```
+
+### Cron 스케줄 요약
+
+| Job | 스케줄 (UTC) | KST | 설명 |
+|-----|-------------|-----|------|
+| poll-tenders | `0 0 * * 1-5` | 09:00 평일 | 신규 공고 수집 |
+| collect-bid-awards | `10 0 * * 1-5` | 09:10 평일 | 낙찰 데이터 수집 |
+| process-alerts | `0 2 * * 1-5` | 11:00 평일 | 알림 발송 |
+| collect-participants | `0 18 * * *` | 03:00 매일 | 참여업체 선별 수집 |
+| rebuild-analysis | `0 20 * * *` | 05:00 매일 | 분석 캐시 재구성 |
+| embed-batch | `0 2 * * 1` | 11:00 월요일 | 벡터 임베딩 |
+| cleanup | `0 1 * * 0` | 10:00 일요일 | 90일 이전 로그 삭제 |
+
+---
+
+## 2. 분석 레벨 3단계 구조 (Analysis Levels)
+
+### 레벨 정의
+
+| 레벨 | 대상 | 수집 범위 | 특징 |
+|------|------|----------|------|
+| **Level 1 (기본)** | 모든 공고 | 공고 기본 정보만 | 검색/목록 표시용 |
+| **Level 2 (후보군)** | OPEN(마감≤7일 or 예산≥1억) + CLOSED/RESULT with awards | 공고+낙찰 데이터 | AI 투찰가 추천 가능 |
+| **Level 3 (정밀)** | 즐겨찾기 또는 participants_collected=true | 공고+낙찰+참여업체 전체 | 정밀 경쟁자 분석 가능 |
+
+### 레벨 승격 로직 (`compute_analysis_levels()` DB 함수)
+
+```sql
+-- Level 2 승격 조건
+OPEN + (deadline ≤ 7일 OR budget ≥ 100,000,000)
+CLOSED or RESULT + (awards 존재)
+
+-- Level 3 승격 조건
+favorites 에 등록됨
+OR participants_collected = true
+```
+
+### bid_participants 수집 흐름
+
+```
+awards 테이블 (낙찰자 1건)
+    ↑
+collect-bid-awards / backfill-awards  →  rank=1 낙찰자만 즉시 저장
+
+awards 테이블 (참여업체 전체)
+    ↑
+collect-participants (매일 18:00 UTC)  →  CLOSED/RESULT + level2+ 선별 수집
+                                          tenders.participants_collected = true
+
+awards 테이블 (온디맨드)
+    ↑
+GET /api/tenders/:id/participants  →  사용자 조회 시 즉시 수집 + level3 승격
+```
+
+---
 
 ---
 

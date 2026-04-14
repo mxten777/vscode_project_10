@@ -1,12 +1,12 @@
 # 기술 부채 및 개선 로드맵
 
-> 작성일: 2026-03-24 / 최종 업데이트: 2026-04-13  
-> 현재 완성도: 약 85–90%  
+> 작성일: 2026-03-24 / 최종 업데이트: 2026-04-14  
+> 현재 완성도: 약 88–92%  
 > 스택: Next.js 16 · React 19 · TypeScript · Supabase · Vercel (Hobby) · Tailwind v4 · Vitest
 
 ---
 
-## 완료된 정비 작업 (2026-04-02 ~ 2026-04-13)
+## 완료된 정비 작업 (2026-04-02 ~ 2026-04-14)
 
 | # | 내용 | 파일 |
 |---|------|------|
@@ -25,6 +25,10 @@
 | ✅ | `.env.local` 리터럴 `\r\n` 제거 (ALERT_FROM_EMAIL, NARA_API_KEY) | `.env.local` |
 | ✅ | `middleware.ts` → `proxy.ts` Next.js 16 마이그레이션 (함수명 `proxy()`) | `src/proxy.ts` |
 | ✅ | Supabase `NEXT_PUBLIC_` 빌드 고정 문제 해소 → `SUPABASE_URL` 런타임 var 추가 | `src/lib/supabase/service.ts` |
+| ✅ | `bid-intelligence-service.ts` 미사용 함수 4개 제거 — `getCompanyProfile`, `upsertCompanyProfile`, `auditDataCoverage`, `rebuildAllAnalysis` | `src/lib/bid-intelligence-service.ts` |
+| ✅ | `parseNaraDate` 공용 헬퍼로 통합 — collect-bid-awards, backfill-awards 로컬 함수 제거 | `src/lib/helpers.ts` |
+| ✅ | `upsertAwardToTenders()` dead code 제거 (bulkUpsertAwards로 대체됨) | `src/app/api/jobs/backfill-awards/route.ts` |
+| ✅ | collect-bid-awards 중복 API fetch 제거 — 동일 URL 2회 호출을 1회로 통합 | `src/app/api/jobs/collect-bid-awards/route.ts` |
 
 ---
 

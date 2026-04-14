@@ -126,3 +126,24 @@ export function formatBudgetCompact(amount: number | null | undefined): string {
   if (amount >= 10_000) return `${Math.round(amount / 10_000)}만`;
   return `${amount.toLocaleString()}원`;
 }
+
+/**
+ * 나라장터 날짜 파싱 (YYYYMMDD 또는 YYYYMMDDHHmmss → UTC ISO)
+ * 나라장터 시각은 KST(+09:00) 기준
+ */
+export function parseNaraDate(dateStr: string): string {
+  if (!dateStr) return new Date().toISOString();
+  const cleaned = dateStr.replace(/[^0-9]/g, "");
+  if (cleaned.length === 8) {
+    return new Date(
+      `${cleaned.slice(0, 4)}-${cleaned.slice(4, 6)}-${cleaned.slice(6, 8)}T00:00:00+09:00`
+    ).toISOString();
+  }
+  if (cleaned.length >= 12) {
+    return new Date(
+      `${cleaned.slice(0, 4)}-${cleaned.slice(4, 6)}-${cleaned.slice(6, 8)}` +
+      `T${cleaned.slice(8, 10)}:${cleaned.slice(10, 12)}:${cleaned.length >= 14 ? cleaned.slice(12, 14) : "00"}+09:00`
+    ).toISOString();
+  }
+  return new Date().toISOString();
+}
