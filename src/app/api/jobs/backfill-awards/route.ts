@@ -259,6 +259,28 @@ async function bulkUpsertAwards(
 
   if (uErr) return { processed: 0, skipped, errors: rows.length, errMsg: `bulk upsert: ${uErr.message}` };
 
+  // bid_participants에도 낙찰자(rank=1) bulk upsert
+  const participantRows = rows
+    .filter((r) => r.winner_company_name && r.bid_notice_no)
+    .map((r) => ({
+      tender_id: r.tender_id,
+      notice_no: r.bid_notice_no,
+      notice_ord: r.bid_notice_ord ?? "00",
+      company_name: r.winner_company_name,
+      bid_rank: 1,
+      bid_amount: r.awarded_amount ?? null,
+      bid_rate: r.awarded_rate ?? null,
+      is_winner: true,
+      raw_json: r.raw_json ?? null,
+    }));
+
+  if (participantRows.length > 0) {
+    await supabase.from("bid_participants").upsert(participantRows, {
+      onConflict: "notice_no,notice_ord,company_name,bid_rank",
+      ignoreDuplicates: true,
+    });
+  }
+
   return { processed: rows.length, skipped, errors: 0 };
 }
 

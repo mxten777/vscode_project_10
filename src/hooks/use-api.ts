@@ -333,7 +333,7 @@ export interface AnalysisEntry {
 }
 
 export function useAnalysisByType(type: "agency" | "industry" | "region", limit = 20) {
-  return useQuery<{ data: AnalysisEntry[] | null; quality: string; message?: string }>({
+  return useQuery<{ data: AnalysisEntry[] | null; quality: string; message?: string; total?: number }>({
     queryKey: ["analysis", type, limit],
     queryFn: () => fetcher(`/api/analysis/${type}?limit=${limit}`),
     staleTime: 1000 * 60 * 60, // 1시간 캐시

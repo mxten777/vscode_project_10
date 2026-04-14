@@ -20,6 +20,8 @@ export interface AnalysisResult<T> {
   quality: DataQuality;
   message?: string;
   computed_at: string;
+  /** 전체 레코드 수 (limit에 관계없이 실제 총 개수) */
+  total?: number;
 }
 
 export interface DashboardSummary {
@@ -241,11 +243,16 @@ export async function getAgencyAnalysis(
 ): Promise<AnalysisResult<AgencyAnalysis[]>> {
   const supabase = createServiceClient();
 
-  const { data, error } = await supabase
-    .from("agency_analysis")
-    .select("*")
-    .order("total_results", { ascending: false })
-    .limit(limit);
+  const [{ data, error }, { count: totalCount }] = await Promise.all([
+    supabase
+      .from("agency_analysis")
+      .select("*")
+      .order("total_results", { ascending: false })
+      .limit(limit),
+    supabase
+      .from("agency_analysis")
+      .select("*", { count: "exact", head: true }),
+  ]);
 
   if (error || !data || data.length === 0) {
     return {
@@ -253,6 +260,7 @@ export async function getAgencyAnalysis(
       quality: "insufficient",
       message: "기관 분석 데이터가 아직 없습니다. 분석 재구성 후 이용 가능합니다.",
       computed_at: new Date().toISOString(),
+      total: 0,
     };
   }
 
@@ -260,7 +268,7 @@ export async function getAgencyAnalysis(
   const quality: DataQuality =
     realCount >= data.length * 0.5 ? "real" : realCount > 0 ? "partial" : "insufficient";
 
-  return { data, quality, computed_at: new Date().toISOString() };
+  return { data, quality, computed_at: new Date().toISOString(), total: totalCount ?? data.length };
 }
 
 /**

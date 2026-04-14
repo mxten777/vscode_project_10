@@ -34,7 +34,13 @@ export async function GET(
       return apiResponse.error("type must be agency|industry|region", 400);
     }
 
-    return apiResponse.success(result);
+    return apiResponse.success({
+      data: result.data,
+      quality: result.quality,
+      message: result.message,
+      total: result.total,
+      computed_at: result.computed_at,
+    });
   } catch (err) {
     const msg = err instanceof Error ? err.message : "Unknown error";
     return apiResponse.error(msg, 500);

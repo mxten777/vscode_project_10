@@ -1,6 +1,6 @@
 # AI 입찰·조달 분석 플랫폼 — 프로젝트 현황 보고서
 
-> 최초 작성: 2026-02-27 / 최종 업데이트: 2026-04-13  
+> 최초 작성: 2026-02-27 / 최종 업데이트: 2026-04-14  
 > 프로젝트: bid-platform  
 > 버전: 1.0.0
 
@@ -240,6 +240,45 @@
 - [x] 테스트 56/56 전부 통과 (`npx vitest run`)
 - [x] 프로덕션 배포 완료 (`bid-platform.vercel.app`) — health/landing/login/cron 200 확인
 
+### Phase 18: AI 입찰 의사결정 플랫폼 고도화 — 낙찰정보 백필 (2026-04-14)
+- [x] Supabase 프로젝트 교체: `pdxjwpskwiinustgzhmb` → `viimjutggzxruabraozb`
+  - `.env.local` 신규 JWT 키로 교체 (로컬 로그인 복구)
+  - Vercel 환경변수 전체 업데이트 (NEXT_PUBLIC_SUPABASE_URL, ANON_KEY, SERVICE_ROLE_KEY)
+- [x] **근본 원인 수정**: `NEXT_PUBLIC_SUPABASE_URL` 빌드-타임 고정 문제 해소
+  - `SUPABASE_URL` 서버-전용 런타임 변수 추가 → `service.ts`에서 우선 참조
+  - poll-tenders "Invalid API key" 오류 해결 (4,900건 정상 수집 확인)
+- [x] Dead code 삭제
+  - `.env.production`, `.env.production.local`, `.env.local.example` 삭제
+  - `src/lib/rate-limit.ts` 삭제 (어디에도 import 없음)
+- [x] `email-provider.ts` `.trim()` 버그 수정 — `ALERT_FROM_EMAIL`, `RESEND_API_KEY`
+- [x] `.env.local` 리터럴 `\r\n` 제거 — `ALERT_FROM_EMAIL`, `NARA_API_KEY`
+- [x] `stripe.ts` `@deprecated stripe` Proxy export 제거
+- [x] `api-response.ts` 미사용 `.unauthorized/.forbidden/.notFound` shortcut 제거
+- [x] `middleware.ts` → `proxy.ts` Next.js 16 마이그레이션 (파일명 + 함수명 `proxy()`)
+- [x] 테스트 56/56 전부 통과 (`npx vitest run`)
+- [x] 프로덕션 배포 완료 (`bid-platform.vercel.app`) — health/landing/login/cron 200 확인
+
+- [x] **Migration 026** `026_ai_decision_platform.sql` 적용
+  - 신규 테이블: `agency_analysis`, `industry_analysis`, `region_analysis`, `bid_participants`
+  - RPC 함수 9개: `rebuild_agency_analysis`, `rebuild_industry_analysis`, `rebuild_region_analysis`, `sync_agency_counts`, `get_dashboard_summary`, `get_ingestion_status`, `get_trending_keywords`, `audit_data_coverage`, `rebuild_all_analysis`
+  - awards 컬럼 추가: `participant_count`, `open_rank`, `reserve_price`, `bid_notice_no`, `bid_notice_ord`, `result_status`
+- [x] **NARA_AWARD_API_KEY** Vercel All Environments 등록 완료
+  - 나라장터 낙찰정보 API (`getScsbidListSttusServc`) 키
+- [x] `collect-bid-awards/route.ts` API 응답 파싱 버그 수정
+  - **근본 원인**: `body.items.item` → 실제로는 `body.items`가 직접 배열 (`firstBodyDebug`로 구조 확인)
+  - `Array.isArray(body?.items)` 분기 추가로 해결
+- [x] `backfill-awards/route.ts` 전면 재작성
+  - bulk upsert 최적화: N개 개별 쿼리 → 2쿼리 (`IN` 조회 + 일괄 upsert)
+  - `onConflict` 수정: `tender_id,bidder_registration_no,sequence_no` (실제 UNIQUE 제약 반영)
+  - `MAX_PAGES = 5` 제한 (Vercel Hobby 60초 타임아웃 대응)
+  - `startMonthsAgo` 파라미터 추가 (월 단위 분할 백필)
+- [x] **낙찰정보 과거 데이터 백필 완료**
+  - `months=1&startMonthsAgo=0`: fetched=2000, processed=284, skipped=1716
+  - `months=1&startMonthsAgo=1`: fetched=2000, processed=6, skipped=1994
+  - `months=1&startMonthsAgo=2`: fetched=2000, processed=0, skipped=2000
+- [x] `SELECT rebuild_all_analysis()` 실행 → `agency.upserted: 2767`
+- [x] `SELECT audit_data_coverage()` 확인 → `awards.with_participants: 473/483 (97.9%)`
+
 ---
 
 ## 3. 해결된 이슈 전체 목록
@@ -312,6 +351,7 @@
 | `SUPABASE_SERVICE_ROLE_KEY` | Supabase 서비스 키 | ✅ 등록 |
 | `CRON_SECRET` | Cron Job 인증 | ✅ 등록 |
 | `NARA_API_KEY` | 나라장터 API 키 (Encoding) | ✅ 등록 |
+| `NARA_AWARD_API_KEY` | 나라장터 낙찰정보 API 키 | ✅ 등록 |
 | `NARA_API_BASE_URL` | 나라장터 API 베이스 URL | ✅ 등록 |
 | `NEXT_PUBLIC_APP_URL` | 앱 프로덕션 URL | ✅ 등록 |
 | `RESEND_API_KEY` | 이메일 알림 (Resend) | ⚠️ 미등록 (이메일 발송 비활성) |
@@ -329,16 +369,19 @@
 ### Git 커밋 이력 (최신 10개)
 
 ```
+a4dec90 feat: add startMonthsAgo param for monthly paginated backfill
+6ad76fe fix: correct onConflict columns for awards upsert
+69ce0f8 perf: bulk upsert awards (2 queries instead of N)
+26fcee9 fix: add MAX_PAGES=5 limit to prevent timeout
+3ebb3c3 fix: handle body.items as direct array (not body.items.item)
+f04d0e0 debug: add firstBodyDebug to expose API response structure
+0c41283 debug: add totalFetched/totalSkipped counters
+[2026-04-13] feat: Phase 17 — Supabase DB 교체 + 기술부채 정리
 [2026-04-03] feat: Phase 15 — team invite, SEO metadata, Zod validation, KST fix
 [2026-04-03] feat: Phase 14 — bid-ai-service FastAPI + pgvector migration 018
 [2026-04-03] feat: Phase 13 — DB migrations 012-017, cleanup cron, collection logs
 [2026-04-03] feat: Phase 12 — Stripe billing (checkout, webhook, pricing UI)
 [2026-04-03] feat: Phase 11 — Upstash Rate Limiter + Security Headers
-d2698f1 chore: remove unused deps + fix header createClient memoization + fix footer a11y
-e992369 fix: wrap ResponsiveContainer in explicit height div to fix Tabs rendering bug
-6dab5b0 fix: bid-analysis API use service client to bypass RLS
-[seed]   scripts/seed-bid-awards.sql 추가 (60건 데모 데이터)
-2215402 chore: remove debug code from poll-tenders
 ```
 
 ---
@@ -422,7 +465,7 @@ node -e "require('child_process').execSync('vercel env add 변수명 production'
 새 대화창에서 아래 문장을 그대로 붙여넣으면 됩니다:
 
 ```
-PROJECT_STATUS.md와 SESSION_LOG_20260324.md를 읽고 현재 상태를 파악한 뒤, 남은 작업 목록에서 이어서 작업해줘.
+PROJECT_STATUS.md와 SESSION_LOG_20260414.md를 읽고 현재 상태를 파악한 뒤, 남은 작업 목록에서 이어서 작업해줘.
 ```
 
 또는 특정 작업을 바로 시작하려면:
@@ -441,7 +484,7 @@ PROJECT_STATUS.md를 읽고, [작업 내용]을 구현해줘.
 |--------|-----|
 | 프로덕션 사이트 | https://bid-platform.vercel.app |
 | Vercel Dashboard | https://vercel.com/dongyeol-jungs-projects/bid-platform |
-| Supabase Dashboard | https://supabase.com/dashboard/project/pdxjwpskwiinustgzhmb |
+| Supabase Dashboard | https://supabase.com/dashboard/project/viimjutggzxruabraozb |
 | GitHub Repository | https://github.com/mxten777/vscode_project_10 |
 | 공공데이터포털 | https://www.data.go.kr/mypage/main.do |
 | Health Check | https://bid-platform.vercel.app/api/health |

@@ -301,6 +301,7 @@ async function processAwardResult(supabase: SupabaseClient, item: NaramarketBidR
         tender_id: tender.id,
         winner_company_name: item.bidwinnrNm || null,
         bidder_registration_no: item.bidwinnrBizno || null,
+        bidder_company_name: item.bidwinnrNm || null,
         awarded_amount: item.sucsfbidAmt ? Number(item.sucsfbidAmt) : null,
         awarded_rate: item.sucsfbidRate ? Number(item.sucsfbidRate) : null,
         opened_at: awardedAt,
@@ -310,6 +311,7 @@ async function processAwardResult(supabase: SupabaseClient, item: NaramarketBidR
         bid_notice_no: item.bidNtceNo,
         bid_notice_ord: item.bidNtceOrd || "00",
         result_status: "awarded",
+        sequence_no: 1,
         raw_json: item,
         updated_at: new Date().toISOString(),
       },
@@ -317,6 +319,24 @@ async function processAwardResult(supabase: SupabaseClient, item: NaramarketBidR
         onConflict: "tender_id,bidder_registration_no,sequence_no",
         ignoreDuplicates: false,
       }
+    );
+  }
+
+  // bid_participants에도 낙찰자(rank=1) 저장
+  if (item.bidwinnrNm && item.bidNtceNo) {
+    await supabase.from("bid_participants").upsert(
+      {
+        tender_id: tender?.id ?? null,
+        notice_no: item.bidNtceNo,
+        notice_ord: item.bidNtceOrd || "00",
+        company_name: item.bidwinnrNm,
+        bid_rank: 1,
+        bid_amount: item.sucsfbidAmt ? Number(item.sucsfbidAmt) : null,
+        bid_rate: item.sucsfbidRate ? Number(item.sucsfbidRate) : null,
+        is_winner: true,
+        raw_json: item,
+      },
+      { onConflict: "notice_no,notice_ord,company_name,bid_rank", ignoreDuplicates: true }
     );
   }
 }

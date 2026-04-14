@@ -142,12 +142,15 @@ export default function AnalyticsPage() {
   const { data: regionAnalysis } = useAnalysisByType("region", 10);
   void useIngestionStatus(); // 상태 프리패치 (배너용)
 
-  // 모의 데이터 (실제로는 analytics에서 가져옴)
+  // KPI: active_agencies는 agency_analysis 실데이터 총 기관 수 우선 사용
   const kpiData = {
     total_bids: (analytics as Record<string, unknown>)?.total_bids as number ?? 0,
     avg_bid_rate: (analytics as Record<string, unknown>)?.avg_bid_rate as number ?? 0,
     total_amount: (analytics as Record<string, unknown>)?.total_amount as number ?? 0,
-    active_agencies: (analytics as Record<string, unknown>)?.active_agencies as number ?? 0,
+    active_agencies:
+      (agencyAnalysis?.total ?? 0) > 0
+        ? (agencyAnalysis?.total as number)
+        : ((analytics as Record<string, unknown>)?.active_agencies as number ?? 0),
   };
 
   // 월별 트렌드 데이터 변환
