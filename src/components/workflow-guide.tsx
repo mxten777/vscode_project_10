@@ -48,7 +48,7 @@ export function WorkflowGuide({
   steps = DEFAULT_STEPS,
 }: WorkflowGuideProps) {
   return (
-    <Card className="premium-card overflow-hidden border-primary/20 bg-[radial-gradient(circle_at_top_left,rgba(99,102,241,0.22),transparent_28%),radial-gradient(circle_at_bottom_right,rgba(56,189,248,0.14),transparent_30%),linear-gradient(135deg,rgba(15,23,42,0.98),rgba(30,41,59,0.94))] text-white shadow-premium-lg">
+    <Card className="overflow-hidden rounded-[1.75rem] border border-slate-800/70 bg-[radial-gradient(circle_at_top_left,rgba(99,102,241,0.22),transparent_28%),radial-gradient(circle_at_bottom_right,rgba(56,189,248,0.14),transparent_30%),linear-gradient(135deg,rgba(15,23,42,0.98),rgba(30,41,59,0.94))] text-white shadow-[0_24px_70px_rgba(15,23,42,0.28)]">
       <CardContent className="px-5 py-5 sm:px-7 sm:py-7 lg:px-8 lg:py-8">
         <div className="flex flex-col gap-6 xl:flex-row xl:items-end xl:justify-between">
           <div className="max-w-3xl">
