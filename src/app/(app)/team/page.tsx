@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { WorkflowGuide, WorkflowNextStepDialog } from "@/components/workflow-guide";
 import {
   Card,
   CardContent,
@@ -55,6 +56,7 @@ export default function TeamPage() {
   const [inviteEmail, setInviteEmail] = useState("");
   const [inviteRole, setInviteRole] = useState<"member" | "admin">("member");
   const [inviteError, setInviteError] = useState("");
+  const [nextStepOpen, setNextStepOpen] = useState(false);
 
   const { data: membersData } = useQuery({
     queryKey: ["team-members"],
@@ -81,6 +83,8 @@ export default function TeamPage() {
       setInviteEmail("");
       setInviteError("");
       qc.invalidateQueries({ queryKey: ["team-invitations"] });
+      qc.invalidateQueries({ queryKey: ["team-members"] });
+      setNextStepOpen(true);
     },
     onError: (err: Error) => {
       setInviteError(err.message);
@@ -108,6 +112,26 @@ export default function TeamPage() {
 
   return (
     <div className="space-y-6 animate-fade-up">
+      <WorkflowNextStepDialog
+        open={nextStepOpen}
+        onOpenChange={setNextStepOpen}
+        title="협업 준비가 됐습니다"
+        description="다음으로 알림 규칙이나 리포트 화면으로 이어가면 팀 단위 검토 흐름이 닫힙니다."
+        primaryAction={{ label: "리포트 화면 보기", href: "/reports" }}
+        secondaryAction={{ label: "알림 규칙 보기", href: "/alerts" }}
+      />
+
+      <WorkflowGuide
+        currentStep={3}
+        title="지금은 검토 기준을 함께 맞추는 단계입니다"
+        description="멤버를 초대한 뒤 역할과 추적 기준을 맞추면 팀 단위 운영으로 이어질 수 있습니다."
+        helper="기대 결과: 개인 검토가 아니라 팀 단위 운영으로 연결됩니다."
+        actions={[
+          { label: "알림 규칙 연결", href: "/alerts", variant: "outline" },
+          { label: "리포트 공유 준비", href: "/reports", variant: "ghost" },
+        ]}
+      />
+
       <Card className="premium-card overflow-hidden border-primary/15 bg-primary/4">
         <CardContent className="px-6 py-6">
           <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">

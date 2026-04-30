@@ -4,6 +4,7 @@ import { useMemo, useState } from "react";
 import { useReportSummary } from "@/hooks/use-api";
 import { formatKRW } from "@/lib/helpers";
 import { useExportPdf } from "@/hooks/use-export-pdf";
+import { WorkflowGuide } from "@/components/workflow-guide";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -103,6 +104,17 @@ export default function ReportsPage() {
 
   return (
     <div className="space-y-8 animate-fade-up">
+      <WorkflowGuide
+        currentStep={3}
+        title="지금은 검토 결과를 정리하고 공유하는 단계입니다"
+        description="기간을 선택하고 전체 규모와 분포를 확인한 뒤 PDF 또는 CSV로 내보내면 됩니다."
+        helper="기대 결과: 팀이 같은 기준으로 흐름을 공유할 수 있습니다."
+        actions={[
+          { label: "분석 화면으로 돌아가기", href: "/analytics", variant: "outline" },
+          { label: "공고 다시 보기", href: "/", variant: "ghost" },
+        ]}
+      />
+
       {/* Header */}
       <div className="rounded-2xl border border-primary/15 bg-primary/4 px-6 py-6 sm:px-8">
         <div className="flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">

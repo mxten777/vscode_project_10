@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { WorkflowGuide, WorkflowNextStepDialog } from "@/components/workflow-guide";
 import {
   useAlertRules,
   useAlertLogs,
@@ -59,6 +60,7 @@ export default function AlertsPage() {
 
   const [dialogOpen, setDialogOpen] = useState(false);
   const [deleteTargetId, setDeleteTargetId] = useState<string | null>(null);
+  const [nextStepOpen, setNextStepOpen] = useState(false);
 
   const [ruleType, setRuleType] = useState<"KEYWORD" | "FILTER">("KEYWORD");
   const [ruleName, setRuleName] = useState("");
@@ -89,6 +91,7 @@ export default function AlertsPage() {
       toast.success("알림 규칙 생성 완료");
       setDialogOpen(false);
       resetForm();
+      setNextStepOpen(true);
     } catch (error) {
       if (error instanceof ApiError && error.code === "PLAN_LIMIT") {
         openModal();
@@ -130,6 +133,24 @@ export default function AlertsPage() {
   return (
     <div className="space-y-8 animate-fade-up">
       <UpgradeModal {...limitModalProps} />
+      <WorkflowNextStepDialog
+        open={nextStepOpen}
+        onOpenChange={setNextStepOpen}
+        title="추적 흐름이 준비됐습니다"
+        description="이제 규칙이 공고를 추적합니다. 다음으로는 발송 이력을 보거나 분석 화면으로 넘어가면 됩니다."
+        primaryAction={{ label: "분석 화면 보기", href: "/analytics" }}
+        secondaryAction={{ label: "규칙 목록 계속 보기", href: "/alerts" }}
+      />
+      <WorkflowGuide
+        currentStep={2}
+        title="지금은 중요한 공고를 놓치지 않는 구조를 만드는 단계입니다"
+        description="추적 기준을 정한 뒤 규칙을 활성화하고 발송 이력을 확인하면 됩니다."
+        helper="기대 결과: 반복 검색 없이 필요한 조건의 공고를 계속 추적할 수 있습니다."
+        actions={[
+          { label: "저장한 공고 보기", href: "/favorites", variant: "outline" },
+          { label: "분석 화면으로 넘어가기", href: "/analytics", variant: "ghost" },
+        ]}
+      />
       {/* Header */}
       <div className="rounded-2xl border border-primary/15 bg-primary/4 px-6 py-6 sm:px-8">
         <div className="flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">

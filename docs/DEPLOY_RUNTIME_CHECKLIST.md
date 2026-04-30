@@ -85,3 +85,55 @@
 - 실제 Railway 배포 상태 검증
 
 위 세 항목은 외부 대시보드 접근 권한이 있어야 완료할 수 있습니다.
+
+## 6. 운영 검증 1분 순서서
+
+배포 직후 아래 순서대로만 확인하면 됩니다.
+
+### 1단계. 운영 콘솔 계정 확인
+
+- Vercel Production 환경 변수에서 `ADMIN_CONSOLE_EMAILS` 값을 확인
+- 실제 운영자 이메일이 포함되어 있는지 확인
+- 누락되어 있으면 저장 후 재배포
+
+예상 결과:
+
+- 운영자 이메일이 allowlist 에 포함되어 있다.
+
+### 2단계. 운영 콘솔 접근 확인
+
+- allowlist 에 포함된 조직 `admin` 계정으로 로그인
+- `/settings/operations` 접속
+- 운영 콘솔 화면이 열리고, `/settings` 로 리다이렉트되지 않는지 확인
+
+예상 결과:
+
+- 수집 상태, 최근 로그, 수동 실행 액션이 보인다.
+
+### 3단계. 결제 업그레이드 흐름 확인
+
+- 조직이 연결된 계정으로 로그인
+- `/settings/billing` 접속
+- Free 플랜이면 업그레이드 버튼 클릭
+- Stripe Checkout 으로 이동되는지 확인
+
+예상 결과:
+
+- `/pricing` 이 아닌 Stripe Checkout 으로 이동된다.
+- 결제 후 돌아오면 `/settings/billing?success=true` 흐름이 동작한다.
+
+### 4단계. Stripe 포털 확인
+
+- 이미 Stripe 고객이 생성된 계정에서 `/settings/billing` 접속
+- `결제 수단 변경 · 구독 관리` 버튼 클릭
+- Stripe Customer Portal 로 이동되는지 확인
+
+예상 결과:
+
+- 포털 세션이 정상 생성되고, 다시 앱으로 복귀할 수 있다.
+
+### 실패 시 바로 볼 위치
+
+- 운영 콘솔 접근 실패: `ADMIN_CONSOLE_EMAILS`, 조직 역할(`admin`) 확인
+- Checkout 실패: Stripe 환경 변수 5개, `NEXT_PUBLIC_APP_URL`, 조직 연결 상태 확인
+- Portal 실패: `subscriptions.stripe_cust_id` 존재 여부와 Stripe Portal 활성화 확인

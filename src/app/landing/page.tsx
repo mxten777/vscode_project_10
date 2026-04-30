@@ -51,6 +51,12 @@ const stats = [
   { value: "평일 자동", label: "공고 수집 운영" },
 ];
 
+const heroSignals = [
+  { label: "먼저 하는 일", value: "후보 공고 좁히기" },
+  { label: "바로 이어지는 일", value: "상세 판단 근거 확인" },
+  { label: "마지막 정리", value: "알림 · 분석 · 공유" },
+];
+
 const outcomes = [
   {
     icon: Clock3,
@@ -66,6 +72,24 @@ const outcomes = [
     icon: FileSearch,
     title: "판단 근거를 모아줍니다",
     desc: "상세 정보와 낙찰 데이터, 분석 화면을 이어서 보여줘 참여 여부 판단을 돕습니다.",
+  },
+];
+
+const processPrompts = [
+  {
+    step: "01",
+    title: "지금 먼저 답해야 할 질문",
+    desc: "오늘 검토할 공고가 무엇인지 먼저 좁혀야 합니다. 랜딩부터 이 우선순위가 읽히도록 구성했습니다.",
+  },
+  {
+    step: "02",
+    title: "다음 화면에서 확인할 판단 근거",
+    desc: "상세 화면으로 넘어간 뒤에는 예산, 기관, 낙찰 정보, 후속 추적 필요 여부를 바로 판단하게 만듭니다.",
+  },
+  {
+    step: "03",
+    title: "액션 후에 이어지는 다음 단계",
+    desc: "저장과 알림에서 멈추지 않고, 다음에 무엇을 해야 하는지 메시지와 모달로 연결되도록 설계했습니다.",
   },
 ];
 
@@ -120,7 +144,7 @@ export default function LandingPage() {
             </p>
             <div className="mt-8 flex flex-col gap-3 sm:flex-row">
               <Link href="/login?tab=signup">
-                <Button size="lg" className="bg-indigo-600 px-8 text-white hover:bg-indigo-700">
+                <Button size="lg" className="btn-premium px-8 text-white">
                   무료로 시작하기 <ArrowRight className="ml-2 size-4" />
                 </Button>
               </Link>
@@ -139,6 +163,17 @@ export default function LandingPage() {
                 <div key={item} className="inline-flex items-center gap-2 text-sm text-foreground/80">
                   <CheckCircle2 className="size-4 text-emerald-500" />
                   {item}
+                </div>
+              ))}
+            </div>
+            <div className="mt-8 grid gap-3 sm:grid-cols-3">
+              {heroSignals.map((signal) => (
+                <div
+                  key={signal.label}
+                  className="rounded-2xl border border-indigo-100/80 bg-white/80 px-4 py-4 shadow-[0_18px_40px_rgba(99,102,241,0.08)] backdrop-blur"
+                >
+                  <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-indigo-500/80">{signal.label}</p>
+                  <p className="mt-2 text-sm font-semibold tracking-tight text-slate-900 sm:text-[15px]">{signal.value}</p>
                 </div>
               ))}
             </div>
@@ -178,6 +213,11 @@ export default function LandingPage() {
                     </div>
                   </div>
                 ))}
+                <div className="rounded-2xl border border-indigo-100 bg-indigo-50/70 p-4">
+                  <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-indigo-600">이 흐름을 본 뒤 기대 결과</p>
+                  <p className="mt-2 text-sm font-semibold tracking-tight text-slate-900">사용자는 기능 목록이 아니라 다음 행동 순서를 이해한 상태로 로그인합니다.</p>
+                  <p className="mt-1 text-sm leading-relaxed text-slate-600">그래서 첫 진입부터 검색, 상세 검토, 저장·알림, 분석으로 이어지는 제품 구조를 더 짧게 받아들일 수 있습니다.</p>
+                </div>
               </div>
             </CardContent>
           </Card>
@@ -193,7 +233,7 @@ export default function LandingPage() {
           </div>
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
             {stats.map((stat) => (
-              <div key={stat.label} className="rounded-2xl border border-border/50 bg-background/80 px-5 py-4 text-center shadow-sm">
+              <div key={stat.label} className="rounded-3xl border border-border/50 bg-background/90 px-5 py-5 text-center shadow-[0_18px_36px_rgba(15,23,42,0.05)]">
                 <div className="text-2xl font-bold tracking-tight text-foreground">{stat.value}</div>
                 <div className="mt-1 text-sm text-muted-foreground">{stat.label}</div>
               </div>
@@ -226,6 +266,34 @@ export default function LandingPage() {
                 </CardContent>
               </Card>
             ))}
+          </div>
+        </div>
+      </section>
+
+      <section className="py-8 sm:py-10">
+        <div className="mx-auto max-w-7xl px-4 sm:px-6">
+          <div className="rounded-[2rem] border border-border/60 bg-[linear-gradient(135deg,rgba(255,255,255,0.95),rgba(241,245,249,0.92))] p-6 shadow-[0_24px_70px_rgba(15,23,42,0.08)] sm:p-8">
+            <div className="max-w-3xl">
+              <p className="text-sm font-semibold uppercase tracking-[0.2em] text-indigo-600">프로세스 중심 메시지</p>
+              <h2 className="mt-3 text-3xl font-bold tracking-tight text-slate-950 sm:text-4xl">
+                화면마다 &quot;지금 무엇을 답해야 하는지&quot;가 먼저 보이도록 정리했습니다
+              </h2>
+              <p className="mt-4 text-base leading-relaxed text-slate-600">
+                좋은 UI 는 기능을 예쁘게 배치하는 것이 아니라, 사용자가 현재 단계에서 어떤 결정을 내려야 하는지 바로 이해하게 만드는 것입니다.
+              </p>
+            </div>
+
+            <div className="mt-8 grid gap-4 lg:grid-cols-3 stagger-children">
+              {processPrompts.map((item) => (
+                <div key={item.step} className="rounded-3xl border border-slate-200 bg-white/90 p-6 shadow-sm">
+                  <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-indigo-600 text-sm font-bold text-white shadow-lg shadow-indigo-600/20">
+                    {item.step}
+                  </div>
+                  <h3 className="mt-4 text-xl font-semibold tracking-tight text-slate-950">{item.title}</h3>
+                  <p className="mt-3 text-sm leading-relaxed text-slate-600">{item.desc}</p>
+                </div>
+              ))}
+            </div>
           </div>
         </div>
       </section>

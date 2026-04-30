@@ -7,6 +7,7 @@ import { ApiError, useCreateAlertRule, useCreateSavedSearch, useDeleteSavedSearc
 import type { SavedSearch } from "@/lib/types";
 import { formatKRW, tenderStatusLabel, formatRawDate, getDday, isNew, formatBudgetCompact } from "@/lib/helpers";
 import { UpgradeModal, usePlanLimit } from "@/components/upgrade-modal";
+import { WorkflowGuide } from "@/components/workflow-guide";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -339,6 +340,17 @@ function HomeContent() {
   return (
     <div className="space-y-6 animate-fade-up">
       <UpgradeModal {...limitModalProps} />
+
+      <WorkflowGuide
+        currentStep={0}
+        title="지금은 후보 공고를 빠르게 좁히는 단계입니다"
+        description="먼저 검토할 공고를 정한 뒤, 다음으로 상세 화면에서 판단 근거를 확인하면 됩니다."
+        helper="기대 결과: 오늘 먼저 검토할 공고를 빠르게 정할 수 있습니다."
+        actions={[
+          { label: "저장한 공고 보기", href: "/favorites", variant: "outline" },
+          { label: "분석 화면 바로가기", href: "/analytics", variant: "ghost" },
+        ]}
+      />
 
       <div className="grid gap-5 xl:grid-cols-[0.95fr_1.05fr]">
         <Card className="premium-card overflow-hidden border-primary/15 bg-linear-to-br from-background via-background to-primary/5">

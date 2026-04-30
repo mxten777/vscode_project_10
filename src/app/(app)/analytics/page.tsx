@@ -4,6 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { useBidAnalytics, useAIInsights, useAnalysisByType, useIngestionStatus } from "@/hooks/use-api";
 import { formatKRW, formatBudgetCompact, getDday } from "@/lib/helpers";
+import { WorkflowGuide } from "@/components/workflow-guide";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
@@ -184,6 +185,17 @@ export default function AnalyticsPage() {
 
   return (
     <div className="space-y-6 animate-fade-up">
+      <WorkflowGuide
+        currentStep={3}
+        title="지금은 전체 흐름 속에서 우선순위를 정리하는 단계입니다"
+        description="전체 흐름을 본 뒤 기관, 업종, 지역 비교로 다음 검토 대상을 정리하면 됩니다."
+        helper="기대 결과: 개별 공고를 넘어서 어디에 시간을 써야 할지 판단할 수 있습니다."
+        actions={[
+          { label: "공고 다시 보러가기", href: "/", variant: "outline" },
+          { label: "알림 규칙 조정", href: "/alerts", variant: "ghost" },
+        ]}
+      />
+
       {/* Header */}
       <div className="grid gap-4 xl:grid-cols-[1.05fr_0.95fr]">
         <Card className="premium-card overflow-hidden border-primary/15 bg-linear-to-br from-background via-background to-primary/5">

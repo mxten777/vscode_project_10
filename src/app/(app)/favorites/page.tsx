@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useFavorites, useToggleFavorite } from "@/hooks/use-api";
 import { formatKRW, tenderStatusLabel } from "@/lib/helpers";
+import { WorkflowGuide } from "@/components/workflow-guide";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
@@ -32,6 +33,17 @@ export default function FavoritesPage() {
 
   return (
     <div className="space-y-8 animate-fade-up">
+      <WorkflowGuide
+        currentStep={2}
+        title="지금은 다시 볼 공고를 정리하는 단계입니다"
+        description="저장한 공고를 다시 열어 판단을 마무리하고, 다음으로 알림이나 분석으로 연결하면 됩니다."
+        helper="기대 결과: 검토가 필요한 공고를 잊지 않고 이어서 볼 수 있습니다."
+        actions={[
+          { label: "알림 규칙 보기", href: "/alerts", variant: "outline" },
+          { label: "분석 화면 보기", href: "/analytics", variant: "ghost" },
+        ]}
+      />
+
       <Card className="premium-card overflow-hidden border-primary/15 bg-primary/4">
         <CardContent className="px-6 py-6">
           <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
@@ -49,7 +61,7 @@ export default function FavoritesPage() {
               </p>
             </div>
 
-            <div className="grid gap-3 sm:grid-cols-2 lg:w-[28rem]">
+            <div className="grid gap-3 sm:grid-cols-2 lg:w-md">
               <div className="rounded-2xl border border-border/50 bg-background/80 px-4 py-3">
                 <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">추천 사용 방식</p>
                 <p className="mt-1 text-sm font-semibold">검토 예정 공고를 먼저 모아두기</p>

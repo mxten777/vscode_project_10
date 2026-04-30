@@ -1,6 +1,6 @@
 "use client";
 
-import { use } from "react";
+import { use, useState } from "react";
 import { useRouter } from "next/navigation";
 import { ApiError, useTender, useToggleFavorite, useBidRecommendation, useSimilarBids, useTenderParticipants } from "@/hooks/use-api";
 import { formatKRW, tenderStatusLabel, formatRawDate, getDday } from "@/lib/helpers";
@@ -34,6 +34,7 @@ import {
 } from "lucide-react";
 import { DataQualityBadge } from "@/components/data-quality-badge";
 import { UpgradeModal, usePlanLimit } from "@/components/upgrade-modal";
+import { WorkflowGuide, WorkflowNextStepDialog } from "@/components/workflow-guide";
 import { toast } from "sonner";
 
 export default function TenderDetailPage({
@@ -43,6 +44,7 @@ export default function TenderDetailPage({
 }) {
   const { id } = use(params);
   const router = useRouter();
+  const [favoriteGuideOpen, setFavoriteGuideOpen] = useState(false);
   const { limitModalProps, openModal } = usePlanLimit("즐겨찾기", 50);
   const { data: tender, isLoading, error } = useTender(id);
   const { addFavorite, removeFavorite } = useToggleFavorite();
@@ -64,6 +66,7 @@ export default function TenderDetailPage({
       } else {
         await addFavorite.mutateAsync(tender.id);
         toast.success("즐겨찾기 추가");
+        setFavoriteGuideOpen(true);
       }
     } catch (error) {
       if (error instanceof ApiError && error.code === "PLAN_LIMIT") {
@@ -151,6 +154,24 @@ export default function TenderDetailPage({
   return (
     <div className="space-y-6 animate-fade-up">
       <UpgradeModal {...limitModalProps} />
+      <WorkflowNextStepDialog
+        open={favoriteGuideOpen}
+        onOpenChange={setFavoriteGuideOpen}
+        title="검토 대상에 올렸습니다"
+        description="다음으로는 알림으로 추적을 연결하거나 저장 목록에서 검토를 이어가면 됩니다."
+        primaryAction={{ label: "알림 규칙 만들기", href: "/alerts" }}
+        secondaryAction={{ label: "저장한 공고 보기", href: "/favorites" }}
+      />
+      <WorkflowGuide
+        currentStep={1}
+        title="지금은 참여 판단 근거를 확인하는 단계입니다"
+        description="상태, 예산, 기관, 낙찰 정보를 확인한 뒤 저장할지 알림으로 추적할지 결정하면 됩니다."
+        helper={`기대 결과: ${nextAction}`}
+        actions={[
+          { label: "저장 목록 보기", href: "/favorites", variant: "outline" },
+          { label: "알림으로 추적 연결", href: "/alerts", variant: "ghost" },
+        ]}
+      />
       {/* Top Bar */}
       <div className="flex items-center justify-between">
         <Button variant="ghost" size="sm" className="gap-1 rounded-xl hover:bg-primary/5 hover:text-primary" onClick={() => router.back()}>
