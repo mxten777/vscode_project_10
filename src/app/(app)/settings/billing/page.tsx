@@ -16,6 +16,7 @@ type SubInfo = {
   current_period_end: string | null;
   cancel_at_period_end: boolean;
   has_stripe: boolean;
+  requiresOrganization?: boolean;
 };
 
 const PLAN_META = {
@@ -38,13 +39,33 @@ export default function BillingSettingsPage() {
   const [loadingSub, setLoadingSub] = useState(true);
   const [portalLoading, setPortalLoading] = useState(false);
   const [upgradeLoading, setUpgradeLoading] = useState<string | null>(null);
+  const [subscriptionError, setSubscriptionError] = useState<string | null>(null);
 
   useEffect(() => {
-    fetch("/api/billing/subscription")
-      .then((r) => r.json())
-      .then(setSub)
-      .catch(() => toast.error("구독 정보를 불러오지 못했습니다"))
-      .finally(() => setLoadingSub(false));
+    async function loadSubscription() {
+      try {
+        const response = await fetch("/api/billing/subscription");
+        const data = await response.json();
+
+        if (!response.ok) {
+          const message = data?.message ?? "구독 정보를 불러오지 못했습니다";
+          setSubscriptionError(message);
+          toast.error(message);
+          return;
+        }
+
+        setSub(data);
+        setSubscriptionError(null);
+      } catch {
+        const message = "구독 정보를 불러오지 못했습니다";
+        setSubscriptionError(message);
+        toast.error(message);
+      } finally {
+        setLoadingSub(false);
+      }
+    }
+
+    void loadSubscription();
   }, []);
 
   const handleUpgrade = async (plan: "pro" | "enterprise") => {
@@ -121,6 +142,11 @@ export default function BillingSettingsPage() {
               <Loader2 className="h-4 w-4 animate-spin" />
               불러오는 중...
             </div>
+          ) : subscriptionError ? (
+            <div className="flex items-center gap-2 text-sm text-destructive">
+              <AlertTriangle className="h-4 w-4 shrink-0" />
+              {subscriptionError}
+            </div>
           ) : sub ? (
             <div className="space-y-4">
               {/* Plan badge */}
@@ -145,6 +171,13 @@ export default function BillingSettingsPage() {
                     ? `⚠️ ${formatDate(sub.current_period_end)}에 구독이 만료됩니다`
                     : `다음 결제일: ${formatDate(sub.current_period_end)}`}
                 </p>
+              )}
+
+              {sub.requiresOrganization && (
+                <div className="flex items-center gap-2 text-sm text-amber-600 dark:text-amber-400">
+                  <AlertTriangle className="h-4 w-4 shrink-0" />
+                  결제와 업그레이드는 조직이 연결된 계정에서 사용할 수 있습니다.
+                </div>
               )}
 
               {/* 결제 실패 경고 */}
@@ -176,7 +209,7 @@ export default function BillingSettingsPage() {
       </Card>
 
       {/* 플랜 업그레이드 (유료 플랜 미구독 시) */}
-      {sub && sub.plan === "free" && (
+      {sub && sub.plan === "free" && !sub.requiresOrganization && (
         <>
           <Separator />
           <div className="space-y-4">

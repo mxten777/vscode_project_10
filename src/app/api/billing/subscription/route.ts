@@ -3,6 +3,17 @@ import { getAuthContext } from "@/lib/auth-context";
 import { createServiceClient } from "@/lib/supabase/service";
 import { errorResponse, successResponse } from "@/lib/api-response";
 
+function buildFreeSubscription(requiresOrganization = false) {
+  return {
+    plan: "free" as const,
+    status: "active",
+    current_period_end: null,
+    cancel_at_period_end: false,
+    has_stripe: false,
+    requiresOrganization,
+  };
+}
+
 /**
  * GET /api/billing/subscription
  * 현재 org의 구독 정보 반환
@@ -15,7 +26,7 @@ export async function GET(request: NextRequest) {
   const { orgId } = ctx;
 
   if (!orgId) {
-    return errorResponse("NO_ORG", "소속 조직이 없습니다.", 400);
+    return successResponse(buildFreeSubscription(true));
   }
 
   const supabase = createServiceClient();
@@ -27,13 +38,7 @@ export async function GET(request: NextRequest) {
 
   if (error || !sub) {
     // 구독 레코드 없음 → free plan
-    return successResponse({
-      plan: "free",
-      status: "active",
-      current_period_end: null,
-      cancel_at_period_end: false,
-      has_stripe: false,
-    });
+    return successResponse(buildFreeSubscription());
   }
 
   return successResponse({

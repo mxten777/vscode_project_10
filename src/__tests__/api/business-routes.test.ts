@@ -40,6 +40,7 @@ vi.mock("@/lib/stripe", () => ({
 import { GET as favoritesGet } from "@/app/api/favorites/route";
 import { POST as favoritesPost } from "@/app/api/favorites/[tenderId]/route";
 import { POST as checkoutPost } from "@/app/api/billing/checkout/route";
+import { GET as subscriptionGet } from "@/app/api/billing/subscription/route";
 import { POST as signupPost } from "@/app/api/auth/signup/route";
 import { GET as companyProfileGet } from "@/app/api/company-profile/route";
 import { GET as reportsSummaryGet } from "@/app/api/reports/summary/route";
@@ -220,6 +221,31 @@ describe("company profile route", () => {
     expect(eqOrgMock).toHaveBeenCalledWith("org_id", "org-1");
     expect(eqUserMock).toHaveBeenCalledWith("user_id", "user-1");
     expect(response.status).toBe(200);
+  });
+});
+
+describe("billing subscription route", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it("조직이 없어도 free 플랜 fallback 반환", async () => {
+    getAuthContextMock.mockResolvedValue({
+      user: { id: "user-1", email: "user@example.com" },
+      orgId: null,
+    });
+
+    const response = await subscriptionGet({} as never);
+
+    expect(response.status).toBe(200);
+    await expect(response.json()).resolves.toEqual({
+      plan: "free",
+      status: "active",
+      current_period_end: null,
+      cancel_at_period_end: false,
+      has_stripe: false,
+      requiresOrganization: true,
+    });
   });
 });
 
