@@ -243,6 +243,7 @@ function StatusRow({
  */
 export function LastUpdatedInline() {
   const { data: status } = useIngestionStatus();
+  const currentTime = useCurrentTime();
 
   const lastAt = status?.tenders.last_success_at;
 
@@ -250,7 +251,7 @@ export function LastUpdatedInline() {
     <span className="inline-flex items-center gap-1 text-xs text-muted-foreground">
       <Clock className="h-3 w-3" />
       {lastAt
-        ? `최근 수집: ${formatRelativeTime(lastAt)}`
+        ? `최근 수집: ${formatRelativeTime(lastAt, currentTime)}`
         : "수집 정보 없음"}
     </span>
   );
