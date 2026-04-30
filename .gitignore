@@ -12,6 +12,8 @@
 
 # testing
 /coverage
+/playwright-report
+/test-results
 
 # next.js
 /.next/
@@ -52,4 +54,5 @@ collect-data.ps1
 debug-api-mapping.ps1
 test-api-direct.ps1
 test-inqryDiv.ps1
+test-results/
 nara-api-response.json

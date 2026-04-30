@@ -16,11 +16,16 @@ export async function GET() {
     const ctx = await getAuthContext();
     if ("error" in ctx) return ctx.error;
 
-    const { supabase, user } = ctx;
+    const { supabase, user, orgId } = ctx;
+
+    if (!orgId) {
+      return errorResponse("NO_ORG", "조직에 가입되어 있지 않습니다", 400);
+    }
 
     const { data, error } = await supabase
       .from("alert_rules")
       .select("*")
+      .eq("org_id", orgId)
       .eq("user_id", user.id)
       .order("created_at", { ascending: false });
 
@@ -55,6 +60,7 @@ export async function POST(request: NextRequest) {
       const { count } = await supabase
         .from("alert_rules")
         .select("*", { count: "exact", head: true })
+        .eq("org_id", orgId)
         .eq("user_id", user.id);
       if ((count ?? 0) >= limit) {
         return errorResponse(

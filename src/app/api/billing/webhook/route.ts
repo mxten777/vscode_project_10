@@ -1,6 +1,7 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextRequest } from "next/server";
 import { getStripe, priceIdToPlan } from "@/lib/stripe";
 import { createServiceClient } from "@/lib/supabase/service";
+import { errorResponse, successResponse } from "@/lib/api-response";
 import type Stripe from "stripe";
 
 // Stripe Webhook은 raw body가 필요 → body parser 비활성화
@@ -21,13 +22,13 @@ export async function POST(request: NextRequest) {
   const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET;
   if (!webhookSecret) {
     console.error("STRIPE_WEBHOOK_SECRET 미설정");
-    return NextResponse.json({ error: "Webhook secret not configured" }, { status: 500 });
+    return errorResponse("WEBHOOK_SECRET_MISSING", "Webhook secret not configured", 500);
   }
 
   const body = await request.text();
   const signature = request.headers.get("stripe-signature");
   if (!signature) {
-    return NextResponse.json({ error: "Missing stripe-signature" }, { status: 400 });
+    return errorResponse("MISSING_SIGNATURE", "Missing stripe-signature", 400);
   }
 
   let event: Stripe.Event;
@@ -35,7 +36,7 @@ export async function POST(request: NextRequest) {
     event = getStripe().webhooks.constructEvent(body, signature, webhookSecret);
   } catch (err) {
     console.error("Stripe Webhook 서명 검증 실패:", err);
-    return NextResponse.json({ error: "Invalid signature" }, { status: 400 });
+    return errorResponse("INVALID_SIGNATURE", "Invalid signature", 400);
   }
 
   const supabase = createServiceClient();
@@ -123,10 +124,10 @@ export async function POST(request: NextRequest) {
     }
   } catch (err) {
     console.error(`Webhook 처리 오류 [${event.type}]:`, err);
-    return NextResponse.json({ error: "Webhook handler failed" }, { status: 500 });
+    return errorResponse("WEBHOOK_HANDLER_FAILED", "Webhook handler failed", 500);
   }
 
-  return NextResponse.json({ received: true });
+  return successResponse({ received: true });
 }
 
 // ── 구독 상태 동기화 헬퍼 ─────────────────────────────────────

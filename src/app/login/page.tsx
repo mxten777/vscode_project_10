@@ -17,7 +17,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Shield,
   Zap,
-  TrendingUp,
+  Search,
   Bell,
   Eye,
   EyeOff,
@@ -29,35 +29,35 @@ import { toast } from "sonner";
 
 const features = [
   {
-    icon: TrendingUp,
-    title: "AI 입찰 분석",
-    desc: "공공 입찰 공고를 AI로 자동 분석하여 최적의 입찰 기회를 발견합니다",
+    icon: Search,
+    title: "필요한 공고를 빠르게 찾습니다",
+    desc: "키워드, 기관, 업종, 예산 기준으로 오늘 검토할 공고를 빠르게 좁힙니다",
     color: "from-indigo-500/20 to-blue-500/20",
   },
   {
     icon: Bell,
-    title: "실시간 알림",
-    desc: "관심 키워드에 맞는 새 공고가 올라오면 즉시 알림을 보내드립니다",
+    title: "놓치지 않게 추적합니다",
+    desc: "관심 키워드와 조건을 규칙으로 저장해 중요한 공고를 반복 검색 없이 확인합니다",
     color: "from-violet-500/20 to-purple-500/20",
   },
   {
     icon: Shield,
-    title: "안전한 데이터",
-    desc: "Supabase RLS 기반의 철저한 데이터 보안을 제공합니다",
+    title: "검토 근거를 한곳에 모읍니다",
+    desc: "상세 정보와 결과 데이터, 분석 정보를 같은 흐름 안에서 이어서 확인할 수 있습니다",
     color: "from-emerald-500/20 to-teal-500/20",
   },
   {
     icon: Zap,
-    title: "빠른 검색",
-    desc: "나라장터 전체 공고를 빠르고 정확하게 검색합니다",
+    title: "반복 업무를 줄입니다",
+    desc: "공고 탐색, 저장, 알림, 분석까지 자주 쓰는 업무를 한 제품 안에서 정리합니다",
     color: "from-amber-500/20 to-orange-500/20",
   },
 ];
 
 const stats = [
-  { value: "10K+", label: "공공 입찰 공고" },
-  { value: "99.9%", label: "서비스 가동률" },
-  { value: "실시간", label: "데이터 수집" },
+  { value: "4,900+", label: "누적 수집 공고" },
+  { value: "280+", label: "누적 낙찰 데이터" },
+  { value: "평일 자동", label: "공고 수집 운영" },
 ];
 
 export default function LoginPage() {
@@ -197,16 +197,16 @@ function LoginContent() {
             <div className="space-y-5">
               <div className="inline-flex items-center gap-2 rounded-full bg-white/10 backdrop-blur-sm border border-white/10 px-4 py-1.5 text-sm font-medium">
                 <Sparkles className="h-3.5 w-3.5 text-amber-300" />
-                AI 기반 자동 분석 시스템
+                공고 탐색과 검토를 정리하는 입찰 지원 서비스
               </div>
               <h1 className="text-5xl xl:text-6xl font-extrabold leading-[1.1] tracking-tight">
-                공공 입찰의
+                공공 입찰 검토를
                 <br />
-                <span className="bg-linear-to-r from-indigo-300 via-blue-200 to-violet-300 bg-clip-text text-transparent">새로운 패러다임</span>
+                <span className="bg-linear-to-r from-indigo-300 via-blue-200 to-violet-300 bg-clip-text text-transparent">더 빠르고 명확하게</span>
               </h1>
               <p className="text-lg text-white/60 leading-relaxed max-w-md">
-                AI 기반 실시간 분석으로 최적의 입찰 기회를
-                놓치지 마세요. 데이터가 말해주는 인사이트.
+                필요한 공고를 먼저 찾고, 판단 근거를 확인하고,
+                중요한 공고를 놓치지 않게 추적하는 흐름을 한곳에서 시작합니다.
               </p>
             </div>
 
@@ -239,7 +239,7 @@ function LoginContent() {
 
           {/* Footer */}
           <p className="text-xs text-white/30">
-            &copy; 2026 BAIKAL BidSight — AI 입찰·조달 분석 플랫폼
+            &copy; 2026 BidSight — 공공입찰 공고 탐색과 선별 지원
           </p>
         </div>
       </div>
@@ -262,7 +262,7 @@ function LoginContent() {
             <CardHeader className="text-center pb-2 pt-8">
               <CardTitle className="text-2xl font-bold tracking-tight">환영합니다</CardTitle>
               <CardDescription className="text-base">
-                계정에 로그인하거나 새로 가입하세요
+                공고 탐색과 추적을 시작하려면 로그인하거나 새로 가입하세요
               </CardDescription>
             </CardHeader>
             <CardContent className="px-8 pb-8">

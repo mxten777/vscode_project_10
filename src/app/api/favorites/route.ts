@@ -1,4 +1,3 @@
-import { NextRequest } from "next/server";
 import { getAuthContext } from "@/lib/auth-context";
 import {
   successResponse,
@@ -10,16 +9,21 @@ import {
  * GET /api/favorites
  * 즐겨찾기 목록
  */
-export async function GET(_request: NextRequest) {
+export async function GET() {
   try {
     const ctx = await getAuthContext();
     if ("error" in ctx) return ctx.error;
 
-    const { supabase, user } = ctx;
+    const { supabase, user, orgId } = ctx;
+
+    if (!orgId) {
+      return errorResponse("NO_ORG", "조직에 가입되어 있지 않습니다", 400);
+    }
 
     const { data, error } = await supabase
       .from("favorites")
       .select("*, tender:tenders(*, agency:agencies(*))")
+      .eq("org_id", orgId)
       .eq("user_id", user.id)
       .order("created_at", { ascending: false });
 

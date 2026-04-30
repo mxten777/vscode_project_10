@@ -1,31 +1,88 @@
-# 🏢 AI 입찰·조달 분석 플랫폼
+# BidSight
 
 <div align="center">
 
-**나라장터 입찰 공고를 자동으로 수집·분석하고, 맞춤 알림을 제공하는 SaaS 플랫폼**
+**공공입찰 공고를 자동으로 모으고, 필요한 공고만 빠르게 찾고, 놓치지 않게 도와주는 입찰 지원 서비스**
 
 [![Next.js](https://img.shields.io/badge/Next.js-16-black)](https://nextjs.org/)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.0-blue)](https://www.typescriptlang.org/)
 [![Supabase](https://img.shields.io/badge/Supabase-Latest-green)](https://supabase.com)
 [![TailwindCSS](https://img.shields.io/badge/TailwindCSS-v4-38bdf8)](https://tailwindcss.com/)
-[![Production Ready](https://img.shields.io/badge/Status-Production%20Ready-success)](https://github.com)
+[![Operational Core](https://img.shields.io/badge/Status-Operational%20Core-0f766e)](https://github.com)
 
 </div>
 
 ---
 
+## 빠른 이해
+
+### 이 서비스는 누구를 위한 것인가
+
+BidSight는 나라장터 공고를 반복적으로 확인해야 하는 입찰 담당자, 영업 담당자, 컨설턴트를 위한 서비스입니다.
+
+특히 아래 같은 상황에서 의미가 있습니다.
+
+- 매일 여러 공고를 직접 뒤져야 한다
+- 기관, 업종, 예산 조건에 맞는 공고만 빨리 보고 싶다
+- 중요한 공고를 놓치지 않고 확인하고 싶다
+- 낙찰 데이터와 경쟁 정보를 근거로 참여 여부를 판단하고 싶다
+
+### 무엇을 해결하나
+
+클라이언트 입장에서 핵심은 기능 수가 아니라 아래 4가지입니다.
+
+- 공고를 대신 모아준다
+- 필요한 공고만 빠르게 걸러준다
+- 놓치지 않게 알려준다
+- 참여할지 판단할 근거를 준다
+
+### 지금 바로 이해해야 할 핵심 효익
+
+| 클라이언트가 얻는 것 | 설명 |
+|------|------|
+| 검색 시간 절감 | 나라장터 공고를 직접 훑는 시간을 줄입니다. |
+| 공고 누락 감소 | 즐겨찾기와 알림으로 중요한 공고를 놓치지 않게 합니다. |
+| 검토 우선순위 정리 | 기관, 업종, 예산 기준으로 공고를 빠르게 선별합니다. |
+| 참여 판단 지원 | 낙찰 데이터, 경쟁 정보, 분석 화면으로 판단 근거를 제공합니다. |
+
+### 지금 운영 기준으로 실제 가능한 것
+
+- 동작 중: 공고 검색, 저장 검색, 즐겨찾기, 알림 규칙/이메일, 분석 대시보드, 리포트, 데이터 수집 Cron
+- 운영 마감 필요: AI 서비스 연결, Stripe 결제 운영 설정, 추가 알림 채널
+- 현재 우선순위: 어드민 운영 화면, 리포트 export 후속 흐름, 사용 빈도 높은 API 회귀 확대
+
+### 기능은 이렇게 보면 됩니다
+
+| 묶음 | 포함 기능 |
+|------|------|
+| 공고 탐색 | 검색, 필터, 상세 조회, 즐겨찾기 |
+| 기회 포착 | 맞춤 알림, 최근 수집 상태 확인 |
+| 판단 지원 | 낙찰 데이터, 참여업체 수집, 분석 대시보드, 리포트 |
+
+### 어디부터 읽어야 하나
+
+- 서비스 개요를 3분 안에 파악: [docs/START_HERE.md](docs/START_HERE.md)
+- 현재 실제 상태와 우선순위: [docs/READINESS_REPORT.md](docs/READINESS_REPORT.md)
+- 남아 있는 핵심 부채와 운영 우선순위: [docs/TECH_DEBT.md](docs/TECH_DEBT.md)
+- 고객/파트너에게 서비스 설명: [docs/CLIENT_OVERVIEW.md](docs/CLIENT_OVERVIEW.md)
+- 전체 방향과 단계별 계획: [docs/ROADMAP.md](docs/ROADMAP.md)
+- 사용자 기능 기준 설명: [docs/USER_MANUAL.md](docs/USER_MANUAL.md)
+- 내부 구조와 운영 문서: [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md), [docs/DEPLOYMENT_GUIDE.md](docs/DEPLOYMENT_GUIDE.md)
+- 과거 진행 로그와 스냅샷: [docs/archive/README.md](docs/archive/README.md)
+
+---
+
 ## 📖 프로젝트 소개
 
-공공 입찰 시장에 참여하는 기업과 컨설턴트를 위한 **올인원 입찰 정보 플랫폼**입니다.
+공공 입찰 시장에 참여하는 조직이 공고 탐색, 공고 선별, 알림, 분석까지 한 화면에서 처리할 수 있도록 만든 입찰 지원 플랫폼입니다.
 
 ### 🎯 핵심 기능
 
-- **🔄 자동 수집**: 나라장터 API 기반 실시간 공고 수집 (Vercel Cron)
-- **🔍 고급 검색**: 키워드, 지역, 업종, 예산 범위 다중 필터링
-- **⭐ 즐겨찾기**: 관심 공고 북마크 및 빠른 접근
-- **🔔 맞춤 알림**: 조건별 알림 규칙 생성 → 이메일/카카오 자동 발송
-- **📊 통계 리포트**: 기관별/업종별 입찰 동향 분석
-- **🔒 보안**: Supabase Auth + RLS 기반 멀티테넌시 지원
+- **공고 자동 수집**: 나라장터 공고를 주기적으로 수집해 최신 목록을 유지합니다.
+- **공고 탐색과 선별**: 키워드, 지역, 업종, 예산 기준으로 필요한 공고만 빠르게 찾습니다.
+- **즐겨찾기와 알림**: 관심 공고를 저장하고 조건별 알림으로 누락을 줄입니다.
+- **낙찰/경쟁 분석**: 낙찰 데이터와 참여업체 정보를 바탕으로 검토 우선순위를 정합니다.
+- **대시보드와 리포트**: 기관별, 업종별, 지역별 흐름을 요약해서 보여줍니다.
 
 ### 🚀 기술적 하이라이트
 
@@ -43,12 +100,20 @@
 
 | 문서 | 설명 |
 |------|------|
+| [🗺️ 로드맵](docs/ROADMAP.md) | 클라이언트 가치, 사용자 흐름, UI/UX, 품질 마감 기준을 정리한 단계별 실행 문서 |
+| [🗓️ 1주 실행계획](docs/WEEK_PLAN.md) | 우선순위 작업을 짧은 주기로 끊어 보는 실행표 |
+| [🎤 시연 스크립트](docs/DEMO_SCRIPT.md) | 필요 시 제품 흐름을 설명할 때 참고하는 발표/시연용 문서 |
+| [🧾 고객용 소개](docs/CLIENT_OVERVIEW.md) | 클라이언트/파트너에게 제품을 짧게 설명하는 1페이지 문서 |
+| [🚦 Start Here](docs/START_HERE.md) | 이 프로젝트가 무엇인지 가장 빨리 이해하는 진입 문서 |
+| [🧭 현재 상태](docs/READINESS_REPORT.md) | 실제 운영 기준의 현재 상태와 우선순위 |
 | [🏗️ 아키텍처](docs/ARCHITECTURE.md) | 시스템 설계 및 기술 스택 상세 |
 | [📡 API 명세서](docs/API_SPECIFICATION.md) | REST API 엔드포인트 및 스키마 |
 | [💾 데이터베이스](docs/DATABASE_SCHEMA.md) | 테이블 구조 및 RLS 정책 |
 | [🚢 배포 가이드](docs/DEPLOYMENT_GUIDE.md) | Vercel + Supabase 배포 절차 |
 | [🎨 UI 설계](docs/UI_DESIGN.md) | 화면 구조 및 컴포넌트 명세 |
-| [🛣️ 로드맵](docs/ENHANCEMENT_ROADMAP.md) | 향후 확장 계획 |
+| [👤 사용자 매뉴얼](docs/USER_MANUAL.md) | 제품 기능과 화면 사용법 |
+| [🧱 기술 부채](docs/TECH_DEBT.md) | 남은 작업과 품질 과제 |
+| [🗃️ 아카이브 안내](docs/archive/README.md) | 과거 세션 로그와 스냅샷 문서 위치 |
 
 ---
 
@@ -80,8 +145,8 @@
 | 데이터 소스 | 나라장터 API (`apis.data.go.kr/1230000`) | API 변경 시 `poll-tenders` 라우트만 수정 |
 | 검색 엔진 | PostgreSQL `pg_trgm` 확장 필요 | Supabase Dashboard에서 활성화 |
 | 낙찰 정보 | MVP에서 1:1 관계 (tender ↔ award) | 향후 1:N 관계로 확장 가능 |
-| 카카오 알림 | Mock 구현 (console.log) | Provider 인터페이스 교체로 실발송 전환 |
-| Vercel 플랜 | Hobby 플랜 (Cron 1일 1회) | Pro 플랜 권장 (분 단위 실행) |
+| 추가 알림 채널 | Provider 구조만 준비됨 | 카카오/슬랙 등 운영 연결은 아직 미완료 |
+| Vercel 플랜 | 현재 Cron은 상위 오케스트레이터 2개 기준 | 세부 Job은 내부 호출로 묶음 |
 
 ---
 
@@ -90,7 +155,10 @@
 ```
 bid-platform/
 ├── docs/
-│   └── ENHANCEMENT_ROADMAP.md      # 고도화 로드맵
+│   ├── START_HERE.md               # 문서 진입점
+│   ├── READINESS_REPORT.md         # 현재 상태/우선순위
+│   ├── ARCHITECTURE.md             # 구조 설명
+│   └── archive/                    # 과거 세션 로그/스냅샷 보관
 ├── supabase/
 │   ├── schema.sql                   # DB 스키마 (테이블 + 인덱스 + RLS)
 │   └── migrations/
@@ -102,14 +170,16 @@ bid-platform/
 ├── src/
 │   ├── app/
 │   │   ├── layout.tsx               # 루트 레이아웃
+│   │   ├── landing/page.tsx         # 공개 랜딩
 │   │   ├── login/page.tsx           # 로그인/회원가입
 │   │   ├── (app)/
 │   │   │   ├── layout.tsx           # 앱 레이아웃 (Header + Footer)
-│   │   │   ├── page.tsx             # 메인: 공고 리스트 (검색/필터)
+│   │   │   ├── page.tsx             # 메인 대시보드/공고 리스트
 │   │   │   ├── tenders/[id]/page.tsx # 공고 상세
 │   │   │   ├── favorites/page.tsx   # 즐겨찾기
 │   │   │   ├── alerts/page.tsx      # 알림 관리
-│   │   │   └── reports/page.tsx     # 리포트
+│   │   │   ├── reports/page.tsx     # 리포트
+│   │   │   └── analytics/page.tsx   # 분석 대시보드
 │   │   └── api/
 │   │       ├── auth/{signup,signin,signout}/route.ts
 │   │       ├── tenders/route.ts     # GET 공고 리스트
@@ -120,8 +190,8 @@ bid-platform/
 │   │       ├── alerts/rules/[id]/route.ts # PATCH/DELETE
 │   │       ├── alerts/logs/route.ts # GET 발송 이력
 │   │       ├── reports/summary/route.ts # GET 리포트
-│   │       ├── jobs/poll-tenders/route.ts # 수집 Job
-│   │       ├── jobs/process-alerts/route.ts # 알림 발송 Job
+│   │       ├── jobs/cron-ingest/route.ts      # 수집 오케스트레이터
+│   │       ├── jobs/cron-maintenance/route.ts # 유지보수 오케스트레이터
 │   │       └── health/route.ts
 │   ├── components/
 │   │   ├── ui/                      # shadcn/ui 컴포넌트
@@ -144,7 +214,8 @@ bid-platform/
 │   │   ├── helpers.ts               # 유틸 함수
 │   │   ├── types.ts                 # 도메인 타입
 │   │   └── validations.ts           # Zod 스키마
-│   └── middleware.ts                # 인증 미들웨어
+│   └── proxy.ts                     # 인증/리다이렉트 프록시
+├── tests/e2e/                       # Playwright 회귀 테스트
 ├── vercel.json                      # Cron 설정
 ├── .env.example
 └── .env.local
@@ -188,6 +259,15 @@ cd bid-platform
 # 2. 의존성 설치
 npm install
 
+# 3. 개발 서버 실행
+npm run dev
+
+# 4. 유닛/API 테스트 실행
+npm run test:run
+
+# 5. E2E 테스트 실행
+npm run test:e2e
+
 # 3. 환경 변수 설정
 cp .env.example .env.local
 # .env.local 파일을 열어 아래 키 입력
@@ -207,16 +287,22 @@ NEXT_PUBLIC_SUPABASE_ANON_KEY=eyJhb...
 SUPABASE_SERVICE_ROLE_KEY=eyJhb...  # 서버 전용
 
 # 나라장터 API (필수)
-NARAMARKET_API_KEY=your-api-key-here
+NARA_API_KEY=your-api-key-here
 
-# Resend 이메일 (선택, 없으면 Mock 동작)
+# 낙찰 수집 전용 키 (선택, 없으면 NARA_API_KEY fallback)
+NARA_AWARD_API_KEY=your-award-api-key-here
+
+# Resend 이메일 (선택, 없으면 이메일 발송 비활성)
 RESEND_API_KEY=re_...
+ALERT_FROM_EMAIL=noreply@example.com
 
 # Cron 작업 보안 (임의의 긴 문자열)
 CRON_SECRET=your-random-secret-string-min-32-chars
 
-# 카카오 알림 (현재 Mock, 실구현 시 필요)
-# KAKAO_REST_API_KEY=...
+# 전사 운영 콘솔 접근 허용 이메일 (쉼표 구분)
+ADMIN_CONSOLE_EMAILS=ops@example.com,founder@example.com
+
+# 카카오/슬랙 등 추가 채널은 아직 운영 연결 전
 ```
 
 ### 4️⃣ 초기 데이터 시드 (선택)
@@ -265,9 +351,12 @@ curl -X POST http://localhost:3000/api/jobs/process-alerts \
 - `NEXT_PUBLIC_SUPABASE_URL`
 - `NEXT_PUBLIC_SUPABASE_ANON_KEY`
 - `SUPABASE_SERVICE_ROLE_KEY`
-- `NARAMARKET_API_KEY`
+- `NARA_API_KEY`
+- `NARA_AWARD_API_KEY` (선택)
 - `RESEND_API_KEY`
+- `ALERT_FROM_EMAIL`
 - `CRON_SECRET`
+- `ADMIN_CONSOLE_EMAILS` (쉼표로 구분한 운영 계정 이메일 목록)
 
 **중요**: Production, Preview, Development 모두 체크!
 
@@ -334,7 +423,7 @@ curl https://your-app.vercel.app/api/health
 
 | Method | Endpoint | 설명 | 인증 |
 |--------|----------|------|------|
-| GET | `/api/reports/summary` | 통계 요약 (기간별) | ❌ |
+| GET | `/api/reports/summary` | 통계 요약 (기간별) | ✅ |
 
 ### Cron 작업 (Internal)
 
@@ -349,20 +438,9 @@ curl https://your-app.vercel.app/api/health
 
 ## 🧪 테스트 현황
 
-| 영역 | 상태 | 검증일 |
-|------|------|--------|
-| 회원가입/로그인 | ✅ 정상 | 2026-03-14 |
-| 공고 검색/필터링 | ✅ 정상 | 2026-03-14 |
-| 즐겨찾기 CRUD | ✅ 정상 | 2026-03-14 |
-| 알림 규칙 관리 | ✅ 정상 | 2026-03-14 |
-| 알림 발송 (이메일) | ✅ 정상 | 2026-03-14 |
-| 알림 중복 방지 | ✅ 정상 | 2026-03-14 |
-| 리포트 생성 | ✅ 정상 | 2026-03-14 |
-| Cron 작업 | ✅ 정상 | 2026-03-14 |
-
-**에러 0건**, 모든 핵심 기능 동작 확인 완료 ✓
-
-상세 테스트 보고서: [TEST_REPORT.md](docs/TEST_REPORT.md)
+- Vitest로 API 라우트, 스키마, 분석/cron 유틸 회귀를 지속 검증합니다.
+- Playwright로 공개 페이지와 핵심 로그인 흐름 smoke 회귀를 유지합니다.
+- 현재 테스트 범위의 확장 우선순위는 [docs/TECH_DEBT.md](docs/TECH_DEBT.md) 와 [docs/READINESS_REPORT.md](docs/READINESS_REPORT.md) 기준으로 관리합니다.
 
 ---
 
@@ -371,9 +449,9 @@ curl https://your-app.vercel.app/api/health
 - **디자인 시스템**: shadcn/ui 기반 프로페셔널 컴포넌트
 - **반응형**: 모바일/태블릿/데스크톱 완벽 지원
 - **접근성**: ARIA 라벨 및 키보드 네비게이션 지원
-- **다크모드**: 준비 완료 (활성화 시 자동 적용)
+- **흐름 중심 구조**: 검색 → 선별 → 저장/알림 → 판단 순서로 화면을 재구성
 
-UI 상세 분석: [UI_UX_IMPROVEMENTS.md](docs/UI_UX_IMPROVEMENTS.md)
+UI 상세 분석: [docs/UI_DESIGN.md](docs/UI_DESIGN.md)
 
 ---
 
@@ -395,7 +473,7 @@ UI 상세 분석: [UI_UX_IMPROVEMENTS.md](docs/UI_UX_IMPROVEMENTS.md)
 | **Phase 2** | 검색 고도화 (유사도 점수, 자동완성) | 🟢 높음 |
 | **Phase 3** | 대시보드 차트 (Recharts/Chart.js) | 🟢 높음 |
 | **Phase 4** | AI 예측 분석 (낙찰률 예측) | 🟡 중 |
-| **Phase 5** | 카카오 알림톡 실연동 | 🟢 높음 |
+| **Phase 5** | 추가 알림 채널 운영 연결 | 🟢 높음 |
 | **Phase 6** | Stripe 결제 연동 | 🔴 낮음 |
 
 상세 계획: [ENHANCEMENT_ROADMAP.md](docs/ENHANCEMENT_ROADMAP.md)

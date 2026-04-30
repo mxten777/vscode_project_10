@@ -1,16 +1,19 @@
-import { NextRequest } from "next/server";
 import { getAuthContext } from "@/lib/auth-context";
-import { successResponse, internalErrorResponse } from "@/lib/api-response";
+import { successResponse, errorResponse, internalErrorResponse } from "@/lib/api-response";
 
 /**
  * GET /api/alerts/logs — 알림 발송 이력
  */
-export async function GET(_request: NextRequest) {
+export async function GET() {
   try {
     const ctx = await getAuthContext();
     if ("error" in ctx) return ctx.error;
 
-    const { supabase, user } = ctx;
+    const { supabase, user, orgId } = ctx;
+
+    if (!orgId) {
+      return errorResponse("NO_ORG", "조직에 가입되어 있지 않습니다", 400);
+    }
 
     const { data, error } = await supabase
       .from("alert_logs")
@@ -21,6 +24,7 @@ export async function GET(_request: NextRequest) {
           await supabase
             .from("alert_rules")
             .select("id")
+            .eq("org_id", orgId)
             .eq("user_id", user.id)
         ).data?.map((r) => r.id) ?? []
       )

@@ -98,6 +98,14 @@ describe("alertRuleCreateSchema", () => {
     });
     expect(result.success).toBe(true);
   });
+
+  it("FILTER 타입 + 상태 조건 → 성공", () => {
+    const result = alertRuleCreateSchema.safeParse({
+      type: "FILTER",
+      rule_json: { statuses: ["OPEN"] },
+    });
+    expect(result.success).toBe(true);
+  });
 });
 
 // ─── tenderSearchSchema ─────────────────────────────────

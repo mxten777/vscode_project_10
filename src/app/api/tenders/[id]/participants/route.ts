@@ -24,7 +24,7 @@ export async function GET(
 ) {
   const ctx = await getAuthContext();
   if ("error" in ctx) return ctx.error;
-  const { supabase, user } = ctx;
+  const { supabase, user, orgId } = ctx;
 
   const { id: tenderId } = await params;
 
@@ -39,10 +39,11 @@ export async function GET(
 
   // 2. 즐겨찾기 여부 확인
   let isFavorited = false;
-  if (user) {
+  if (user && orgId) {
     const { data: fav } = await supabase
       .from("favorites")
       .select("id")
+      .eq("org_id", orgId)
       .eq("user_id", user.id)
       .eq("tender_id", tenderId)
       .maybeSingle();

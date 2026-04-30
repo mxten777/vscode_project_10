@@ -1,7 +1,7 @@
 # BidSight 관리자 매뉴얼
 
-> **BidSight — AI 입찰·조달 분석 플랫폼**  
-> 버전: 1.0 | 작성일: 2026-03-01  
+> **BidSight — 공공입찰 검토 지원 서비스**  
+> 버전: 1.1 | 최종 업데이트: 2026-04-30  
 > 대상: 시스템 관리자 / DevOps / 운영팀
 
 ---
@@ -98,22 +98,27 @@
 NEXT_PUBLIC_SUPABASE_URL=https://pdxjwpskwiinustgzhmb.supabase.co
 NEXT_PUBLIC_SUPABASE_ANON_KEY=<anon_key>
 SUPABASE_SERVICE_ROLE_KEY=<service_role_key>
+SUPABASE_URL=https://pdxjwpskwiinustgzhmb.supabase.co
 
 # 나라장터 G2B API (공공데이터포털)
 NARA_API_KEY=<encoding_key_url_encoded>
+NARA_AWARD_API_KEY=<award_api_key_or_empty>
 
 # Cron 보안 토큰
 CRON_SECRET=<random_256bit_hex>
 
 # 이메일 발송 (선택)
-EMAIL_FROM=no-reply@bidsight.co.kr
-SMTP_HOST=smtp.example.com
-SMTP_PORT=587
-SMTP_USER=<smtp_user>
-SMTP_PASS=<smtp_password>
+RESEND_API_KEY=<resend_api_key>
+ALERT_FROM_EMAIL=no-reply@bidsight.co.kr
 
-# 카카오 알림톡 (선택)
-KAKAO_API_KEY=<kakao_api_key>
+# AI / Billing (운영 연결 전이면 비워둘 수 있음)
+AI_SERVICE_URL=https://your-service.railway.app
+AI_SERVICE_API_KEY=<ai_service_key>
+STRIPE_SECRET_KEY=<stripe_secret>
+STRIPE_WEBHOOK_SECRET=<stripe_webhook_secret>
+NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY=<stripe_publishable>
+STRIPE_PRICE_PRO_MONTHLY=<price_id>
+STRIPE_PRICE_ENTERPRISE_MONTHLY=<price_id>
 ```
 
 ### 3.2 Vercel 환경 변수 설정
@@ -239,9 +244,10 @@ bid-platform/
 │   ├── components/         # 공통 컴포넌트
 │   ├── hooks/              # React Query 훅
 │   ├── lib/                # 유틸리티·타입
-│   └── middleware.ts        # 인증 미들웨어 (라우트 보호)
+│   └── proxy.ts            # 인증/리다이렉트 프록시 (Next.js 16)
 ├── supabase/
-│   └── schema.sql          # DB 스키마 전체
+│   ├── schema.sql          # 참고용 스키마 스냅샷
+│   └── migrations/         # 실제 DB 변경 이력의 소스 오브 트루스
 ├── scripts/
 │   └── seed-demo.mjs       # 데모 데이터 시드 스크립트
 ├── docs/                   # 프로젝트 문서
@@ -272,14 +278,13 @@ alert_logs      -- 알림 발송 이력
 ### 6.2 스키마 마이그레이션
 
 ```bash
-# Supabase Dashboard > SQL Editor 에서 직접 실행
-# 또는 supabase CLI 사용 (설치 시)
-
-# 새 마이그레이션 파일 실행
+# Supabase CLI 사용 권장
 supabase db push
-
-# 또는 SQL Editor에서 supabase/schema.sql 수동 실행
 ```
+
+- `supabase/migrations/*.sql` 이 실제 배포 기준입니다.
+- `supabase/schema.sql` 은 스냅샷 참고용으로만 보고, 신규 환경 재현은 마이그레이션 기준으로 진행합니다.
+- `029_expand_collection_logs_for_cron.sql`, `030_fix_sync_agency_counts_safeupdate.sql` 적용 여부는 cron 운영 안정성에 직접 영향을 줍니다.
 
 ### 6.3 tenders 테이블 주요 컬럼
 
@@ -388,8 +393,7 @@ GET /api/tenders?minBudget=10000000&maxBudget=100000000
 |--------|-----------|------|
 | GET | `/api/alerts/rules` | 알림 규칙 목록 |
 | POST | `/api/alerts/rules` | 알림 규칙 생성 |
-| GET | `/api/alerts/rules/[id]` | 알림 규칙 상세 |
-| PUT | `/api/alerts/rules/[id]` | 알림 규칙 수정 |
+| PATCH | `/api/alerts/rules/[id]` | 알림 규칙 수정 |
 | DELETE | `/api/alerts/rules/[id]` | 알림 규칙 삭제 |
 | GET | `/api/alerts/logs` | 알림 발송 이력 |
 
@@ -404,6 +408,8 @@ GET /api/tenders?minBudget=10000000&maxBudget=100000000
 | 메서드 | 엔드포인트 | 설명 | 인증 |
 |--------|-----------|------|------|
 | GET | `/api/health` | 헬스체크 | ❌ |
+| GET/POST | `/api/jobs/cron-ingest` | 수집 오케스트레이터 | CRON_SECRET |
+| GET/POST | `/api/jobs/cron-maintenance` | 유지보수 오케스트레이터 | CRON_SECRET |
 | POST | `/api/jobs/poll-tenders` | 나라장터 공고 수집 | CRON_SECRET |
 | POST | `/api/jobs/process-alerts` | 알림 규칙 처리 | CRON_SECRET |
 
@@ -419,12 +425,12 @@ GET /api/tenders?minBudget=10000000&maxBudget=100000000
 {
   "crons": [
     {
-      "path": "/api/jobs/poll-tenders",
-      "schedule": "0 * * * *"
+      "path": "/api/jobs/cron-ingest",
+      "schedule": "0 0 * * 1-5"
     },
     {
-      "path": "/api/jobs/process-alerts",
-      "schedule": "15 * * * *"
+      "path": "/api/jobs/cron-maintenance",
+      "schedule": "0 2 * * *"
     }
   ]
 }
@@ -432,8 +438,8 @@ GET /api/tenders?minBudget=10000000&maxBudget=100000000
 
 | Job | 스케줄 | 설명 |
 |-----|--------|------|
-| `poll-tenders` | 매시 정각 | 나라장터 API에서 신규 공고 수집 |
-| `process-alerts` | 매시 15분 | 알림 규칙과 신규 공고 매칭 후 발송 |
+| `cron-ingest` | 평일 00:00 UTC | `poll-tenders` + `collect-bid-awards` 순차 실행 |
+| `cron-maintenance` | 매일 02:00 UTC | alerts / analysis / participants 실행 + 요일별 cleanup / embed-batch |
 
 ### 8.2 수동 Job 실행
 
@@ -453,7 +459,8 @@ curl -X POST http://localhost:3000/api/jobs/poll-tenders \
 
 ### 8.3 Cron 실행 이력 확인
 
-- Vercel Dashboard → **Logs** → `cron` 태그 필터
+- Vercel Dashboard → **Crons** 또는 **Logs** → `source:cron` 필터
+- Supabase SQL Editor에서 `collection_logs` 최근 상태를 함께 확인하는 편이 정확합니다.
 
 ### 8.4 CRON_SECRET 교체 방법
 
@@ -478,7 +485,7 @@ curl -X POST http://localhost:3000/api/jobs/poll-tenders \
 |------|------|
 | 사용자 목록 조회 | Dashboard → Authentication → Users |
 | 사용자 삭제 | Users 목록 → 해당 사용자 클릭 → Delete User |
-| 이메일 인증 강제 완료 | Users → Confirm email |
+| 이메일 인증 상태 확인 또는 수동 변경 | Users → Confirm email |
 | 비밀번호 초기화 발송 | Dashboard > SQL Editor에서 `auth.users` 조회 후 처리 |
 | 신규 사용자 생성 | Dashboard → Authentication → Users → Add user |
 
@@ -592,7 +599,7 @@ curl -X POST http://localhost:3000/api/jobs/poll-tenders \
 
 | 원칙 | 구현 방법 |
 |------|----------|
-| 인증 필요 페이지 보호 | `src/middleware.ts` — 비로그인 시 `/login` 리다이렉트 |
+| 인증 필요 페이지 보호 | `src/proxy.ts` — 비로그인 시 `/login` 리다이렉트 |
 | DB Row 수준 보안 | Supabase RLS — 본인 데이터만 접근 |
 | API 인증 | Supabase JWT 검증 (`createClient` 서버사이드) |
 | Cron 보호 | `Authorization: Bearer <CRON_SECRET>` 헤더 검증 |
@@ -600,7 +607,7 @@ curl -X POST http://localhost:3000/api/jobs/poll-tenders \
 
 ### 12.2 미들웨어 라우트 보호
 
-`src/middleware.ts` 에서 인증 필요 경로를 설정합니다:
+`src/proxy.ts` 에서 인증 필요 경로를 설정합니다:
 
 ```typescript
 // 보호되는 경로 (로그인 필요)
@@ -650,7 +657,7 @@ node_modules/
 ```
 1. Supabase Auth 로그 확인 (Dashboard → Auth → Logs)
 2. NEXT_PUBLIC_SUPABASE_ANON_KEY 환경 변수 확인
-3. 사용자 이메일 인증 여부 확인 (Dashboard → Auth → Users)
+3. 사용자 계정 상태 및 세션 생성 여부 확인 (Dashboard → Auth → Users)
 4. Supabase Auth 서비스 상태 확인
 ```
 
@@ -669,9 +676,9 @@ node_modules/
 ```
 1. alert_rules 테이블에 활성화된 규칙 확인
 2. /api/jobs/process-alerts 수동 실행
-3. 이메일 설정 (SMTP_HOST 등) 환경 변수 확인
+3. 이메일 설정 (`RESEND_API_KEY`, `ALERT_FROM_EMAIL`) 환경 변수 확인
 4. alert_logs 테이블에 실패 레코드 있는지 확인
-5. 이메일 발송 서비스 (SendGrid/SMTP) 상태 확인
+5. Resend 상태와 발신 도메인 검증 상태 확인
 ```
 
 ### 13.5 빌드 실패

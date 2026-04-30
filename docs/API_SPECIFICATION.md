@@ -14,12 +14,28 @@
 ### 응답 형식
 
 #### 성공 응답
+
+성공 응답은 엔드포인트 성격에 따라 아래 셋 중 하나를 사용합니다.
+
+- 리스트/페이지네이션 API: `data`, `total`, `page`, `pageSize`
+- 단건/작업 API: 필요한 필드를 그대로 반환
+- 단순 완료 응답: `message` 또는 `success` 포함 객체
+
 ```json
 {
   "data": [...],
   "total": 100,    // PaginatedResponse인 경우
   "page": 1,
   "pageSize": 20
+}
+```
+
+또는:
+
+```json
+{
+  "success": true,
+  "message": "작업 완료"
 }
 ```
 
@@ -543,7 +559,104 @@ GET /api/alerts/logs
 
 ---
 
-## 5. 리포트 (Reports)
+## 5. 저장 검색 (Saved Searches)
+
+### 5.1 저장 검색 목록
+
+```
+GET /api/saved-searches
+```
+
+**인증**: 필수
+
+**처리 로직**:
+1. `getAuthContext()` 로 사용자와 `orgId` 확인
+2. `saved_searches` 를 `org_id`, `user_id` 기준으로 최신순 조회
+3. 최대 8개까지만 반환
+
+**Response (200)**:
+```json
+[
+  {
+    "id": "uuid",
+    "org_id": "uuid",
+    "user_id": "uuid",
+    "name": "서울 OPEN 공고",
+    "query_json": {
+      "keyword": "정보시스템",
+      "statuses": ["OPEN"],
+      "regionCodes": ["11"]
+    },
+    "created_at": "2026-04-30T00:00:00Z",
+    "updated_at": "2026-04-30T00:00:00Z"
+  }
+]
+```
+
+### 5.2 저장 검색 생성
+
+```
+POST /api/saved-searches
+```
+
+**인증**: 필수
+
+**Request Body**:
+```json
+{
+  "name": "서울 OPEN 공고",
+  "query_json": {
+    "keyword": "정보시스템",
+    "statuses": ["OPEN"],
+    "regionCodes": ["11"]
+  }
+}
+```
+
+**에러 응답**:
+| 상황 | Code | Status |
+|---|---|---|
+| 조직 없음 | `NO_ORG` | 400 |
+| 입력 오류 | `VALIDATION_ERROR` | 400 |
+| 최대 개수 초과 | `LIMIT_REACHED` | 400 |
+
+### 5.3 저장 검색 수정
+
+```
+PATCH /api/saved-searches/:id
+```
+
+**인증**: 필수
+
+**Request Body**:
+```json
+{
+  "name": "서울/부산 진행 공고",
+  "query_json": {
+    "statuses": ["OPEN", "RESULT"],
+    "regionCodes": ["11", "26"]
+  }
+}
+```
+
+### 5.4 저장 검색 삭제
+
+```
+DELETE /api/saved-searches/:id
+```
+
+**인증**: 필수
+
+**Response (200)**:
+```json
+{
+  "message": "저장한 검색 삭제 완료"
+}
+```
+
+---
+
+## 6. 리포트 (Reports)
 
 ### 5.1 요약 통계
 
@@ -551,7 +664,7 @@ GET /api/alerts/logs
 GET /api/reports/summary
 ```
 
-**인증**: 불필요 (공개 데이터 기반 집계)
+**인증**: 필수
 
 **Query Parameters**:
 | 파라미터 | 타입 | 설명 |
@@ -560,12 +673,9 @@ GET /api/reports/summary
 | `to` | ISO8601 datetime | 종료일 (선택) |
 
 **처리 로직**:
-1. 조건부 날짜 필터 (`published_at` 기준)
-2. 전체 공고 수 (`SELECT COUNT`)
-3. 예산 합계 (클라이언트 측 reduce — MVP)
-4. 상태 분포 (GROUP BY status)
-5. 기관 TOP 10 (GROUP BY agency.name, COUNT DESC)
-6. 업종 TOP 10 (GROUP BY industry_name, COUNT DESC)
+1. `getAuthContext()` 로 인증 확인
+2. `report_summary(from_date, to_date)` RPC 호출
+3. RPC 결과를 그대로 반환
 
 **Response (200)**:
 ```json
@@ -592,12 +702,70 @@ GET /api/reports/summary
 
 ---
 
-## 6. 배치 작업 (Jobs)
+## 7. 배치 작업 (Jobs)
 
-> Vercel Cron에서 **평일 09:00 UTC**(poll) / **09:30 UTC**(alerts) 에 호출되는 내부 API  
-> (Vercel Hobby 플랜 제한 — 일 1회 한도)
+> 현재 운영 기준은 개별 job 직접 호출보다 `cron-ingest`, `cron-maintenance` 오케스트레이터 중심입니다.
 
-### 6.1 공고 수집 (Poll Tenders)
+### 7.1 수집 오케스트레이터 (Cron Ingest)
+
+```
+GET /api/jobs/cron-ingest
+POST /api/jobs/cron-ingest
+```
+
+**인증**: `Authorization: Bearer <CRON_SECRET>` 필수
+
+**스케줄**: 평일 00:00 UTC
+
+**처리 로직**:
+1. `poll-tenders?maxPages=3&lookbackDays=2` 실행
+2. 성공 시 `collect-bid-awards?lookbackDays=2&maxPages=1&maxItems=25` 실행
+3. step 결과를 순서대로 `results` 배열에 수집
+4. 첫 실패가 발생하면 중단 후 `207` 반환
+
+**Response (200/207)**:
+```json
+{
+  "success": true,
+  "ran_at": "2026-04-30T00:00:00.000Z",
+  "mode": "cron-ingest",
+  "results": [
+    {
+      "name": "poll-tenders",
+      "path": "/api/jobs/poll-tenders?maxPages=3&lookbackDays=2",
+      "ok": true,
+      "status": 200,
+      "body": {
+        "message": "수집 완료"
+      }
+    }
+  ]
+}
+```
+
+---
+
+### 7.2 유지보수 오케스트레이터 (Cron Maintenance)
+
+```
+GET /api/jobs/cron-maintenance
+POST /api/jobs/cron-maintenance
+```
+
+**인증**: `Authorization: Bearer <CRON_SECRET>` 필수
+
+**스케줄**: 매일 02:00 UTC
+
+**처리 로직**:
+1. 평일: `process-alerts` 포함
+2. 매일: `rebuild-analysis`, `collect-participants` 실행
+3. 월요일: `embed-batch` 추가
+4. 일요일: `cleanup` 추가
+5. 하나라도 실패하면 전체 상태 코드는 `207`
+
+---
+
+### 7.3 공고 수집 (Poll Tenders)
 
 ```
 POST /api/jobs/poll-tenders
@@ -622,9 +790,12 @@ POST /api/jobs/poll-tenders
 {
   "message": "수집 완료",
   "totalFetched": 85,
+  "totalCount": 85,
+  "pagesProcessed": 1,
+  "maxPages": 3,
+  "lookbackDays": 2,
   "inserted": 12,
-  "updated": 73,
-  "errors": 0
+  "expiredClosed": 3
 }
 ```
 
@@ -636,7 +807,7 @@ POST /api/jobs/poll-tenders
 
 ---
 
-### 6.2 알림 처리 (Process Alerts)
+### 7.4 알림 처리 (Process Alerts)
 
 ```
 POST /api/jobs/process-alerts
@@ -647,10 +818,11 @@ POST /api/jobs/process-alerts
 **처리 로직**:
 1. `verifyCronSecret()` 검증
 2. 활성화된 `alert_rules` 전체 조회 (`is_enabled = true`)
-3. 최근 15분 내 신규 공고 조회 (`created_at >= now() - 15min`)
+3. 최근 2시간 내 신규 공고 조회 (`created_at >= now() - 2h`)
 4. 각 규칙에 대해 매칭 로직 실행:
-   - **KEYWORD**: `tender.title.includes(rule_json.keyword)`
-   - **FILTER**: `regionCodes`, `industryCodes`, `budgetMin/Max` 조건
+  - 키워드: 공백 분리 OR 매칭
+  - 상태: `statuses`
+  - 필터: `regionCodes`, `industryCodes`, `budgetMin/Max`
 5. 매칭된 공고에 대해:
    - `alert_logs`에서 기발송 여부 확인 (중복 방지)
    - `NotificationProvider.send()` 호출
@@ -668,7 +840,7 @@ POST /api/jobs/process-alerts
 
 ---
 
-## 7. 헬스체크 (Health)
+## 8. 헬스체크 (Health)
 
 ### 7.1 서버 상태 확인
 

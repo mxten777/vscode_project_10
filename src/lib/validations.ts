@@ -25,6 +25,7 @@ export const alertRuleCreateSchema = z.object({
   name: z.string().optional(),
   rule_json: z.object({
     keyword: z.string().optional(),
+    statuses: z.array(z.enum(["OPEN", "CLOSED", "RESULT"])).optional(),
     regionCodes: z.array(z.string()).optional(),
     budgetMin: z.number().optional(),
     budgetMax: z.number().optional(),
@@ -41,6 +42,7 @@ export const alertRuleUpdateSchema = z.object({
   rule_json: z
     .object({
       keyword: z.string().optional(),
+      statuses: z.array(z.enum(["OPEN", "CLOSED", "RESULT"])).optional(),
       regionCodes: z.array(z.string()).optional(),
       budgetMin: z.number().optional(),
       budgetMax: z.number().optional(),
@@ -51,6 +53,27 @@ export const alertRuleUpdateSchema = z.object({
   is_enabled: z.boolean().optional(),
 });
 export type AlertRuleUpdateInput = z.infer<typeof alertRuleUpdateSchema>;
+
+export const savedSearchCreateSchema = z.object({
+  name: z.string().trim().min(1, "이름을 입력하세요").max(80, "이름은 80자 이하여야 합니다"),
+  query_json: z
+    .object({
+      q: z.string().trim().optional(),
+      status: z.enum(["OPEN", "CLOSED", "RESULT"]).optional(),
+      sortBy: z
+        .enum(["published_at", "deadline_at", "budget_amount", "created_at"])
+        .optional()
+        .default("published_at"),
+      sortOrder: z.enum(["asc", "desc"]).optional().default("desc"),
+    })
+    .refine((value) => Boolean(value.q?.trim()) || Boolean(value.status), {
+      message: "키워드 또는 상태 중 하나는 필요합니다",
+    }),
+});
+export type SavedSearchCreateInput = z.infer<typeof savedSearchCreateSchema>;
+
+export const savedSearchUpdateSchema = savedSearchCreateSchema;
+export type SavedSearchUpdateInput = z.infer<typeof savedSearchUpdateSchema>;
 
 // ─── Report ────────────────────────────────────────────
 export const reportQuerySchema = z.object({

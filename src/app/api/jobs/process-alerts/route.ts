@@ -3,6 +3,7 @@ import { createServiceClient } from "@/lib/supabase/service";
 import { verifyCronSecret } from "@/lib/helpers";
 import { getNotificationProvider } from "@/lib/notifications";
 import { errorResponse, successResponse, internalErrorResponse } from "@/lib/api-response";
+import { failCollectionJob, finishCollectionJob, startCollectionJob } from "@/lib/collection-logs";
 import type { AlertRuleJson } from "@/lib/types";
 
 /**
@@ -22,6 +23,7 @@ export async function POST(request: NextRequest) {
 
   const supabase = createServiceClient();
   const stats = { evaluated: 0, sent: 0, failed: 0 };
+  const logId = await startCollectionJob(supabase, "alerts");
 
   try {
     // 1) 활성 알림 규칙 전체 조회
@@ -31,7 +33,7 @@ export async function POST(request: NextRequest) {
       .eq("is_enabled", true);
 
     if (rulesErr || !rules) {
-      return internalErrorResponse("알림 규칙 조회 실패");
+      throw new Error("알림 규칙 조회 실패");
     }
 
     // 2) 최근 2시간 이내에 수집된 신규 공고 (Vercel Hobby 플랜 flexible window 대응)
@@ -43,6 +45,7 @@ export async function POST(request: NextRequest) {
 
     // 신규 공고가 없으면 규칙 평가 자체를 건너뜀 (불필요한 "없음" 이메일 방지)
     if (!recentTenders?.length) {
+      await finishCollectionJob(supabase, logId, 0);
       return successResponse({ message: "신규 공고 없음 — 알림 발송 생략", ...stats });
     }
 
@@ -51,7 +54,7 @@ export async function POST(request: NextRequest) {
       stats.evaluated++;
       const ruleJson = rule.rule_json as AlertRuleJson;
 
-      const matched = recentTenders.filter((t) => matchesRule(t, ruleJson, rule.type));
+      const matched = recentTenders.filter((t) => matchesRule(t, ruleJson));
 
       // 매칭 공고 없으면 해당 규칙은 skip (이메일 미발송)
       if (!matched.length) continue;
@@ -102,10 +105,13 @@ export async function POST(request: NextRequest) {
       }
     }
 
+    await finishCollectionJob(supabase, logId, stats.sent);
     return successResponse({ message: "알림 처리 완료", ...stats });
   } catch (err) {
+    const message = err instanceof Error ? err.message : "Unknown error";
+    await failCollectionJob(supabase, logId, message);
     console.error("process-alerts 오류:", err);
-    return internalErrorResponse();
+    return internalErrorResponse(message === "알림 규칙 조회 실패" ? message : undefined);
   }
 }
 
@@ -113,16 +119,19 @@ export async function POST(request: NextRequest) {
 
 function matchesRule(
   tender: Record<string, unknown>,
-  ruleJson: AlertRuleJson,
-  type: string
+  ruleJson: AlertRuleJson
 ): boolean {
-  if (type === "KEYWORD" && ruleJson.keyword) {
+  if (ruleJson.keyword) {
     const title = (tender.title as string) || "";
     const titleLower = title.toLowerCase();
     // 공백으로 분리된 키워드를 OR 조건으로 매칭 ("AI RAG LLM" → AI 또는 RAG 또는 LLM)
     const keywords = ruleJson.keyword.split(/\s+/).filter(Boolean);
     const matched = keywords.some((kw) => titleLower.includes(kw.toLowerCase()));
     if (!matched) return false;
+  }
+
+  if (ruleJson.statuses?.length) {
+    if (!ruleJson.statuses.includes(tender.status as "OPEN" | "CLOSED" | "RESULT")) return false;
   }
 
   if (ruleJson.regionCodes?.length) {

@@ -10,7 +10,7 @@
 ```
 [나라장터 공공API]
       │
-      │  KST 09:00 (평일)  ─────────────────────────────────────────────────────────────────
+  │  KST 09:00 (평일)  ─ cron-ingest ───────────────────────────────────────────────────
       ▼
 [poll-tenders]  →  tenders 테이블 upsert  →  analysis_level = 1 (기본)
       │
@@ -19,7 +19,7 @@
 [collect-bid-awards]  →  awards + bid_notices + bid_awards upsert
       │                   bid_participants (낙찰자 rank=1) upsert
       │
-      │  KST 11:00 (평일)
+  │  KST 11:00 (평일)  ─ cron-maintenance ──────────────────────────────────────────────
       ▼
 [process-alerts]  →  신규 공고 알림 규칙 매칭  →  이메일 발송
       │
@@ -44,15 +44,16 @@
 
 ### Cron 스케줄 요약
 
-| Job | 스케줄 (UTC) | KST | 설명 |
+| Orchestrator | 스케줄 (UTC) | KST | 내부 실행 |
 |-----|-------------|-----|------|
-| poll-tenders | `0 0 * * 1-5` | 09:00 평일 | 신규 공고 수집 |
-| collect-bid-awards | `10 0 * * 1-5` | 09:10 평일 | 낙찰 데이터 수집 |
-| process-alerts | `0 2 * * 1-5` | 11:00 평일 | 알림 발송 |
-| collect-participants | `0 18 * * *` | 03:00 매일 | 참여업체 선별 수집 |
-| rebuild-analysis | `0 20 * * *` | 05:00 매일 | 분석 캐시 재구성 |
-| embed-batch | `0 2 * * 1` | 11:00 월요일 | 벡터 임베딩 |
-| cleanup | `0 1 * * 0` | 10:00 일요일 | 90일 이전 로그 삭제 |
+| cron-ingest | `0 0 * * 1-5` | 09:00 평일 | `poll-tenders` → `collect-bid-awards` |
+| cron-maintenance | `0 2 * * *` | 11:00 매일 | 평일 `process-alerts`, 매일 `rebuild-analysis`/`collect-participants`, 월요일 `embed-batch`, 일요일 `cleanup` |
+
+### 운영 로그 기준
+
+- `collection_logs` 는 현재 `tenders`, `awards`, `backfill_awards`, `analysis_rebuild`, `alerts`, `participants`, `cleanup` 작업을 기록합니다.
+- 운영 상태 카드는 이 로그를 기준으로 최근 성공, 최근 실패, 실행 중 작업을 계산합니다.
+- 실제 DB 반영을 위해 `029_expand_collection_logs_for_cron.sql` 적용이 필요합니다.
 
 ---
 

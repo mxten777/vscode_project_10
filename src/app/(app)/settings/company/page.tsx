@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { useCompanyProfile, useUpdateCompanyProfile } from "@/hooks/use-api";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -43,6 +43,38 @@ const REGION_OPTIONS = [
   { code: "48", label: "경남" },
   { code: "50", label: "제주" },
 ];
+
+type CompanyProfileForm = {
+  companyName: string;
+  industryCodes: string[];
+  regionCodes: string[];
+  preferredAgencies: string[];
+  keywords: string[];
+  minBudget: string;
+  maxBudget: string;
+};
+
+type CompanyProfileData = {
+  company_name?: string | null;
+  industry_codes?: string[] | null;
+  region_codes?: string[] | null;
+  preferred_agency_names?: string[] | null;
+  keywords?: string[] | null;
+  min_budget?: number | null;
+  max_budget?: number | null;
+} | null | undefined;
+
+function profileToForm(profile: CompanyProfileData): CompanyProfileForm {
+  return {
+    companyName: profile?.company_name ?? "",
+    industryCodes: profile?.industry_codes ?? [],
+    regionCodes: profile?.region_codes ?? [],
+    preferredAgencies: profile?.preferred_agency_names ?? [],
+    keywords: profile?.keywords ?? [],
+    minBudget: profile?.min_budget != null ? String(profile.min_budget / 10000) : "",
+    maxBudget: profile?.max_budget != null ? String(profile.max_budget / 10000) : "",
+  };
+}
 
 function TagInput({
   values,
@@ -145,33 +177,19 @@ function ToggleChipGroup({
 export default function CompanySettingsPage() {
   const { data: profile, isLoading } = useCompanyProfile();
   const updateProfile = useUpdateCompanyProfile();
+  const [draft, setDraft] = useState<CompanyProfileForm | null>(null);
 
-  const [companyName, setCompanyName] = useState("");
-  const [industryCodes, setIndustryCodes] = useState<string[]>([]);
-  const [regionCodes, setRegionCodes] = useState<string[]>([]);
-  const [preferredAgencies, setPreferredAgencies] = useState<string[]>([]);
-  const [keywords, setKeywords] = useState<string[]>([]);
-  const [minBudget, setMinBudget] = useState("");
-  const [maxBudget, setMaxBudget] = useState("");
+  const form = draft ?? profileToForm(profile);
 
-  // 프로파일 로드 시 폼에 반영
-  useEffect(() => {
-    if (profile) {
-      setCompanyName(profile.company_name ?? "");
-      setIndustryCodes(profile.industry_codes ?? []);
-      setRegionCodes(profile.region_codes ?? []);
-      setPreferredAgencies(profile.preferred_agency_names ?? []);
-      setKeywords(profile.keywords ?? []);
-      setMinBudget(profile.min_budget != null ? String(profile.min_budget / 10000) : "");
-      setMaxBudget(profile.max_budget != null ? String(profile.max_budget / 10000) : "");
-    }
-  }, [profile]);
+  const updateForm = (updater: (current: CompanyProfileForm) => CompanyProfileForm) => {
+    setDraft((currentDraft) => updater(currentDraft ?? profileToForm(profile)));
+  };
 
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    const minNum = minBudget ? parseFloat(minBudget) * 10000 : null;
-    const maxNum = maxBudget ? parseFloat(maxBudget) * 10000 : null;
+    const minNum = form.minBudget ? parseFloat(form.minBudget) * 10000 : null;
+    const maxNum = form.maxBudget ? parseFloat(form.maxBudget) * 10000 : null;
 
     if (minNum != null && maxNum != null && minNum > maxNum) {
       toast.error("최소 예산은 최대 예산보다 작아야 합니다");
@@ -180,11 +198,11 @@ export default function CompanySettingsPage() {
 
     try {
       await updateProfile.mutateAsync({
-        company_name: companyName || null,
-        industry_codes: industryCodes,
-        region_codes: regionCodes,
-        preferred_agency_names: preferredAgencies,
-        keywords,
+        company_name: form.companyName || null,
+        industry_codes: form.industryCodes,
+        region_codes: form.regionCodes,
+        preferred_agency_names: form.preferredAgencies,
+        keywords: form.keywords,
         min_budget: minNum,
         max_budget: maxNum,
       });
@@ -230,8 +248,8 @@ export default function CompanySettingsPage() {
             <Label htmlFor="company-name" className="text-xs font-medium">회사명</Label>
             <Input
               id="company-name"
-              value={companyName}
-              onChange={(e) => setCompanyName(e.target.value)}
+              value={form.companyName}
+              onChange={(e) => updateForm((current) => ({ ...current, companyName: e.target.value }))}
               placeholder="예: (주)바이칼솔루션"
               maxLength={100}
             />
@@ -250,8 +268,8 @@ export default function CompanySettingsPage() {
         <CardContent>
           <ToggleChipGroup
             options={INDUSTRY_OPTIONS}
-            selected={industryCodes}
-            onChange={setIndustryCodes}
+            selected={form.industryCodes}
+            onChange={(industryCodes) => updateForm((current) => ({ ...current, industryCodes }))}
           />
         </CardContent>
       </Card>
@@ -267,8 +285,8 @@ export default function CompanySettingsPage() {
         <CardContent>
           <ToggleChipGroup
             options={REGION_OPTIONS}
-            selected={regionCodes}
-            onChange={setRegionCodes}
+            selected={form.regionCodes}
+            onChange={(regionCodes) => updateForm((current) => ({ ...current, regionCodes }))}
           />
         </CardContent>
       </Card>
@@ -285,8 +303,8 @@ export default function CompanySettingsPage() {
               <Label className="text-xs">최소 (만원)</Label>
               <Input
                 type="number"
-                value={minBudget}
-                onChange={(e) => setMinBudget(e.target.value)}
+                value={form.minBudget}
+                onChange={(e) => updateForm((current) => ({ ...current, minBudget: e.target.value }))}
                 placeholder="예: 5000"
                 min={0}
               />
@@ -296,8 +314,8 @@ export default function CompanySettingsPage() {
               <Label className="text-xs">최대 (만원)</Label>
               <Input
                 type="number"
-                value={maxBudget}
-                onChange={(e) => setMaxBudget(e.target.value)}
+                value={form.maxBudget}
+                onChange={(e) => updateForm((current) => ({ ...current, maxBudget: e.target.value }))}
                 placeholder="예: 50000"
                 min={0}
               />
@@ -316,8 +334,8 @@ export default function CompanySettingsPage() {
         </CardHeader>
         <CardContent>
           <TagInput
-            values={preferredAgencies}
-            onChange={setPreferredAgencies}
+            values={form.preferredAgencies}
+            onChange={(preferredAgencies) => updateForm((current) => ({ ...current, preferredAgencies }))}
             placeholder="기관명 입력 후 Enter (예: 조달청)"
           />
         </CardContent>
@@ -333,8 +351,8 @@ export default function CompanySettingsPage() {
         </CardHeader>
         <CardContent>
           <TagInput
-            values={keywords}
-            onChange={setKeywords}
+            values={form.keywords}
+            onChange={(keywords) => updateForm((current) => ({ ...current, keywords }))}
             placeholder="키워드 입력 후 Enter (예: AI, 디지털전환)"
           />
         </CardContent>
@@ -370,7 +388,7 @@ export default function CompanySettingsPage() {
             ))}
           </div>
           <p className="pt-1 text-[11px] text-muted-foreground/60">
-            ※ 설정 후 AI 추천 점수가 자동으로 재계산됩니다. 낙찰 데이터가 부족한 항목은 "분석 준비 중"으로 표시됩니다.
+            ※ 설정 후 AI 추천 점수가 자동으로 재계산됩니다. 낙찰 데이터가 부족한 항목은 &quot;분석 준비 중&quot;으로 표시됩니다.
           </p>
         </CardContent>
       </Card>

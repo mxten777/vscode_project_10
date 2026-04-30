@@ -79,6 +79,7 @@ export type AlertChannel = "EMAIL" | "KAKAO";
 
 export interface AlertRuleJson {
   keyword?: string;
+  statuses?: TenderStatus[];
   regionCodes?: string[];
   budgetMin?: number;
   budgetMax?: number;
@@ -109,6 +110,26 @@ export interface AlertLog {
   error_message: string | null;
   tender?: Tender;
 }
+
+export interface SavedSearchQuery {
+  q?: string;
+  status?: TenderStatus;
+  sortBy?: "published_at" | "deadline_at" | "budget_amount" | "created_at";
+  sortOrder?: "asc" | "desc";
+}
+
+export interface SavedSearch {
+  id: string;
+  org_id: string;
+  user_id: string;
+  name: string;
+  query_json: SavedSearchQuery;
+  created_at: string;
+  updated_at: string;
+}
+
+export type SavedSearchInput = Pick<SavedSearch, "name" | "query_json">;
+export type SavedSearchUpdateInput = SavedSearchInput;
 
 // ─── API Response 공통 ─────────────────────────────────
 

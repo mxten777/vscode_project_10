@@ -173,29 +173,83 @@ export default function AnalyticsPage() {
         }))
       : [];
 
+  const analysisTypeLabel =
+    analysisType === "overall"
+      ? "전체 흐름"
+      : analysisType === "agency"
+      ? "기관 비교"
+      : analysisType === "industry"
+      ? "업종 비교"
+      : "지역 비교";
+
   return (
     <div className="space-y-6 animate-fade-up">
       {/* Header */}
-      <div className="flex items-start justify-between gap-4 flex-wrap">
-        <div>
-          <h1 className="text-3xl font-extrabold tracking-tight mb-2">낙찰 분석 대시보드</h1>
-          <p className="text-muted-foreground">
-            과거 낙찰 데이터를 분석하여 입찰 전략을 수립하세요
-          </p>
-        </div>
-        <div className="flex items-center gap-2">
-          <Select value={months.toString()} onValueChange={(v) => setMonths(parseInt(v))}>
-            <SelectTrigger className="w-32 rounded-xl">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="3">최근 3개월</SelectItem>
-              <SelectItem value="6">최근 6개월</SelectItem>
-              <SelectItem value="12">최근 12개월</SelectItem>
-              <SelectItem value="24">최근 24개월</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
+      <div className="grid gap-4 xl:grid-cols-[1.05fr_0.95fr]">
+        <Card className="premium-card overflow-hidden border-primary/15 bg-linear-to-br from-background via-background to-primary/5">
+          <CardContent className="px-6 py-6 sm:px-7 sm:py-7">
+            <div className="inline-flex items-center gap-2 rounded-full border border-primary/15 bg-primary/8 px-3 py-1 text-xs font-semibold text-primary">
+              <BarChart3 className="h-3.5 w-3.5" />
+              의사결정 요약
+            </div>
+            <h1 className="mt-4 text-3xl font-extrabold tracking-tight sm:text-4xl">낙찰 데이터를 보기보다, 먼저 읽을 포인트를 정리합니다</h1>
+            <p className="mt-3 max-w-2xl text-sm leading-relaxed text-muted-foreground sm:text-base">
+              이 화면의 목적은 차트를 많이 보여주는 것이 아니라, 최근 흐름에서 어디를 먼저 봐야 하는지 빠르게 판단하게 만드는 것입니다.
+            </p>
+
+            <div className="mt-6 grid gap-3 sm:grid-cols-3">
+              <div className="rounded-2xl border border-border/50 bg-background/80 px-4 py-3">
+                <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">현재 범위</p>
+                <p className="mt-1 text-sm font-semibold">최근 {months}개월</p>
+                <p className="mt-1 text-xs text-muted-foreground">분석 기간을 바꾸면 같은 구조로 다시 비교할 수 있습니다.</p>
+              </div>
+              <div className="rounded-2xl border border-border/50 bg-background/80 px-4 py-3">
+                <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">현재 보기</p>
+                <p className="mt-1 text-sm font-semibold">{analysisTypeLabel}</p>
+                <p className="mt-1 text-xs text-muted-foreground">전체 흐름을 본 뒤 기관, 업종, 지역 순으로 좁혀가는 것이 좋습니다.</p>
+              </div>
+              <div className="rounded-2xl border border-border/50 bg-background/80 px-4 py-3">
+                <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">먼저 볼 질문</p>
+                <p className="mt-1 text-sm font-semibold">어디에서 기회가 더 자주 열리는가</p>
+                <p className="mt-1 text-xs text-muted-foreground">건수, 낙찰률, 금액을 함께 보고 우선순위를 정합니다.</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="premium-card overflow-hidden">
+          <CardContent className="px-6 py-6 sm:px-7 sm:py-7">
+            <div className="flex items-center justify-between gap-3 flex-wrap">
+              <div>
+                <p className="text-xs font-semibold uppercase tracking-widest text-primary">빠른 읽기</p>
+                <p className="mt-2 text-sm text-muted-foreground">전체 추세를 먼저 보고, 이후 비교 분석으로 들어가면 해석이 쉬워집니다.</p>
+              </div>
+              <Select value={months.toString()} onValueChange={(v) => setMonths(parseInt(v))}>
+                <SelectTrigger className="w-32 rounded-xl">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="3">최근 3개월</SelectItem>
+                  <SelectItem value="6">최근 6개월</SelectItem>
+                  <SelectItem value="12">최근 12개월</SelectItem>
+                  <SelectItem value="24">최근 24개월</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="mt-5 space-y-3">
+              {[
+                "1. KPI 로 전체 규모와 평균 낙찰률을 먼저 본다.",
+                "2. 월별 추세에서 최근 변화가 있는지 확인한다.",
+                "3. 기관, 업종, 지역 비교로 실제 집중 대상을 좁힌다.",
+              ].map((item) => (
+                <div key={item} className="rounded-2xl border border-border/50 bg-muted/20 px-4 py-3 text-sm text-muted-foreground">
+                  {item}
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
       </div>
 
       {/* KPI Cards */}
@@ -325,7 +379,7 @@ export default function AnalyticsPage() {
                   </div>
                 ) : (
                   <div className="flex items-center justify-center h-80 text-muted-foreground">
-                    <p className="text-sm">데이터가 수집 중입니다</p>
+                    <p className="text-sm">아직 읽을 수 있는 추세가 충분하지 않습니다. 데이터가 더 쌓이면 비교 흐름이 보입니다.</p>
                   </div>
                 )}
               </CardContent>
@@ -531,14 +585,14 @@ export default function AnalyticsPage() {
         </CardContent>
       </Card>
 
-      {/* ─── AI 인사이트 섹션 ─── */}
+      {/* ─── 참고 인사이트 섹션 ─── */}
       <div className="space-y-4">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
             <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-violet-500/15">
               <Sparkles className="h-4 w-4 text-violet-600 dark:text-violet-400" />
             </div>
-            <h2 className="text-lg font-bold">AI 입찰 의사결정</h2>
+            <h2 className="text-lg font-bold">참고 인사이트</h2>
             <span className="inline-flex items-center rounded-full bg-violet-500/10 border border-violet-500/20 px-2 py-0.5 text-[10px] font-semibold text-violet-600 dark:text-violet-400">
               Beta
             </span>
@@ -550,6 +604,10 @@ export default function AnalyticsPage() {
           )}
         </div>
 
+        <p className="text-sm text-muted-foreground">
+          이 구간은 검색과 상세 검토를 마친 뒤 참고로 보는 보조 인사이트입니다.
+        </p>
+
         {/* 낙찰 가능성 공식 설명 */}
         <Card className="premium-card border-violet-500/20 bg-violet-50/30 dark:bg-violet-950/20">
           <CardContent className="py-4">
@@ -558,7 +616,7 @@ export default function AnalyticsPage() {
                 <Target className="h-4 w-4 text-violet-600 dark:text-violet-400" />
               </div>
               <div>
-                <p className="text-sm font-semibold text-violet-900 dark:text-violet-100 mb-1">낙찰 가능성 계산 공식</p>
+                <p className="text-sm font-semibold text-violet-900 dark:text-violet-100 mb-1">참고 점수 계산 방식</p>
                 <p className="text-xs text-violet-700 dark:text-violet-300 font-mono">
                   낙찰 가능성 = <span className="font-semibold">(업종 낙찰률 × 0.4)</span> + (기관 낙찰률 × 0.3) + (지역 낙찰률 × 0.2) + (경쟁강도 × 0.1)
                 </p>
@@ -573,7 +631,7 @@ export default function AnalyticsPage() {
         {/* 4열 그리드 */}
         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
           <AIDetailCard
-            title="AI 추천 공고"
+            title="추천 공고"
             subtitle="종합 점수 1~10위"
             icon={<Sparkles className="h-4 w-4" />}
             colorClass="text-violet-600 dark:text-violet-400"
@@ -583,7 +641,7 @@ export default function AnalyticsPage() {
             isLoading={aiLoading}
           />
           <AIDetailCard
-            title="낙찰 가능성 높음"
+            title="기회 점수 높음"
             subtitle="승률 65% 이상 공고"
             icon={<Target className="h-4 w-4" />}
             colorClass="text-emerald-600 dark:text-emerald-400"
@@ -604,7 +662,7 @@ export default function AnalyticsPage() {
             showBidders
           />
           <AIDetailCard
-            title="수익성 높은 공고"
+            title="예산 큰 후보"
             subtitle="예산 × 낙찰 가능성 최대"
             icon={<Award className="h-4 w-4" />}
             colorClass="text-amber-600 dark:text-amber-400"
@@ -668,8 +726,8 @@ function AIDetailCard({
         ) : items.length === 0 ? (
           <div className="flex items-center justify-center h-40">
             <p className="text-xs text-muted-foreground text-center leading-relaxed">
-              낙찰 데이터 수집 중<br />
-              <span className="text-[10px]">데이터 누적 후 표시됩니다</span>
+              아직 비교할 낙찰 데이터가 충분하지 않습니다<br />
+              <span className="text-[10px]">데이터가 더 누적되면 우선 검토 후보가 표시됩니다</span>
             </p>
           </div>
         ) : (

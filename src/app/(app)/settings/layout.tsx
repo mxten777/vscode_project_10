@@ -2,10 +2,11 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { User, CreditCard, Building } from "lucide-react";
+import { LayoutGrid, User, CreditCard, Building } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const sidebarItems = [
+  { href: "/settings", label: "개요", icon: LayoutGrid },
   { href: "/settings/profile", label: "프로필", icon: User },
   { href: "/settings/company", label: "회사 정보", icon: Building },
   { href: "/settings/billing", label: "요금제 & 결제", icon: CreditCard },
@@ -26,7 +27,9 @@ export default function SettingsLayout({ children }: { children: React.ReactNode
         <aside className="sm:w-48 shrink-0">
           <nav className="flex sm:flex-col gap-1">
             {sidebarItems.map((item) => {
-              const active = pathname === item.href;
+              const active = item.href === "/settings"
+                ? pathname === "/settings"
+                : pathname === item.href;
               return (
                 <Link
                   key={item.href}

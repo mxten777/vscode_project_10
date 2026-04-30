@@ -119,6 +119,17 @@ CREATE TABLE IF NOT EXISTS public.alert_logs (
   error_message  text
 );
 
+-- saved_searches (저장한 검색)
+CREATE TABLE IF NOT EXISTS public.saved_searches (
+  id         uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  org_id     uuid NOT NULL REFERENCES public.orgs(id) ON DELETE CASCADE,
+  user_id    uuid NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+  name       text NOT NULL,
+  query_json jsonb NOT NULL DEFAULT '{}',
+  created_at timestamptz NOT NULL DEFAULT now(),
+  updated_at timestamptz NOT NULL DEFAULT now()
+);
+
 -- ============================================================
 -- 인덱스
 -- ============================================================
@@ -142,6 +153,7 @@ CREATE INDEX IF NOT EXISTS idx_favorites_org      ON public.favorites (org_id);
 -- alert
 CREATE INDEX IF NOT EXISTS idx_alert_rules_user   ON public.alert_rules (user_id);
 CREATE INDEX IF NOT EXISTS idx_alert_logs_rule    ON public.alert_logs (alert_rule_id);
+CREATE INDEX IF NOT EXISTS idx_saved_searches_org_user_created ON public.saved_searches (org_id, user_id, created_at DESC);
 
 -- ============================================================
 -- RLS 정책
@@ -155,6 +167,7 @@ ALTER TABLE public.awards ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.favorites ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.alert_rules ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.alert_logs ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.saved_searches ENABLE ROW LEVEL SECURITY;
 
 -- Helper: 현재 사용자의 org_id 목록
 CREATE OR REPLACE FUNCTION public.user_org_ids()
@@ -208,6 +221,13 @@ CREATE POLICY "alert_logs_select_own" ON public.alert_logs
     )
   );
 
+CREATE POLICY "saved_searches_select_own" ON public.saved_searches
+  FOR SELECT USING (org_id IN (SELECT public.user_org_ids()) AND user_id = auth.uid());
+CREATE POLICY "saved_searches_insert_own" ON public.saved_searches
+  FOR INSERT WITH CHECK (org_id IN (SELECT public.user_org_ids()) AND user_id = auth.uid());
+CREATE POLICY "saved_searches_delete_own" ON public.saved_searches
+  FOR DELETE USING (user_id = auth.uid());
+
 -- ============================================================
 -- updated_at 자동 갱신 트리거
 -- ============================================================
@@ -225,3 +245,4 @@ CREATE TRIGGER trg_agencies_updated   BEFORE UPDATE ON public.agencies   FOR EAC
 CREATE TRIGGER trg_tenders_updated    BEFORE UPDATE ON public.tenders    FOR EACH ROW EXECUTE FUNCTION public.set_updated_at();
 CREATE TRIGGER trg_awards_updated     BEFORE UPDATE ON public.awards     FOR EACH ROW EXECUTE FUNCTION public.set_updated_at();
 CREATE TRIGGER trg_alert_rules_updated BEFORE UPDATE ON public.alert_rules FOR EACH ROW EXECUTE FUNCTION public.set_updated_at();
+CREATE TRIGGER trg_saved_searches_updated BEFORE UPDATE ON public.saved_searches FOR EACH ROW EXECUTE FUNCTION public.set_updated_at();

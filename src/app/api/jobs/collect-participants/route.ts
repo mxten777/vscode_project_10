@@ -14,20 +14,24 @@
  * Schedule: 매일 새벽 3시 KST (18:00 UTC 전날)
  *   vercel.json: "0 18 * * *"
  */
-import { NextRequest, NextResponse } from "next/server";
+import { NextRequest } from "next/server";
+import { errorResponse, internalErrorResponse, successResponse } from "@/lib/api-response";
 import { createServiceClient } from "@/lib/supabase/service";
 import { verifyCronSecret } from "@/lib/helpers";
+import { failCollectionJob, finishCollectionJob, startCollectionJob } from "@/lib/collection-logs";
+import { getErrorMessage } from "@/lib/job-utils";
 
 export const preferredRegion = "icn1";
 export const maxDuration = 60;
 
 export async function GET(request: NextRequest) {
   if (!verifyCronSecret(request)) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    return errorResponse("UNAUTHORIZED", "Unauthorized", 401);
   }
 
   const supabase = createServiceClient();
   const limit = parseInt(request.nextUrl.searchParams.get("limit") || "200");
+  const logId = await startCollectionJob(supabase, "participants");
 
   try {
     // 1. 먼저 analysis_level 재계산
@@ -47,7 +51,8 @@ export async function GET(request: NextRequest) {
 
     if (tErr) throw tErr;
     if (!targets || targets.length === 0) {
-      return NextResponse.json({
+      await finishCollectionJob(supabase, logId, 0);
+      return successResponse({
         success: true,
         message: "수집 대상 없음",
         level_updates: levelData,
@@ -67,7 +72,8 @@ export async function GET(request: NextRequest) {
     if (aErr) throw aErr;
 
     if (!awards || awards.length === 0) {
-      return NextResponse.json({
+      await finishCollectionJob(supabase, logId, 0);
+      return successResponse({
         success: true,
         message: "매칭되는 awards 없음",
         level_updates: levelData,
@@ -104,7 +110,7 @@ export async function GET(request: NextRequest) {
     }
 
     if (participantRows.length === 0) {
-      return NextResponse.json({
+      return successResponse({
         success: true,
         level_updates: levelData,
         candidates: targets.length,
@@ -129,14 +135,17 @@ export async function GET(request: NextRequest) {
       })
       .in("id", processedTenderIds);
 
-    return NextResponse.json({
+    await finishCollectionJob(supabase, logId, participantRows.length);
+
+    return successResponse({
       success: true,
       level_updates: levelData,
       candidates: targets.length,
       processed: participantRows.length,
     });
   } catch (err) {
-    const message = err instanceof Error ? err.message : "Unknown error";
-    return NextResponse.json({ success: false, error: message }, { status: 500 });
+    const message = getErrorMessage(err);
+    await failCollectionJob(supabase, logId, message);
+    return internalErrorResponse(message);
   }
 }

@@ -7,17 +7,29 @@
  * Schedule: 매주 일요일 UTC 01:00 (10:00 KST)
  */
 
-import { NextRequest, NextResponse } from "next/server";
+import { NextRequest } from "next/server";
+import { errorResponse, internalErrorResponse, successResponse } from "@/lib/api-response";
 import { createServiceClient } from "@/lib/supabase/service";
 import { verifyCronSecret } from "@/lib/helpers";
+import { failCollectionJob, finishCollectionJob, startCollectionJob } from "@/lib/collection-logs";
+import { getErrorMessage } from "@/lib/job-utils";
+
+function countCleanupRows(result: unknown) {
+  if (!result || typeof result !== "object") return 0;
+
+  return Object.values(result as Record<string, unknown>).reduce<number>((sum, value) => {
+    return typeof value === "number" ? sum + value : sum;
+  }, 0);
+}
 
 export async function GET(request: NextRequest) {
+  const supabase = createServiceClient();
+  const logId = await startCollectionJob(supabase, "cleanup");
+
   try {
     if (!verifyCronSecret(request)) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+      return errorResponse("UNAUTHORIZED", "Unauthorized", 401);
     }
-
-    const supabase = createServiceClient();
 
     const { data, error } = await supabase.rpc("run_cleanup_jobs");
 
@@ -25,17 +37,17 @@ export async function GET(request: NextRequest) {
       throw error;
     }
 
-    return NextResponse.json({
+    await finishCollectionJob(supabase, logId, countCleanupRows(data));
+
+    return successResponse({
       success: true,
       message: "DB cleanup 완료",
       result: data,
     });
   } catch (error) {
-    const message = error instanceof Error ? error.message : "Unknown error";
+    const message = getErrorMessage(error);
+    await failCollectionJob(supabase, logId, message);
     console.error("[cleanup] Error:", error);
-    return NextResponse.json(
-      { success: false, error: message },
-      { status: 500 }
-    );
+    return internalErrorResponse(message);
   }
 }

@@ -18,7 +18,7 @@ export async function GET(
     const { id } = await params;
     const ctx = await getAuthContext();
     if ("error" in ctx) return ctx.error;
-    const { supabase, user } = ctx;
+    const { supabase, user, orgId } = ctx;
 
     // raw_json 포함 (공고일·마감일 원본 표시용, G2B 공개 데이터)
     const { data, error } = await supabase
@@ -40,10 +40,11 @@ export async function GET(
 
     // 현재 사용자의 즐겨찾기 여부 확인
     let isFavorited = false;
-    if (user) {
+    if (user && orgId) {
       const { data: fav } = await supabase
         .from("favorites")
         .select("id")
+        .eq("org_id", orgId)
         .eq("user_id", user.id)
         .eq("tender_id", id)
         .maybeSingle();

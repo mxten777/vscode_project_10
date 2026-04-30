@@ -8,9 +8,12 @@
  * Schedule: Vercel Cron (평일 09:10 UTC = 18:10 KST)
  */
 
-import { NextRequest, NextResponse } from "next/server";
+import { NextRequest } from "next/server";
+import { errorResponse, internalErrorResponse, successResponse } from "@/lib/api-response";
 import { createServiceClient } from "@/lib/supabase/service";
 import { verifyCronSecret, parseNaraDate } from "@/lib/helpers";
+import { failCollectionJob, finishCollectionJob, startCollectionJob } from "@/lib/collection-logs";
+import { getErrorMessage, parseBoundedInt } from "@/lib/job-utils";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 // 나라장터 API 타입 (getScsbidListSttusServc 기준)
@@ -37,26 +40,15 @@ interface NaramarketBidResult {
 
 export async function GET(request: NextRequest) {
   let logId: string | null = null;
+  const supabase = createServiceClient();
 
   try {
     // Cron secret 검증
     if (!verifyCronSecret(request)) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+      return errorResponse("UNAUTHORIZED", "Unauthorized", 401);
     }
 
-    const supabase = createServiceClient();
-
-    // 수집 시작 기록
-    const { data: logRow } = await supabase
-      .from("collection_logs")
-      .insert({
-        job_type: "awards",
-        status: "started",
-        started_at: new Date().toISOString(),
-      })
-      .select("id")
-      .single();
-    logId = logRow?.id ?? null;
+    logId = await startCollectionJob(supabase, "awards");
     // 낙찰정보서비스는 별도 키 사용 (NARA_AWARD_API_KEY), 없으면 NARA_API_KEY fallback
     const NARAMARKET_API_KEY = process.env.NARA_AWARD_API_KEY || process.env.NARA_API_KEY;
 
@@ -64,14 +56,17 @@ export async function GET(request: NextRequest) {
       throw new Error("NARA_API_KEY not configured");
     }
 
-    // 최근 7일간 개찰된 공고 조회 (나라장터 API 호출)
+    const lookbackDays = parseBoundedInt(request.nextUrl.searchParams.get("lookbackDays"), 7, 1, 30);
+    const maxPages = parseBoundedInt(request.nextUrl.searchParams.get("maxPages"), 10, 1, 10);
+    const maxItems = parseBoundedInt(request.nextUrl.searchParams.get("maxItems"), 1000, 1, 1000);
+
+    // 최근 N일간 개찰된 공고 조회 (나라장터 API 호출)
     const targetDate = new Date();
-    targetDate.setDate(targetDate.getDate() - 7);
+    targetDate.setDate(targetDate.getDate() - lookbackDays);
     const startDate = targetDate.toISOString().split("T")[0].replace(/-/g, "") + "0000";
     const endDate = new Date().toISOString().split("T")[0].replace(/-/g, "") + "2359";
 
     const PAGE_SIZE = 100;
-    const MAX_PAGES = 10; // 최대 1,000건 (과도한 API 호출 방지)
 
     /**
      * 나라장터 API 전체 페이지 수집 헬퍼
@@ -80,7 +75,7 @@ export async function GET(request: NextRequest) {
      */
     async function fetchAllPages(baseRawUrl: string): Promise<NaramarketBidResult[]> {
       const results: NaramarketBidResult[] = [];
-      for (let page = 1; page <= MAX_PAGES; page++) {
+      for (let page = 1; page <= maxPages; page++) {
         const res = await fetch(`${baseRawUrl}&pageNo=${page}`);
         const json = await res.json();
         const body = json?.response?.body;
@@ -91,6 +86,9 @@ export async function GET(request: NextRequest) {
         if (!rawItems) break;
         const items: NaramarketBidResult[] = Array.isArray(rawItems) ? rawItems : [rawItems];
         results.push(...items);
+        if (results.length >= maxItems) {
+          return results.slice(0, maxItems);
+        }
         // 마지막 페이지면 종료
         const totalCount: number = body?.totalCount ?? 0;
         if (results.length >= totalCount || items.length < PAGE_SIZE) break;
@@ -134,54 +132,25 @@ export async function GET(request: NextRequest) {
 
     // 5) bid_price_features는 DB 트리거(trg_bid_awards_compute_features)가 자동 계산
 
-    // 수집 완료 기록
-    if (logId) {
-      await supabase
-        .from("collection_logs")
-        .update({
-          status: "completed",
-          completed_at: new Date().toISOString(),
-          records_collected: processedCount,
-          metadata: { errors: errorCount, date_range: { start: startDate, end: endDate } },
-        })
-        .eq("id", logId);
-    }
+    await finishCollectionJob(supabase, logId, processedCount);
 
-    return NextResponse.json({
+    return successResponse({
       success: true,
       message: "낙찰 데이터 수집 완료",
       processed: processedCount,
       errors: errorCount,
+      lookbackDays,
+      maxPages,
+      maxItems,
       date_range: { start: startDate, end: endDate },
     });
   } catch (error) {
-    const message = error instanceof Error ? error.message : "Unknown error";
+    const message = getErrorMessage(error);
     console.error("[collect-bid-awards] Error:", error);
 
-    // 수집 실패 기록
-    if (typeof logId === "string") {
-      try {
-        const supabase = createServiceClient();
-        await supabase
-          .from("collection_logs")
-          .update({
-            status: "failed",
-            completed_at: new Date().toISOString(),
-            error_message: message,
-          })
-          .eq("id", logId);
-      } catch {
-        // 로그 기록 실패는 무시
-      }
-    }
+    await failCollectionJob(supabase, logId, message);
 
-    return NextResponse.json(
-      {
-        success: false,
-        error: message,
-      },
-      { status: 500 }
-    );
+    return internalErrorResponse(message);
   }
 }
 

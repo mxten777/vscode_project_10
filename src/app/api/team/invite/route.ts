@@ -5,10 +5,10 @@
  * Body: { email: string, role?: "admin" | "member" }
  */
 
-import { NextRequest, NextResponse } from "next/server";
+import { NextRequest } from "next/server";
 import { createServiceClient } from "@/lib/supabase/service";
 import { getAuthContext } from "@/lib/auth-context";
-import { apiResponse } from "@/lib/api-response";
+import { apiResponse, successResponse } from "@/lib/api-response";
 import { EmailProvider } from "@/lib/notifications/email-provider";
 import { z } from "zod";
 import crypto from "crypto";
@@ -108,7 +108,7 @@ export async function POST(request: NextRequest) {
     `,
   });
 
-  return NextResponse.json({ message: "초대 이메일을 발송했습니다." }, { status: 201 });
+  return successResponse({ message: "초대 이메일을 발송했습니다." }, 201);
 }
 
 /**
@@ -132,5 +132,5 @@ export async function GET() {
 
   if (error) return apiResponse.error(error.message, 500);
 
-  return NextResponse.json({ invitations: data });
+  return successResponse({ invitations: data });
 }

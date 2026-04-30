@@ -2,6 +2,8 @@ import { NextRequest } from "next/server";
 import { createServiceClient } from "@/lib/supabase/service";
 import { verifyCronSecret, retryWithBackoff } from "@/lib/helpers";
 import { errorResponse, successResponse, internalErrorResponse } from "@/lib/api-response";
+import { failCollectionJob, finishCollectionJob, startCollectionJob, updateCollectionJob } from "@/lib/collection-logs";
+import { getErrorMessage, parseBoundedInt } from "@/lib/job-utils";
 
 // 나라장터 API는 한국 IP만 허용 → 서울 리전에서 실행
 export const preferredRegion = "icn1";
@@ -29,24 +31,20 @@ export async function POST(request: NextRequest) {
 
   const supabase = createServiceClient();
   const results = { inserted: 0, errors: 0, totalFetched: 0 };
+  const maxPages = parseBoundedInt(request.nextUrl.searchParams.get("maxPages"), 50, 1, 50);
+  const lookbackDays = parseBoundedInt(request.nextUrl.searchParams.get("lookbackDays"), 7, 1, 14);
 
   // ── 수집 이력: 시작 기록 ──────────────────────────────────────
-  const { data: logEntry } = await supabase
-    .from("collection_logs")
-    .insert({ job_type: "tenders", status: "running" })
-    .select("id")
-    .single();
-  const logId: string | null = logEntry?.id ?? null;
+  const logId = await startCollectionJob(supabase, "tenders");
 
   try {
     let pageNo = 1;
     let totalCount = 0;
-    const MAX_PAGES = 50; // 안전 상한선 (5,000건)
 
     // ── 페이지네이션 루프 ────────────────────────────────────────
     do {
       const { items, total } = await retryWithBackoff(async () => {
-        const url = buildApiUrl(pageNo);
+        const url = buildApiUrl(pageNo, lookbackDays);
         const res = await fetch(url, { cache: "no-store" });
         if (!res.ok) throw new Error(`나라장터 API 오류: ${res.status}`);
 
@@ -127,32 +125,19 @@ export async function POST(request: NextRequest) {
       }
 
       // 진행 상태 업데이트 (페이지마다 체크포인트 저장)
-      if (logId) {
-        await supabase
-          .from("collection_logs")
-          .update({
-            last_page_no: pageNo,
-            records_collected: results.inserted,
-            total_pages: Math.ceil(totalCount / 100),
-          })
-          .eq("id", logId);
-      }
+      await updateCollectionJob(supabase, logId, {
+        last_page_no: pageNo,
+        records_collected: results.inserted,
+        total_pages: Math.ceil(totalCount / 100),
+      });
 
       pageNo++;
-    } while (results.totalFetched < totalCount && pageNo <= MAX_PAGES);
+    } while (results.totalFetched < totalCount && pageNo <= maxPages);
 
     // ── 수집 이력: 완료 기록 ─────────────────────────────────────
-    if (logId) {
-      await supabase
-        .from("collection_logs")
-        .update({
-          status: "success",
-          finished_at: new Date().toISOString(),
-          records_collected: results.inserted,
-          total_pages: Math.ceil(totalCount / 100),
-        })
-        .eq("id", logId);
-    }
+    await finishCollectionJob(supabase, logId, results.inserted, {
+      total_pages: Math.ceil(totalCount / 100),
+    });
 
     // ── 만료 공고 CLOSED 갱신 ─────────────────────────────────────
     // 7일 이전 수집 공고 중 deadline_at이 지난 것을 OPEN → CLOSED로 일괄 갱신
@@ -164,36 +149,30 @@ export async function POST(request: NextRequest) {
       totalFetched: results.totalFetched,
       totalCount,
       pagesProcessed: pageNo - 1,
+      maxPages,
+      lookbackDays,
       inserted: results.inserted,
       expiredClosed: closedCount,
     });
   } catch (err) {
+    const message = getErrorMessage(err, "서버 오류가 발생했습니다");
     // ── 수집 이력: 실패 기록 ─────────────────────────────────────
-    if (logId) {
-      await supabase
-        .from("collection_logs")
-        .update({
-          status: "failed",
-          finished_at: new Date().toISOString(),
-          error_message: String(err),
-        })
-        .eq("id", logId);
-    }
+    await failCollectionJob(supabase, logId, message);
     console.error("poll-tenders 전체 오류:", err);
-    return internalErrorResponse();
+    return internalErrorResponse(message);
   }
 }
 
 // ─── 유틸 ──────────────────────────────────────────────
 
-function buildApiUrl(pageNo: number): string {
+function buildApiUrl(pageNo: number, lookbackDays: number): string {
   const params = new URLSearchParams({
     serviceKey: NARA_API_KEY,
     pageNo: String(pageNo),
     numOfRows: "100",
     type: "json",
     inqryDiv: "1",
-    inqryBgnDt: getRecentDateStr(),
+    inqryBgnDt: getRecentDateStr(lookbackDays),
     inqryEndDt: getTodayStr(),
   });
   return `${NARA_API_ENDPOINT}?${params.toString()}`;
@@ -252,9 +231,9 @@ function getTodayStr(): string {
   return `${d.getFullYear()}${String(d.getMonth() + 1).padStart(2, "0")}${String(d.getDate()).padStart(2, "0")}2359`;
 }
 
-function getRecentDateStr(): string {
+function getRecentDateStr(lookbackDays: number): string {
   // 운영계정 날짜 형식: YYYYMMDDHHMM (12자리)
   const d = new Date();
-  d.setDate(d.getDate() - 7);
+  d.setDate(d.getDate() - lookbackDays);
   return `${d.getFullYear()}${String(d.getMonth() + 1).padStart(2, "0")}${String(d.getDate()).padStart(2, "0")}0000`;
 }

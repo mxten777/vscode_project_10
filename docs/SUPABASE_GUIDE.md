@@ -500,9 +500,9 @@ export async function getAuthContext() {
 ### 7.6 미들웨어에서 세션 관리
 
 ```typescript
-// src/middleware.ts — 모든 페이지 요청 전에 실행됩니다
+// src/proxy.ts — 모든 페이지 요청 전에 실행됩니다
 
-export async function middleware(request: NextRequest) {
+export async function proxy(request: NextRequest) {
   // 쿠키 기반 Supabase 클라이언트 생성
   const supabase = createServerClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
     cookies: {

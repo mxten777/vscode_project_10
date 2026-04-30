@@ -9,16 +9,18 @@
  *   curl -X POST https://bid-platform.vercel.app/api/jobs/backfill-participants \
  *     -H "Authorization: Bearer $CRON_SECRET"
  */
-import { NextRequest, NextResponse } from "next/server";
+import { NextRequest } from "next/server";
+import { errorResponse, internalErrorResponse, successResponse } from "@/lib/api-response";
 import { createServiceClient } from "@/lib/supabase/service";
 import { verifyCronSecret } from "@/lib/helpers";
+import { getErrorMessage } from "@/lib/job-utils";
 
 export const preferredRegion = "icn1";
 export const maxDuration = 60;
 
 export async function POST(request: NextRequest) {
   if (!verifyCronSecret(request)) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    return errorResponse("UNAUTHORIZED", "Unauthorized", 401);
   }
 
   const supabase = createServiceClient();
@@ -41,10 +43,10 @@ export async function POST(request: NextRequest) {
       .limit(limit);
 
     if (aErr) {
-      return NextResponse.json({ error: aErr.message }, { status: 500 });
+      return internalErrorResponse(aErr.message);
     }
     if (!awards || awards.length === 0) {
-      return NextResponse.json({ success: true, processed: 0, message: "awards 테이블이 비어 있습니다." });
+      return successResponse({ success: true, processed: 0, message: "awards 테이블이 비어 있습니다." });
     }
 
     // 2. 이미 bid_participants에 있는 notice_no 목록 (skip_existing=true 일 때)
@@ -76,7 +78,7 @@ export async function POST(request: NextRequest) {
       }));
 
     if (rows.length === 0) {
-      return NextResponse.json({
+      return successResponse({
         success: true,
         processed: 0,
         skipped: awards.length,
@@ -94,19 +96,19 @@ export async function POST(request: NextRequest) {
       const { error: iErr, count } = await supabase
         .from("bid_participants")
         .insert(rows, { count: "exact" });
-      if (iErr) return NextResponse.json({ error: `insert failed: ${iErr.message}` }, { status: 500 });
-      return NextResponse.json({ success: true, processed: count ?? rows.length, skipped: awards.length - rows.length });
+      if (iErr) return internalErrorResponse(`insert failed: ${iErr.message}`);
+      return successResponse({ success: true, processed: count ?? rows.length, skipped: awards.length - rows.length });
     }
 
-    return NextResponse.json({
+    return successResponse({
       success: true,
       processed: rows.length,
       skipped: awards.length - rows.length,
       total_awards: awards.length,
     });
   } catch (err) {
-    const message = err instanceof Error ? err.message : "Unknown error";
-    return NextResponse.json({ success: false, error: message }, { status: 500 });
+    const message = getErrorMessage(err);
+    return internalErrorResponse(message);
   }
 }
 

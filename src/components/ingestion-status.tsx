@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -14,9 +15,45 @@ import {
 } from "lucide-react";
 import { useIngestionStatus } from "@/hooks/use-api";
 
-function formatRelativeTime(iso: string | null): string {
+function useCurrentTime() {
+  const [currentTime, setCurrentTime] = useState<number | null>(null);
+
+  useEffect(() => {
+    const updateCurrentTime = () => setCurrentTime(Date.now());
+
+    updateCurrentTime();
+    const intervalId = window.setInterval(updateCurrentTime, 60000);
+
+    return () => window.clearInterval(intervalId);
+  }, []);
+
+  return currentTime;
+}
+
+function formatJobLabel(jobType: string): string {
+  switch (jobType) {
+    case "tenders":
+      return "공고 수집";
+    case "awards":
+      return "낙찰 수집";
+    case "alerts":
+      return "알림 처리";
+    case "participants":
+      return "참여업체 수집";
+    case "cleanup":
+      return "정리 작업";
+    case "analysis_rebuild":
+      return "분석 재구성";
+    default:
+      return jobType;
+  }
+}
+
+function formatRelativeTime(iso: string | null, currentTime: number | null): string {
   if (!iso) return "없음";
-  const diff = Date.now() - new Date(iso).getTime();
+  if (!currentTime) return "방금";
+
+  const diff = currentTime - new Date(iso).getTime();
   const mins = Math.floor(diff / 60000);
   if (mins < 1) return "방금";
   if (mins < 60) return `${mins}분 전`;
@@ -30,6 +67,7 @@ function formatRelativeTime(iso: string | null): string {
  */
 export function IngestionStatusBanner() {
   const { data: status, isLoading } = useIngestionStatus();
+  const currentTime = useCurrentTime();
 
   if (isLoading) return null;
   if (!status) return null;
@@ -38,15 +76,16 @@ export function IngestionStatusBanner() {
   if (status.system_ok) return null;
 
   const tenderDelayed =
+    currentTime !== null &&
     status.tenders.last_success_at &&
-    Date.now() - new Date(status.tenders.last_success_at).getTime() > 1000 * 60 * 60 * 6;
+    currentTime - new Date(status.tenders.last_success_at).getTime() > 1000 * 60 * 60 * 6;
 
   return (
     <div className="flex items-center gap-2 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-800 dark:border-amber-800 dark:bg-amber-900/20 dark:text-amber-300">
       <AlertTriangle className="h-4 w-4 shrink-0" />
       <span>
-        {status.tenders.failure_count_24h > 0
-          ? `공고 수집 오류 ${status.tenders.failure_count_24h}건 발생 — 일부 수치가 최신이 아닐 수 있습니다`
+        {status.recent_failures.length > 0
+          ? `${formatJobLabel(status.recent_failures[0]?.job_type ?? "cron")} 오류 감지 — 일부 수치가 최신이 아닐 수 있습니다`
           : tenderDelayed
           ? "외부 API 수집 지연 — 최신 공고가 반영되지 않을 수 있습니다"
           : "데이터 수집 상태 확인 필요"}
@@ -60,6 +99,7 @@ export function IngestionStatusBanner() {
  */
 export function IngestionStatusCard() {
   const { data: status, isLoading } = useIngestionStatus();
+  const currentTime = useCurrentTime();
 
   return (
     <Card className="premium-card">
@@ -103,36 +143,63 @@ export function IngestionStatusCard() {
             <StatusRow
               icon={<Wifi className="h-4 w-4" />}
               label="공고 최근 수집"
-              value={formatRelativeTime(status.tenders.last_success_at)}
+              value={formatRelativeTime(status.tenders.last_success_at, currentTime)}
               ok={status.tenders.failure_count_24h === 0}
             />
             <StatusRow
               icon={<CheckCircle2 className="h-4 w-4" />}
               label="낙찰 최근 수집"
-              value={formatRelativeTime(status.awards.last_success_at)}
+              value={formatRelativeTime(status.awards.last_success_at, currentTime)}
               ok={status.awards.failure_count_24h === 0}
             />
             <StatusRow
               icon={<RefreshCw className="h-4 w-4" />}
               label="분석 캐시 갱신"
-              value={formatRelativeTime(status.analysis_last_rebuilt)}
+              value={formatRelativeTime(status.analysis.last_success_at ?? status.analysis_last_rebuilt, currentTime)}
               ok={
-                !status.analysis_last_rebuilt
+                currentTime === null || !status.analysis.last_success_at
                   ? false
-                  : Date.now() - new Date(status.analysis_last_rebuilt).getTime() <
+                  : currentTime - new Date(status.analysis.last_success_at).getTime() <
                     1000 * 60 * 60 * 30
               }
             />
             <StatusRow
+              icon={<CheckCircle2 className="h-4 w-4" />}
+              label="알림 최근 처리"
+              value={formatRelativeTime(status.alerts.last_success_at, currentTime)}
+              ok={status.alerts.failure_count_24h === 0}
+            />
+            <StatusRow
+              icon={<CheckCircle2 className="h-4 w-4" />}
+              label="참여업체 최근 수집"
+              value={formatRelativeTime(status.participants.last_success_at, currentTime)}
+              ok={status.participants.failure_count_24h === 0}
+            />
+            <StatusRow
+              icon={<Clock className="h-4 w-4" />}
+              label="현재 실행 중"
+              value={status.running_jobs.length > 0 ? `${status.running_jobs.length}개` : "없음"}
+              ok={status.running_jobs.length === 0}
+            />
+            <StatusRow
               icon={<XCircle className="h-4 w-4" />}
               label="24h 수집 실패"
-              value={`${status.tenders.failure_count_24h + status.awards.failure_count_24h}건`}
-              ok={
-                status.tenders.failure_count_24h +
-                  status.awards.failure_count_24h ===
-                0
-              }
+              value={status.recent_failures.length > 0 ? `${status.recent_failures.length}건` : "없음"}
+              ok={status.recent_failures.length === 0}
             />
+            {status.recent_failures.length > 0 && (
+              <div className="rounded-lg border border-amber-200 bg-amber-50/70 px-3 py-2 text-xs text-amber-900 dark:border-amber-900/60 dark:bg-amber-950/30 dark:text-amber-200">
+                {status.recent_failures.slice(0, 2).map((failure, index) => (
+                  <div key={`${failure.job_type}-${failure.at}-${index}`} className="flex items-start justify-between gap-3">
+                    <span className="font-medium">{formatJobLabel(failure.job_type)}</span>
+                    <span className="text-right text-amber-800/80 dark:text-amber-200/80">
+                      {failure.message ?? "오류 메시지 없음"}
+                      {failure.at ? ` · ${formatRelativeTime(failure.at, currentTime)}` : ""}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
         )}
       </CardContent>

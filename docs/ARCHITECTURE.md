@@ -118,25 +118,25 @@
   → queryClient.invalidateQueries (캐시 갱신)
 ```
 
-#### 2.3.3 Cron: 공고 수집
+#### 2.3.3 Cron: 상위 수집 오케스트레이터
 ```
-Vercel Cron (평일 09:00 UTC — Hobby 플랜 1일 1회)
-  → POST /api/jobs/poll-tenders (Authorization: Bearer CRON_SECRET)
+Vercel Cron (평일 00:00 UTC)
+  → POST /api/jobs/cron-ingest (Authorization: Bearer CRON_SECRET)
   → verifyCronSecret 검증
-  → 나라장터 API 호출 (retryWithBackoff, 3회 재시도)
-  → 각 공고: 기관 upsert → 공고 upsert (source_tender_id 기준)
-  → 결과 통계 반환 { inserted, updated, errors }
+  → 내부적으로 /api/jobs/poll-tenders 호출
+  → 내부적으로 /api/jobs/collect-bid-awards 호출
+  → 세부 Job 결과를 집계해 반환
 ```
 
-#### 2.3.4 Cron: 알림 처리
+#### 2.3.4 Cron: 상위 유지보수 오케스트레이터
 ```
-Vercel Cron (평일 09:30 UTC — Hobby 플랜 1일 1회)
-  → POST /api/jobs/process-alerts
-  → 활성 alert_rules 전체 조회
-  → 최근 2시간 내 신규 공고 조회 (Vercel Hobby 플랜 대응)
-  → 각 규칙 × 각 공고 매칭 (keyword, region, industry, budget)
-  → 중복 발송 방지 (alert_logs 확인)
-  → 이메일/카카오 발송 + alert_logs 기록
+Vercel Cron (매일 02:00 UTC)
+  → POST /api/jobs/cron-maintenance
+  → 평일: /api/jobs/process-alerts 호출
+  → 매일: /api/jobs/rebuild-analysis, /api/jobs/collect-participants 호출
+  → 월요일: /api/ai/embed-batch 호출
+  → 일요일: /api/jobs/cleanup 호출
+  → 세부 Job 결과를 집계해 반환
 ```
 
 ---
@@ -238,7 +238,7 @@ bid-platform/
 │   │   ├── notifications/
 │   │   │   ├── types.ts           # NotificationProvider 인터페이스
 │   │   │   ├── email-provider.ts  # Resend 이메일 발송
-│   │   │   ├── kakao-provider.ts  # 카카오 알림 (Mock)
+│   │   │   ├── kakao-provider.ts  # 추가 채널용 provider 스텁
 │   │   │   └── index.ts           # Provider 팩토리
 │   │   │
 │   │   ├── types.ts               # 도메인 타입 정의
@@ -247,7 +247,7 @@ bid-platform/
 │   │   ├── api-response.ts        # API 응답 형식 헬퍼
 │   │   └── auth-context.ts        # 인증 컨텍스트 헬퍼
 │   │
-│   └── middleware.ts              # Next.js 인증 미들웨어 (Next.js 16 표준)
+│   └── proxy.ts                   # Next.js 16 인증/리다이렉트 프록시
 │
 ├── supabase/
 │   ├── schema.sql                 # 전체 DB 스키마 (DDL)

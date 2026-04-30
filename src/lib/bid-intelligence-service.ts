@@ -55,20 +55,138 @@ export interface DashboardSummary {
 
 export interface IngestionStatus {
   tenders: {
+    last_started_at: string | null;
     last_success_at: string | null;
     last_failure_at: string | null;
     recent_count: number;
     failure_count_24h: number;
+    last_error: string | null;
+    is_running: boolean;
   };
   awards: {
+    last_started_at: string | null;
     last_success_at: string | null;
     last_failure_at: string | null;
     recent_count: number;
     failure_count_24h: number;
+    last_error: string | null;
+    is_running: boolean;
   };
+  analysis: {
+    last_started_at: string | null;
+    last_success_at: string | null;
+    last_failure_at: string | null;
+    recent_count: number;
+    failure_count_24h: number;
+    last_error: string | null;
+    is_running: boolean;
+  };
+  alerts: {
+    last_started_at: string | null;
+    last_success_at: string | null;
+    last_failure_at: string | null;
+    recent_count: number;
+    failure_count_24h: number;
+    last_error: string | null;
+    is_running: boolean;
+  };
+  participants: {
+    last_started_at: string | null;
+    last_success_at: string | null;
+    last_failure_at: string | null;
+    recent_count: number;
+    failure_count_24h: number;
+    last_error: string | null;
+    is_running: boolean;
+  };
+  cleanup: {
+    last_started_at: string | null;
+    last_success_at: string | null;
+    last_failure_at: string | null;
+    recent_count: number;
+    failure_count_24h: number;
+    last_error: string | null;
+    is_running: boolean;
+  };
+  running_jobs: string[];
+  recent_failures: Array<{
+    job_type: string;
+    at: string | null;
+    message: string | null;
+  }>;
   analysis_last_rebuilt: string | null;
   computed_at: string;
   system_ok: boolean;
+}
+
+type CollectionLogRow = {
+  job_type: string | null;
+  status: string | null;
+  started_at: string | null;
+  finished_at: string | null;
+  created_at: string | null;
+  records_collected: number | null;
+  error_message: string | null;
+};
+
+type JobSummary = IngestionStatus["tenders"];
+
+const SUCCESS_STATUSES = new Set(["success", "completed"]);
+const FAILURE_STATUSES = new Set(["failed"]);
+const RUNNING_STATUSES = new Set(["running", "started"]);
+
+function normalizeStatus(status: string | null | undefined) {
+  return (status ?? "").toLowerCase();
+}
+
+function rowTimestamp(row: CollectionLogRow) {
+  return row.finished_at ?? row.started_at ?? row.created_at ?? null;
+}
+
+function rowStartedAt(row: CollectionLogRow) {
+  return row.started_at ?? row.created_at ?? null;
+}
+
+function isWithinHours(iso: string | null, hours: number) {
+  if (!iso) return false;
+
+  const parsed = Date.parse(iso);
+  if (Number.isNaN(parsed)) return false;
+
+  return Date.now() - parsed <= hours * 60 * 60 * 1000;
+}
+
+function emptyJobSummary(): JobSummary {
+  return {
+    last_started_at: null,
+    last_success_at: null,
+    last_failure_at: null,
+    recent_count: 0,
+    failure_count_24h: 0,
+    last_error: null,
+    is_running: false,
+  };
+}
+
+function buildJobSummary(rows: CollectionLogRow[], jobTypes: string[]): JobSummary {
+  const relevantRows = rows.filter((row) => row.job_type && jobTypes.includes(row.job_type));
+  if (relevantRows.length === 0) return emptyJobSummary();
+
+  const successRow = relevantRows.find((row) => SUCCESS_STATUSES.has(normalizeStatus(row.status)));
+  const failureRow = relevantRows.find((row) => FAILURE_STATUSES.has(normalizeStatus(row.status)));
+  const recentRows = relevantRows.filter((row) => isWithinHours(rowStartedAt(row), 24));
+
+  return {
+    last_started_at: rowStartedAt(relevantRows[0]),
+    last_success_at: successRow ? rowTimestamp(successRow) : null,
+    last_failure_at: failureRow ? rowTimestamp(failureRow) : null,
+    recent_count: recentRows
+      .filter((row) => SUCCESS_STATUSES.has(normalizeStatus(row.status)))
+      .reduce((sum, row) => sum + (row.records_collected ?? 0), 0),
+    failure_count_24h: recentRows.filter((row) => FAILURE_STATUSES.has(normalizeStatus(row.status))).length,
+    last_error: failureRow?.error_message ?? null,
+    is_running: relevantRows.some((row) => RUNNING_STATUSES.has(normalizeStatus(row.status))),
+  };
 }
 
 export interface AgencyAnalysis {
@@ -143,31 +261,111 @@ export async function getIngestionStatus(): Promise<IngestionStatus> {
   const supabase = createServiceClient();
 
   try {
-    const { data, error } = await supabase.rpc("get_ingestion_status");
+    const { data, error } = await supabase
+      .from("collection_logs")
+      .select("job_type,status,started_at,finished_at,created_at,records_collected,error_message")
+      .order("started_at", { ascending: false })
+      .limit(200);
+
     if (error) throw error;
 
-    const status = data as Omit<IngestionStatus, "system_ok">;
-    const tenderOk = status.tenders.failure_count_24h === 0;
-    const awardsOk = status.awards.failure_count_24h === 0;
+    const rows = (data ?? []) as CollectionLogRow[];
+    const tenders = buildJobSummary(rows, ["tenders"]);
+    const awards = buildJobSummary(rows, ["awards"]);
+    const analysis = buildJobSummary(rows, ["analysis_rebuild"]);
+    const alerts = buildJobSummary(rows, ["alerts"]);
+    const participants = buildJobSummary(rows, ["participants"]);
+    const cleanup = buildJobSummary(rows, ["cleanup"]);
+    const runningJobs = Array.from(
+      new Set(
+        rows
+          .filter((row) => RUNNING_STATUSES.has(normalizeStatus(row.status)))
+          .map((row) => row.job_type)
+          .filter((jobType): jobType is string => Boolean(jobType))
+      )
+    );
+    const recentFailures = rows
+      .filter((row) => FAILURE_STATUSES.has(normalizeStatus(row.status)) && isWithinHours(rowStartedAt(row), 24))
+      .slice(0, 5)
+      .map((row) => ({
+        job_type: row.job_type ?? "unknown",
+        at: rowTimestamp(row),
+        message: row.error_message ?? null,
+      }));
+    const tenderOk = tenders.failure_count_24h === 0;
+    const awardsOk = awards.failure_count_24h === 0;
 
     return {
-      ...status,
+      tenders,
+      awards,
+      analysis,
+      alerts,
+      participants,
+      cleanup,
+      running_jobs: runningJobs,
+      recent_failures: recentFailures,
+      analysis_last_rebuilt: analysis.last_success_at,
+      computed_at: new Date().toISOString(),
       system_ok: tenderOk && awardsOk,
     };
   } catch {
     return {
       tenders: {
+        last_started_at: null,
         last_success_at: null,
         last_failure_at: null,
         recent_count: 0,
         failure_count_24h: 0,
+        last_error: null,
+        is_running: false,
       },
       awards: {
+        last_started_at: null,
         last_success_at: null,
         last_failure_at: null,
         recent_count: 0,
         failure_count_24h: 0,
+        last_error: null,
+        is_running: false,
       },
+      analysis: {
+        last_started_at: null,
+        last_success_at: null,
+        last_failure_at: null,
+        recent_count: 0,
+        failure_count_24h: 0,
+        last_error: null,
+        is_running: false,
+      },
+      alerts: {
+        last_started_at: null,
+        last_success_at: null,
+        last_failure_at: null,
+        recent_count: 0,
+        failure_count_24h: 0,
+        last_error: null,
+        is_running: false,
+      },
+      participants: {
+        last_started_at: null,
+        last_success_at: null,
+        last_failure_at: null,
+        recent_count: 0,
+        failure_count_24h: 0,
+        last_error: null,
+        is_running: false,
+      },
+      cleanup: {
+        last_started_at: null,
+        last_success_at: null,
+        last_failure_at: null,
+        recent_count: 0,
+        failure_count_24h: 0,
+        last_error: null,
+        is_running: false,
+      },
+      running_jobs: [],
+      recent_failures: [],
       analysis_last_rebuilt: null,
       computed_at: new Date().toISOString(),
       system_ok: false,

@@ -13,16 +13,32 @@ import type {
   AIInsights,
   CompanyProfile,
   CompanyProfileInput,
+  SavedSearch,
+  SavedSearchInput,
+  SavedSearchUpdateInput,
 } from "@/lib/types";
+import type { DashboardSummary, IngestionStatus } from "@/lib/bid-intelligence-service";
 import type { TenderSearchParams } from "@/lib/validations";
 
 // ─── Fetch 유틸 ────────────────────────────────────────
+
+export class ApiError extends Error {
+  status: number;
+  code?: string;
+
+  constructor(message: string, status: number, code?: string) {
+    super(message);
+    this.name = "ApiError";
+    this.status = status;
+    this.code = code;
+  }
+}
 
 async function fetcher<T>(url: string, init?: RequestInit): Promise<T> {
   const res = await fetch(url, init);
   if (!res.ok) {
     const err = await res.json().catch(() => ({ message: "Unknown error" }));
-    throw new Error(err.message || `HTTP ${res.status}`);
+    throw new ApiError(err.message || `HTTP ${res.status}`, res.status, err.code);
   }
   return res.json();
 }
@@ -186,6 +202,54 @@ export function useAlertLogs() {
   });
 }
 
+export function useSavedSearches() {
+  return useQuery<SavedSearch[]>({
+    queryKey: ["saved-searches"],
+    queryFn: () => fetcher("/api/saved-searches"),
+    staleTime: 1000 * 60 * 5,
+  });
+}
+
+export function useCreateSavedSearch() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (data: SavedSearchInput) =>
+      fetcher<SavedSearch>("/api/saved-searches", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(data),
+      }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["saved-searches"] });
+    },
+  });
+}
+
+export function useDeleteSavedSearch() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => fetcher(`/api/saved-searches/${id}`, { method: "DELETE" }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["saved-searches"] });
+    },
+  });
+}
+
+export function useUpdateSavedSearch() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, ...data }: { id: string } & SavedSearchUpdateInput) =>
+      fetcher<SavedSearch>(`/api/saved-searches/${id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(data),
+      }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["saved-searches"] });
+    },
+  });
+}
+
 // ─── Reports ───────────────────────────────────────────
 
 export function useReportSummary(from?: string, to?: string) {
@@ -279,38 +343,8 @@ export function useUpdateCompanyProfile() {
 
 // ─── Dashboard Summary (실데이터) ──────────────────────
 
-export interface DashboardKPI {
-  tender_stats: {
-    open_count: number;
-    closed_count: number;
-    result_count: number;
-    new_today: number;
-    new_this_week: number;
-    total_count: number;
-  };
-  award_stats: {
-    total_awards: number;
-    avg_award_rate: number | null;
-    total_awarded_amount: number | null;
-    awards_with_participants: number;
-    avg_participants: number | null;
-  };
-  collection_status: {
-    last_tender_collection: string | null;
-    last_award_collection: string | null;
-    recent_failures: number;
-  };
-  data_coverage: {
-    agencies_real: number;
-    industries_real: number;
-    regions_real: number;
-    awards_with_participants: number;
-  };
-  computed_at: string;
-}
-
 export function useDashboardSummary() {
-  return useQuery<{ data: DashboardKPI | null; quality: string; computed_at: string }>({
+  return useQuery<{ data: DashboardSummary | null; quality: string; computed_at: string }>({
     queryKey: ["dashboard-summary"],
     queryFn: () => fetcher("/api/dashboard/summary"),
     staleTime: 1000 * 60 * 5, // 5분 캐시
@@ -318,24 +352,6 @@ export function useDashboardSummary() {
 }
 
 // ─── Ingestion Status (운영 상태) ──────────────────────
-
-export interface IngestionStatus {
-  tenders: {
-    last_success_at: string | null;
-    last_failure_at: string | null;
-    recent_count: number;
-    failure_count_24h: number;
-  };
-  awards: {
-    last_success_at: string | null;
-    last_failure_at: string | null;
-    recent_count: number;
-    failure_count_24h: number;
-  };
-  analysis_last_rebuilt: string | null;
-  computed_at: string;
-  system_ok: boolean;
-}
 
 export function useIngestionStatus() {
   return useQuery<IngestionStatus>({

@@ -7,7 +7,10 @@ import {
   useCreateAlertRule,
   useUpdateAlertRule,
   useDeleteAlertRule,
+  ApiError,
 } from "@/hooks/use-api";
+import { UpgradeModal, usePlanLimit } from "@/components/upgrade-modal";
+import { tenderStatusLabel } from "@/lib/helpers";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -47,6 +50,7 @@ import { Bell, Plus, Trash2, Mail, MessageSquare, BellRing, Send, AlertTriangle 
 import { toast } from "sonner";
 
 export default function AlertsPage() {
+  const { limitModalProps, openModal } = usePlanLimit("알림 규칙", 3);
   const { data: rules, isLoading: rulesLoading } = useAlertRules();
   const { data: logs, isLoading: logsLoading } = useAlertLogs();
   const createRule = useCreateAlertRule();
@@ -59,6 +63,7 @@ export default function AlertsPage() {
   const [ruleType, setRuleType] = useState<"KEYWORD" | "FILTER">("KEYWORD");
   const [ruleName, setRuleName] = useState("");
   const [keyword, setKeyword] = useState("");
+  const [status, setStatus] = useState<"ALL" | "OPEN" | "CLOSED" | "RESULT">("ALL");
   const [budgetMin, setBudgetMin] = useState("");
   const [budgetMax, setBudgetMax] = useState("");
   const [channel, setChannel] = useState<"EMAIL" | "KAKAO">("EMAIL");
@@ -74,6 +79,7 @@ export default function AlertsPage() {
         name: ruleName.trim() || undefined,
         rule_json: {
           keyword: keyword || undefined,
+          statuses: status === "ALL" ? undefined : [status],
           budgetMin: budgetMin ? Number(budgetMin) : undefined,
           budgetMax: budgetMax ? Number(budgetMax) : undefined,
         },
@@ -83,8 +89,12 @@ export default function AlertsPage() {
       toast.success("알림 규칙 생성 완료");
       setDialogOpen(false);
       resetForm();
-    } catch {
-      toast.error("알림 규칙 생성 실패");
+    } catch (error) {
+      if (error instanceof ApiError && error.code === "PLAN_LIMIT") {
+        openModal();
+        return;
+      }
+      toast.error(error instanceof Error ? error.message : "알림 규칙 생성 실패");
     }
   };
 
@@ -111,6 +121,7 @@ export default function AlertsPage() {
     setRuleType("KEYWORD");
     setRuleName("");
     setKeyword("");
+    setStatus("ALL");
     setBudgetMin("");
     setBudgetMax("");
     setChannel("EMAIL");
@@ -118,26 +129,37 @@ export default function AlertsPage() {
 
   return (
     <div className="space-y-8 animate-fade-up">
+      <UpgradeModal {...limitModalProps} />
       {/* Header */}
-      <div className="relative overflow-hidden rounded-2xl px-8 py-8 sm:px-10" style={{ background: "linear-gradient(135deg, #1a0a1e 0%, #1e1b4b 50%, #0f172a 100%)" }}>
-        <div className="noise-overlay" />
-        {/* Colour orbs */}
-        <div className="absolute top-[-10%] right-[-5%] h-55 w-55 rounded-full bg-rose-500/25 blur-[80px] animate-mesh pointer-events-none" />
-        <div className="absolute bottom-[-10%] left-[10%] h-45 w-45 rounded-full bg-indigo-500/25 blur-[70px] animate-mesh pointer-events-none" style={{ animationDelay: "-5s" }} />
-        {/* Top shimmer */}
-        <div className="absolute top-0 left-0 right-0 h-px" style={{ background: "linear-gradient(90deg, transparent, rgba(251,113,133,0.7) 50%, transparent)" }} />
-        <div className="relative z-10 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+      <div className="rounded-2xl border border-primary/15 bg-primary/4 px-6 py-6 sm:px-8">
+        <div className="flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
           <div>
-            <div className="inline-flex items-center gap-2 rounded-full bg-white/10 border border-white/20 px-3 py-1 text-xs font-semibold text-white/85 mb-3">
-              <Bell className="h-3 w-3 text-rose-300" />
-              매치 알림 시스템
+            <div className="inline-flex items-center gap-2 rounded-full border border-primary/15 bg-primary/8 px-3 py-1 text-xs font-semibold text-primary">
+              <Bell className="h-3 w-3" />
+              공고 추적 자동화
             </div>
-            <h1 className="text-3xl font-extrabold tracking-tight text-white">알림 관리</h1>
-            <p className="text-white/65 mt-1">키워드/필터 조건에 맞는 새 공고를 알림 받으세요</p>
+            <h1 className="mt-4 text-3xl font-extrabold tracking-tight">알림 추적</h1>
+            <p className="mt-2 max-w-2xl text-sm text-muted-foreground">
+              반복 검색을 줄이고, 중요한 공고를 놓치지 않도록 키워드와 예산 조건을 규칙으로 저장하는 화면입니다.
+            </p>
           </div>
+
+          <div className="grid gap-3 sm:grid-cols-2 lg:w-lg">
+            <div className="rounded-2xl border border-border/50 bg-background/80 px-4 py-3">
+              <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">언제 쓰나</p>
+              <p className="mt-1 text-sm font-semibold">반복적으로 같은 조건의 공고를 찾을 때</p>
+              <p className="mt-1 text-xs text-muted-foreground">매번 검색하는 대신 규칙으로 추적 흐름을 만듭니다.</p>
+            </div>
+            <div className="rounded-2xl border border-border/50 bg-background/80 px-4 py-3">
+              <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">핵심 기준</p>
+              <p className="mt-1 text-sm font-semibold">키워드, 예산, 채널</p>
+              <p className="mt-1 text-xs text-muted-foreground">너무 많은 옵션보다 실제 추적 기준 2~3개만 먼저 두는 편이 좋습니다.</p>
+            </div>
+          </div>
+
           <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
             <DialogTrigger asChild>
-              <Button className="gap-1.5 rounded-xl px-5 h-10 bg-white text-indigo-900 hover:bg-white/90 font-semibold shadow-lg">
+              <Button className="gap-1.5 rounded-xl px-5 h-10 btn-premium text-white font-semibold">
                 <Plus className="h-4 w-4" />
                 규칙 추가
               </Button>
@@ -150,7 +172,7 @@ export default function AlertsPage() {
                 <div className="space-y-2">
                   <Label className="text-xs font-medium text-muted-foreground uppercase tracking-wider">규칙 이름 (선택)</Label>
                   <Input
-                    placeholder="예: AI 공공사업 알림"
+                    placeholder="예: 플랫폼 운영 공고 알림"
                     value={ruleName}
                     onChange={(e) => setRuleName(e.target.value)}
                     className="h-11"
@@ -176,12 +198,27 @@ export default function AlertsPage() {
                 <div className="space-y-2">
                   <Label className="text-xs font-medium text-muted-foreground uppercase tracking-wider">키워드</Label>
                   <Input
-                    placeholder="예: AI 시스템 소프트웨어 (띄어쓰기로 구분, OR 조건)"
+                    placeholder="예: 플랫폼 AI 데이터 (띄어쓰기로 구분, OR 조건)"
                     value={keyword}
                     onChange={(e) => setKeyword(e.target.value)}
                     className="h-11"
                   />
                   <p className="text-xs text-muted-foreground">여러 키워드는 띄어쓰기로 구분 — 하나라도 포함되면 알림 발송</p>
+                </div>
+
+                <div className="space-y-2">
+                  <Label className="text-xs font-medium text-muted-foreground uppercase tracking-wider">공고 상태</Label>
+                  <Select value={status} onValueChange={(v) => setStatus(v as "ALL" | "OPEN" | "CLOSED" | "RESULT")}>
+                    <SelectTrigger className="h-11">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="ALL">전체 상태</SelectItem>
+                      <SelectItem value="OPEN">진행중</SelectItem>
+                      <SelectItem value="CLOSED">마감</SelectItem>
+                      <SelectItem value="RESULT">결과발표</SelectItem>
+                    </SelectContent>
+                  </Select>
                 </div>
 
                 <div className="grid grid-cols-2 gap-3">
@@ -239,6 +276,19 @@ export default function AlertsPage() {
       </div>
 
       <Tabs defaultValue="rules">
+        <Card className="premium-card overflow-hidden border-primary/15 bg-primary/4">
+          <CardContent className="py-4 px-5">
+            <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
+              <span className="font-semibold text-primary">빠른 흐름</span>
+              <span>1. 키워드 또는 조건 정하기</span>
+              <span className="text-border">/</span>
+              <span>2. 규칙 활성화</span>
+              <span className="text-border">/</span>
+              <span>3. 발송 이력으로 누락 없이 추적</span>
+            </div>
+          </CardContent>
+        </Card>
+
         <TabsList className="grid w-full max-w-xs grid-cols-2">
           <TabsTrigger value="rules" className="gap-1.5">
             <BellRing className="h-3.5 w-3.5" />
@@ -267,7 +317,7 @@ export default function AlertsPage() {
                   <Bell className="h-7 w-7 text-primary/50" />
                 </div>
                 <p className="text-lg font-semibold text-foreground">알림 규칙이 없습니다</p>
-                <p className="text-sm mt-1.5">새 규칙을 추가하여 맞춤 알림을 받아보세요</p>
+                <p className="text-sm mt-1.5">반복해서 찾는 키워드나 예산 조건이 있다면 첫 규칙부터 만들어 두세요</p>
               </CardContent>
             </Card>
           )}
@@ -302,6 +352,11 @@ export default function AlertsPage() {
                           </div>
                           <div className="text-sm text-muted-foreground space-y-0.5 mt-1">
                             {rj.keyword && <p>키워드: <span className="font-medium text-foreground">{rj.keyword}</span></p>}
+                            {rj.statuses?.length ? (
+                              <p>
+                                상태: <span className="font-medium text-foreground">{rj.statuses.map((value) => tenderStatusLabel(value)).join(", ")}</span>
+                              </p>
+                            ) : null}
                             {(rj.budgetMin || rj.budgetMax) && (
                               <p>
                                 예산:{" "}
@@ -358,6 +413,7 @@ export default function AlertsPage() {
                   <Send className="h-7 w-7 text-primary/50" />
                 </div>
                 <p className="text-lg font-semibold text-foreground">발송 이력이 없습니다</p>
+                <p className="text-sm mt-1.5">규칙을 활성화한 뒤 조건에 맞는 공고가 생기면 이력에서 바로 확인할 수 있습니다</p>
               </CardContent>
             </Card>
           )}

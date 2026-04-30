@@ -21,7 +21,7 @@ export default function TermsPage() {
           <section>
             <h2 className="text-lg font-bold mb-3">제1조 (목적)</h2>
             <p className="text-muted-foreground leading-relaxed">
-              본 약관은 BAIKAL Inc.(이하 "회사")가 운영하는 BidSight AI 입찰·조달 분석 플랫폼(이하 "서비스")의 이용 조건 및 절차,
+              본 약관은 BAIKAL Inc.(이하 &quot;회사&quot;)가 운영하는 BidSight AI 입찰·조달 분석 플랫폼(이하 &quot;서비스&quot;)의 이용 조건 및 절차,
               회사와 이용자 간의 권리·의무 및 책임사항을 규정함을 목적으로 합니다.
             </p>
           </section>
@@ -29,9 +29,9 @@ export default function TermsPage() {
           <section>
             <h2 className="text-lg font-bold mb-3">제2조 (정의)</h2>
             <ul className="list-disc list-inside space-y-2 text-muted-foreground">
-              <li>"서비스"란 회사가 제공하는 공공 입찰 정보 수집·분석·알림 서비스를 의미합니다.</li>
-              <li>"이용자"란 본 약관에 동의하고 서비스를 이용하는 개인 또는 법인을 의미합니다.</li>
-              <li>"계정"이란 이용자가 서비스 이용을 위해 등록한 이메일 및 비밀번호 조합을 의미합니다.</li>
+              <li>&quot;서비스&quot;란 회사가 제공하는 공공 입찰 정보 수집·분석·알림 서비스를 의미합니다.</li>
+              <li>&quot;이용자&quot;란 본 약관에 동의하고 서비스를 이용하는 개인 또는 법인을 의미합니다.</li>
+              <li>&quot;계정&quot;이란 이용자가 서비스 이용을 위해 등록한 이메일 및 비밀번호 조합을 의미합니다.</li>
             </ul>
           </section>
 

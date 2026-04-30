@@ -1,5 +1,6 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextRequest } from "next/server";
 import { createServiceClient } from "@/lib/supabase/service";
+import { errorResponse, internalErrorResponse, successResponse } from "@/lib/api-response";
 import { signUpSchema } from "@/lib/validations";
 
 /**
@@ -12,12 +13,13 @@ export async function POST(request: NextRequest) {
 
     const parsed = signUpSchema.safeParse(body);
     if (!parsed.success) {
-      return NextResponse.json(
-        { code: "VALIDATION_ERROR", message: parsed.error.issues[0]?.message ?? "입력값이 올바르지 않습니다" },
-        { status: 400 }
+      return errorResponse(
+        "VALIDATION_ERROR",
+        parsed.error.issues[0]?.message ?? "입력값이 올바르지 않습니다",
+        400
       );
     }
-    const { email, password } = parsed.data;
+    const { email, password, orgName } = parsed.data;
 
     const supabase = createServiceClient();
 
@@ -29,21 +31,50 @@ export async function POST(request: NextRequest) {
     });
 
     if (authError) {
-      return NextResponse.json(
-        { code: "AUTH_ERROR", message: authError.message },
-        { status: 400 }
-      );
+      return errorResponse("AUTH_ERROR", authError.message, 400);
     }
 
-    return NextResponse.json(
-      { message: "회원가입 완료", userId: authData.user.id },
-      { status: 201 }
-    );
+    const userId = authData.user.id;
+
+    const { data: membership, error: membershipError } = await supabase
+      .from("org_members")
+      .select("org_id")
+      .eq("user_id", userId)
+      .maybeSingle();
+
+    if (membershipError) {
+      return errorResponse("DB_ERROR", membershipError.message, 500);
+    }
+
+    let orgId = membership?.org_id ?? null;
+
+    // DB 트리거가 없거나 적용되지 않은 환경에서도 신규 사용자가 바로 조직 기능을 사용할 수 있게 보장합니다.
+    if (!orgId) {
+      const fallbackOrgName = orgName?.trim() || `${email.split("@")[0]}의 조직`;
+      const { data: org, error: orgError } = await supabase
+        .from("orgs")
+        .insert({ name: fallbackOrgName, plan: "free" })
+        .select("id")
+        .single();
+
+      if (orgError) {
+        return errorResponse("DB_ERROR", orgError.message, 500);
+      }
+
+      orgId = org.id;
+
+      const { error: memberInsertError } = await supabase
+        .from("org_members")
+        .insert({ org_id: orgId, user_id: userId, role: "admin" });
+
+      if (memberInsertError) {
+        return errorResponse("DB_ERROR", memberInsertError.message, 500);
+      }
+    }
+
+    return successResponse({ message: "회원가입 완료", userId, orgId }, 201);
   } catch (err) {
     console.error("signup error:", err);
-    return NextResponse.json(
-      { code: "INTERNAL_ERROR", message: "서버 오류" },
-      { status: 500 }
-    );
+    return internalErrorResponse("서버 오류");
   }
 }

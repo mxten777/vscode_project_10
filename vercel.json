@@ -8,32 +8,12 @@
   },
   "crons": [
     {
-      "path": "/api/jobs/poll-tenders",
+      "path": "/api/jobs/cron-ingest",
       "schedule": "0 0 * * 1-5"
     },
     {
-      "path": "/api/jobs/process-alerts",
-      "schedule": "0 2 * * 1-5"
-    },
-    {
-      "path": "/api/jobs/collect-bid-awards",
-      "schedule": "10 0 * * 1-5"
-    },
-    {
-      "path": "/api/jobs/rebuild-analysis",
-      "schedule": "0 20 * * *"
-    },
-    {
-      "path": "/api/jobs/collect-participants",
-      "schedule": "0 18 * * *"
-    },
-    {
-      "path": "/api/jobs/cleanup",
-      "schedule": "0 1 * * 0"
-    },
-    {
-      "path": "/api/ai/embed-batch",
-      "schedule": "0 2 * * 1"
+      "path": "/api/jobs/cron-maintenance",
+      "schedule": "0 2 * * *"
     }
   ],
   "headers": [

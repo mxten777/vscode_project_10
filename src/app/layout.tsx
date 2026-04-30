@@ -15,24 +15,24 @@ const geistMono = Geist_Mono({
 
 export const metadata: Metadata = {
   title: {
-    default: "BidSight — AI 입찰·조달 분석 플랫폼",
+    default: "BidSight — 공공입찰 공고 탐색과 선별 지원",
     template: "%s | BidSight",
   },
-  description: "나라장터 공공 입찰 공고를 AI로 자동 분석. 키워드 알림, 즐겨찾기, 통계 리포트까지 — 최적의 입찰 기회를 놓치지 마세요.",
-  keywords: ["입찰", "나라장터", "공공조달", "입찰분석", "AI", "공고알림", "조달청"],
+  description: "나라장터 공공입찰 공고를 자동으로 모으고, 필요한 공고를 빠르게 찾고, 놓치지 않게 관리하도록 돕는 입찰 지원 서비스.",
+  keywords: ["입찰", "나라장터", "공공조달", "공고검색", "공고알림", "낙찰분석", "조달청"],
   authors: [{ name: "BidSight" }],
   openGraph: {
     type: "website",
     locale: "ko_KR",
     url: "https://bid-platform.vercel.app",
     siteName: "BidSight",
-    title: "BidSight — AI 입찰·조달 분석 플랫폼",
-    description: "나라장터 공공 입찰 공고를 AI로 자동 분석. 키워드 알림, 즐겨찾기, 통계 리포트.",
+    title: "BidSight — 공공입찰 공고 탐색과 선별 지원",
+    description: "나라장터 공고를 자동으로 모으고, 필요한 공고를 빠르게 찾고, 놓치지 않게 관리하도록 돕는 서비스.",
   },
   twitter: {
     card: "summary",
-    title: "BidSight — AI 입찰·조달 분석 플랫폼",
-    description: "나라장터 공공 입찰 공고를 AI로 자동 분석.",
+    title: "BidSight — 공공입찰 공고 탐색과 선별 지원",
+    description: "나라장터 공고를 자동으로 모으고, 필요한 공고를 빠르게 찾고 놓치지 않게 돕는 서비스.",
   },
   robots: { index: true, follow: true },
 };

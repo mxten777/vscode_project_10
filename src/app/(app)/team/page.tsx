@@ -38,14 +38,16 @@ interface Invitation {
 
 async function fetchMembers(): Promise<{ members: Member[] }> {
   const res = await fetch("/api/team/members");
-  if (!res.ok) throw new Error("멤버 조회 실패");
-  return res.json();
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(data.message ?? "멤버 조회 실패");
+  return data;
 }
 
 async function fetchInvitations(): Promise<{ invitations: Invitation[] }> {
   const res = await fetch("/api/team/invite");
-  if (!res.ok) throw new Error("초대 목록 조회 실패");
-  return res.json();
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(data.message ?? "초대 목록 조회 실패");
+  return data;
 }
 
 export default function TeamPage() {
@@ -59,7 +61,7 @@ export default function TeamPage() {
     queryFn: fetchMembers,
   });
 
-  const { data: invitesData } = useQuery({
+  const { data: invitesData, error: invitesError } = useQuery({
     queryKey: ["team-invitations"],
     queryFn: fetchInvitations,
   });
@@ -105,14 +107,34 @@ export default function TeamPage() {
   const invitations = invitesData?.invitations ?? [];
 
   return (
-    <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-semibold">팀 관리</h1>
-        <p className="text-muted-foreground mt-1">조직 멤버를 초대하고 관리하세요.</p>
-      </div>
+    <div className="space-y-6 animate-fade-up">
+      <Card className="premium-card overflow-hidden border-primary/15 bg-primary/4">
+        <CardContent className="px-6 py-6">
+          <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+            <div>
+              <h1 className="text-3xl font-extrabold tracking-tight">팀 관리</h1>
+              <p className="mt-2 max-w-2xl text-sm text-muted-foreground">
+                같은 기준으로 공고를 검토할 수 있도록 팀원을 초대하고, 누가 함께 보고 있는지 정리하는 화면입니다.
+              </p>
+            </div>
+            <div className="grid gap-3 sm:grid-cols-2 lg:w-md">
+              <div className="rounded-2xl border border-border/50 bg-background/80 px-4 py-3">
+                <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">현재 멤버</p>
+                <p className="mt-1 text-sm font-semibold">{members.length}명</p>
+                <p className="mt-1 text-xs text-muted-foreground">검토와 공유에 참여 중인 인원 수입니다.</p>
+              </div>
+              <div className="rounded-2xl border border-border/50 bg-background/80 px-4 py-3">
+                <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">대기 중 초대</p>
+                <p className="mt-1 text-sm font-semibold">{invitations.length}건</p>
+                <p className="mt-1 text-xs text-muted-foreground">아직 수락되지 않은 초대 링크 수입니다.</p>
+              </div>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
 
       {/* 멤버 초대 */}
-      <Card>
+      <Card className="premium-card">
         <CardHeader>
           <CardTitle className="flex items-center gap-2 text-base">
             <UserPlus className="h-4 w-4" />
@@ -150,6 +172,9 @@ export default function TeamPage() {
           {inviteError && (
             <p className="text-sm text-destructive mt-2">{inviteError}</p>
           )}
+          {!inviteError && invitesError && (
+            <p className="text-sm text-muted-foreground mt-2">{invitesError.message}</p>
+          )}
           {inviteMutation.isSuccess && (
             <p className="text-sm text-green-600 mt-2">초대 이메일을 발송했습니다.</p>
           )}
@@ -157,7 +182,7 @@ export default function TeamPage() {
       </Card>
 
       {/* 현재 멤버 */}
-      <Card>
+      <Card className="premium-card">
         <CardHeader>
           <CardTitle className="flex items-center gap-2 text-base">
             <Users className="h-4 w-4" />
@@ -166,7 +191,7 @@ export default function TeamPage() {
         </CardHeader>
         <CardContent>
           {members.length === 0 ? (
-            <p className="text-sm text-muted-foreground">멤버가 없습니다.</p>
+            <p className="text-sm text-muted-foreground">아직 함께 검토 중인 멤버가 없습니다. 먼저 한 명을 초대해 보세요.</p>
           ) : (
             <div className="space-y-2">
               {members.map((m) => (
@@ -187,9 +212,17 @@ export default function TeamPage() {
         </CardContent>
       </Card>
 
+      {invitesError && (
+        <Card className="premium-card border-border/50 bg-muted/20">
+          <CardContent className="py-6 text-sm text-muted-foreground">
+            대기 중인 초대 목록은 관리자만 볼 수 있습니다.
+          </CardContent>
+        </Card>
+      )}
+
       {/* 대기 중인 초대 */}
-      {invitations.length > 0 && (
-        <Card>
+      {!invitesError && invitations.length > 0 && (
+        <Card className="premium-card">
           <CardHeader>
             <CardTitle className="flex items-center gap-2 text-base">
               <Clock className="h-4 w-4" />

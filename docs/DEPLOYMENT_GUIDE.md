@@ -51,11 +51,36 @@ Dashboard → **Settings** → **API**:
 
 ### 2.3 데이터베이스 스키마 적용
 
-1. Dashboard → **SQL Editor** → **New Query**
-2. `supabase/schema.sql` 파일의 전체 내용을 붙여넣기
-3. **Run** 클릭
-4. **Table Editor**에서 8개 테이블 생성 확인:
-   - `orgs`, `org_members`, `agencies`, `tenders`, `awards`, `favorites`, `alert_rules`, `alert_logs`
+> 현재 운영 기준의 소스 오브 트루스는 `supabase/schema.sql` 단일 파일이 아니라 `supabase/migrations/*.sql` 입니다.
+
+1. 가능하면 **Supabase CLI** 또는 마이그레이션 실행 방식으로 `supabase/migrations/` 파일을 **번호 순서대로 전체 적용**합니다.
+2. SQL Editor를 수동 사용한다면 `001_stabilize.sql`부터 최신 파일까지 순서대로 실행합니다.
+3. `supabase/schema.sql`은 **초기 구조 참고용**으로만 사용하고, 단독 실행 기준으로 사용하지 않습니다.
+4. 적용 후 기본 테이블 외에 아래 확장 테이블/기능이 생성되었는지 확인합니다:
+  - `bid_notices`, `bid_open_results`, `bid_awards`, `bid_price_features`
+  - `collection_logs`, `subscriptions`, `reports`, `analysis_cache`
+  - `company_profiles`, `recommendation_logs`, `bid_participants`
+5. AI 기능 사용 시 `018_pgvector.sql` 이후 마이그레이션까지 반영되었는지 반드시 확인합니다.
+6. `027_bid_participants_unique.sql` 과 `027_saved_searches.sql` 처럼 번호가 같은 파일도 있으므로 파일명 전체 기준으로 누락 없이 확인합니다.
+
+### 2.3.1 개별 마이그레이션 적용 메모
+
+운영 중 특정 마이그레이션만 추가 반영해야 할 때는 아래 순서로 진행합니다.
+
+```bash
+# Supabase CLI를 쓰는 경우
+supabase link --project-ref <your-project-ref>
+supabase db push
+```
+
+- 현재 Cron 모니터링 확장을 위해서는 `029_expand_collection_logs_for_cron.sql` 이 반영돼 있어야 합니다.
+- `rebuild-analysis` 가 `UPDATE requires a WHERE clause` 로 실패하면 `030_fix_sync_agency_counts_safeupdate.sql` 도 함께 반영해야 합니다.
+- 저장소에 `supabase/config.toml` 이 없는 경우에도 `supabase link` 후 `db push` 는 가능합니다.
+- CLI 연결이 어렵다면 Supabase SQL Editor에서 `029_expand_collection_logs_for_cron.sql`, `030_fix_sync_agency_counts_safeupdate.sql` 내용을 수동 실행해도 됩니다.
+
+운영 검증 메모:
+- 프로덕션 `cron-maintenance` 는 `029`, `030` 적용 후 `alerts`, `analysis_rebuild`, `participants` 성공 로그가 `collection_logs` 에 남는 것까지 확인했습니다.
+- Vercel `CRON_SECRET` 값을 바꾼 경우에는 **재배포 후**에만 런타임에 반영됩니다.
 
 ### 2.4 Auth 설정
 
@@ -74,6 +99,7 @@ Dashboard → **Authentication** → **Providers**:
 Dashboard → **Database** → **Extensions**:
 - `pgcrypto`: 활성화 확인
 - `pg_trgm`: 활성화 확인 (검색 기능에 필수)
+- `vector` 또는 `pgvector`: 활성화 확인 (유사 공고 검색 및 임베딩 기능에 필수)
 
 ---
 
@@ -144,8 +170,13 @@ SUPABASE_URL=https://xxxxx.supabase.co
 # ── Cron Secret ──
 CRON_SECRET=your-random-secret-string-here
 
+# ── Operations Console ──
+ADMIN_CONSOLE_EMAILS=ops@example.com,founder@example.com
+
 # ── 나라장터 API ──
 NARA_API_KEY=your-data.go.kr-api-key
+# 낙찰 수집 전용 키 (없으면 NARA_API_KEY fallback)
+NARA_AWARD_API_KEY=your-award-api-key
 NARA_API_BASE_URL=https://apis.data.go.kr/1230000
 
 # ── Email (Resend) ──
@@ -190,13 +221,23 @@ Vercel → Project → **Settings** → **Environment Variables**:
 |---|---|---|
 | `NEXT_PUBLIC_SUPABASE_URL` | All | Supabase URL |
 | `NEXT_PUBLIC_SUPABASE_ANON_KEY` | All | Supabase anon key |
+| `SUPABASE_URL` | Production, Preview | 서버 전용 런타임 Supabase URL |
 | `SUPABASE_SERVICE_ROLE_KEY` | Production, Preview | Service role key |
 | `CRON_SECRET` | Production | Cron 인증 시크릿 |
+| `ADMIN_CONSOLE_EMAILS` | Production | `/settings/operations` 접근 허용 이메일 목록 (쉼표 구분) |
 | `NARA_API_KEY` | Production | 나라장터 API 키 |
+| `NARA_AWARD_API_KEY` | Production | 낙찰 수집 전용 키 (선택, 없으면 `NARA_API_KEY` fallback) |
 | `NARA_API_BASE_URL` | All | `https://apis.data.go.kr/1230000` |
 | `RESEND_API_KEY` | Production | Resend API 키 |
 | `ALERT_FROM_EMAIL` | Production | 발신 이메일 주소 |
 | `NEXT_PUBLIC_APP_URL` | Production | `https://your-domain.vercel.app` |
+| `AI_SERVICE_URL` | Production | Railway 등 외부 AI 서비스 URL |
+| `AI_SERVICE_API_KEY` | Production | AI 프록시 호출용 x-api-key |
+| `STRIPE_SECRET_KEY` | Production | Stripe 서버 API 키 |
+| `STRIPE_WEBHOOK_SECRET` | Production | Stripe webhook 서명 키 |
+| `NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY` | Production | Stripe 클라이언트 키 |
+| `STRIPE_PRICE_PRO_MONTHLY` | Production | Pro 요금제 Price ID |
+| `STRIPE_PRICE_ENTERPRISE_MONTHLY` | Production | Enterprise 요금제 Price ID |
 
 ### 6.3 Cron Jobs 설정
 
@@ -206,21 +247,26 @@ Vercel → Project → **Settings** → **Environment Variables**:
 {
   "crons": [
     {
-      "path": "/api/jobs/poll-tenders",
-      "schedule": "0 9 * * 1-5"
+      "path": "/api/jobs/cron-ingest",
+      "schedule": "0 0 * * 1-5"
     },
     {
-      "path": "/api/jobs/process-alerts",
-      "schedule": "30 9 * * 1-5"
+      "path": "/api/jobs/cron-maintenance",
+      "schedule": "0 2 * * *"
     }
   ]
 }
 ```
 
-- **현재 스케줄**: 평일 09:00 UTC (poll) / 09:30 UTC (alerts)
-- **Hobby plan 제한**: 24시간당 1회 (Cron 표현식과 무관하게)
-- **Pro plan 업그레이드 시**: `*/10 * * * *` (medium미늹 수집)\ub85c 변경 가능
-- Vercel이 자동으로 `Authorization: Bearer <CRON_SECRET>` 헤더 추가
+- **현재 Hobby 운영안**: Cron 2개만 유지하고 내부에서 세부 Job을 순차 실행
+- `cron-ingest`: 평일 공고 수집 + 낙찰 수집
+- `cron-maintenance`: 알림 처리(평일) + 분석 재계산(매일) + 참여업체 수집(매일) + 임베딩 배치(월요일) + cleanup(일요일)
+- 실제 `vercel.json` 기준 스케줄은 UTC `00:00`(평일 ingest), UTC `02:00`(매일 maintenance) 입니다.
+- Vercel Hobby에서는 세부 Job을 개별 Cron으로 분리하지 않고 상위 오케스트레이터로 묶는 것을 기준으로 함
+- Vercel이 자동으로 `Authorization: Bearer <CRON_SECRET>` 헤더를 추가하므로 내부 Job 호출도 동일 시크릿을 사용함
+- 운영 기준에서 `cron-ingest` 는 현재 `/api/jobs/collect-bid-awards?lookbackDays=2&maxPages=1&maxItems=25` 경량 경로를 사용함
+- 최신 프로덕션 검증 기준 응답 시간은 `cron-ingest` 약 23초, 경량 `collect-bid-awards` 직접 호출 약 7.6초였음
+- 전체 award 범위를 한 번에 수집하는 방식은 여전히 장시간 실행 가능성이 있으므로, 데모 전에는 경량 운영안을 유지하는 편이 안전함
 
 ### 6.4 배포 실행
 
@@ -262,6 +308,19 @@ git push origin main
 | Auth 활동 | Project → Authentication → Users |
 | API 요청 통계 | Project → Reports → API |
 | 쿼리 성능 | Project → Database → Query Performance |
+
+### 7.2.1 Cron 로그 확인 SQL
+
+`collection_logs` 에서 최근 실행 상태를 직접 확인할 수 있습니다.
+
+```sql
+select job_type, status, started_at, finished_at, records_collected, error_message
+from public.collection_logs
+order by started_at desc
+limit 20;
+```
+
+- `029_expand_collection_logs_for_cron.sql` 적용 후에는 `alerts`, `participants`, `cleanup`, `analysis_rebuild`, `backfill_awards` 도 함께 보여야 정상입니다.
 
 ### 7.3 수동 Cron 실행 (디버깅)
 

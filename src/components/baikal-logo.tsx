@@ -1,7 +1,5 @@
 ﻿"use client";
 
-import Image from "next/image";
-
 interface BaikalLogoProps {
   variant?: "default" | "light";
   height?: number;
@@ -9,47 +7,22 @@ interface BaikalLogoProps {
 }
 
 /**
- * BAIKAL.AI brand logo using official image assets.
- * variant="default" — black text for light backgrounds, white text for dark mode
- * variant="light"   — always white text (for dark hero panels)
+ * Shared BidSight wordmark for light and dark surfaces.
  */
 export function BaikalLogo({ variant = "default", height = 32, className = "" }: BaikalLogoProps) {
-  const width = height * 2; // 1200x600 = 2:1 ratio
+  const textSize = height >= 44 ? "text-3xl" : height >= 36 ? "text-2xl" : "text-xl";
+  const textColor = variant === "light" ? "text-white" : "text-slate-950 dark:text-white";
+  const accentColor =
+    variant === "light"
+      ? "from-sky-300 via-violet-300 to-rose-300"
+      : "from-sky-500 via-indigo-500 to-rose-500 dark:from-sky-300 dark:via-violet-300 dark:to-rose-300";
 
-  if (variant === "light") {
-    return (
-      <div className={className}>
-        <Image
-          src="/images/baikal_logo_white.png"
-          alt="BAIKAL.AI"
-          width={width}
-          height={height}
-          className="object-contain"
-          priority
-        />
-      </div>
-    );
-  }
-
-  // Default: colored black logo for light mode, white logo for dark mode
   return (
-    <div className={className}>
-      <Image
-        src="/images/baikal_logo_new_trans.png"
-        alt="BAIKAL.AI"
-        width={width}
-        height={height}
-        className="object-contain dark:hidden"
-        priority
-      />
-      <Image
-        src="/images/baikal_logo_white.png"
-        alt="BAIKAL.AI"
-        width={width}
-        height={height}
-        className="object-contain hidden dark:block"
-        priority
-      />
+    <div className={`inline-flex flex-col justify-center ${className}`} style={{ minHeight: height }}>
+      <span className={`font-black tracking-[-0.06em] leading-none ${textSize} ${textColor}`}>
+        BidSight
+      </span>
+      <span className={`mt-1 h-1.5 w-16 rounded-full bg-gradient-to-r ${accentColor}`} />
     </div>
   );
 }

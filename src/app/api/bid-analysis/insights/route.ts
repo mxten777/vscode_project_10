@@ -24,7 +24,11 @@ export async function GET(request: NextRequest) {
     const ctx = await getAuthContext();
     if ("error" in ctx) return ctx.error;
 
-    const { user } = ctx;
+    const { user, orgId } = ctx;
+    if (!orgId) {
+      return apiResponse.error("조직에 가입되어 있지 않습니다", 400);
+    }
+
     const limit = Math.min(
       parseInt(request.nextUrl.searchParams.get("limit") || "8"),
       20
@@ -40,6 +44,7 @@ export async function GET(request: NextRequest) {
       .select(
         "industry_codes, region_codes, preferred_agency_names, min_budget, max_budget"
       )
+      .eq("org_id", orgId)
       .eq("user_id", user.id)
       .single();
 

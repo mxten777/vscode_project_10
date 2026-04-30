@@ -6,10 +6,10 @@
  * 인증: 현재 로그인한 사용자 기준 (로그인 유도 필요)
  */
 
-import { NextRequest, NextResponse } from "next/server";
+import { NextRequest } from "next/server";
 import { createServiceClient } from "@/lib/supabase/service";
 import { getAuthContext } from "@/lib/auth-context";
-import { apiResponse } from "@/lib/api-response";
+import { apiResponse, successResponse } from "@/lib/api-response";
 import { z } from "zod";
 
 const acceptSchema = z.object({
@@ -59,7 +59,7 @@ export async function POST(request: NextRequest) {
   if (existingMember) {
     // 초대 삭제 후 성공 반환 (멱등성)
     await supabase.from("org_invitations").delete().eq("id", invitation.id);
-    return NextResponse.json({ message: "이미 조직 멤버입니다." });
+    return successResponse({ message: "이미 조직 멤버입니다." });
   }
 
   // 조직 멤버 추가
@@ -76,5 +76,5 @@ export async function POST(request: NextRequest) {
   // 초대 삭제 (일회용)
   await supabase.from("org_invitations").delete().eq("id", invitation.id);
 
-  return NextResponse.json({ message: "팀에 합류했습니다.", orgId: invitation.org_id });
+  return successResponse({ message: "팀에 합류했습니다.", orgId: invitation.org_id });
 }

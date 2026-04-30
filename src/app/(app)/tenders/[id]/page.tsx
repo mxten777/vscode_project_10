@@ -2,7 +2,7 @@
 
 import { use } from "react";
 import { useRouter } from "next/navigation";
-import { useTender, useToggleFavorite, useBidRecommendation, useSimilarBids, useTenderParticipants } from "@/hooks/use-api";
+import { ApiError, useTender, useToggleFavorite, useBidRecommendation, useSimilarBids, useTenderParticipants } from "@/hooks/use-api";
 import { formatKRW, tenderStatusLabel, formatRawDate, getDday } from "@/lib/helpers";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -22,8 +22,6 @@ import {
   FileCode,
   Clock,
   CheckCircle2,
-  Circle,
-  Loader2,
   TrendingUp,
   Lightbulb,
   AlertTriangle,
@@ -35,6 +33,7 @@ import {
   Info,
 } from "lucide-react";
 import { DataQualityBadge } from "@/components/data-quality-badge";
+import { UpgradeModal, usePlanLimit } from "@/components/upgrade-modal";
 import { toast } from "sonner";
 
 export default function TenderDetailPage({
@@ -44,6 +43,7 @@ export default function TenderDetailPage({
 }) {
   const { id } = use(params);
   const router = useRouter();
+  const { limitModalProps, openModal } = usePlanLimit("즐겨찾기", 50);
   const { data: tender, isLoading, error } = useTender(id);
   const { addFavorite, removeFavorite } = useToggleFavorite();
   const { data: recommendation, isLoading: recLoading } = useBidRecommendation(id);
@@ -65,8 +65,12 @@ export default function TenderDetailPage({
         await addFavorite.mutateAsync(tender.id);
         toast.success("즐겨찾기 추가");
       }
-    } catch {
-      toast.error("로그인이 필요합니다");
+    } catch (error) {
+      if (error instanceof ApiError && error.code === "PLAN_LIMIT") {
+        openModal();
+        return;
+      }
+      toast.error(error instanceof Error ? error.message : "로그인이 필요합니다");
     }
   };
 
@@ -112,40 +116,41 @@ export default function TenderDetailPage({
   } | null;
   const dday = getDday(tender.deadline_at ?? null);
 
-  // Timeline stages
-  const stages = [
+  const reviewCards = [
     {
-      key: "published",
-      label: "공고 등록",
-      date: tender.published_at,
-      done: !!tender.published_at,
-      active: tender.status === "OPEN" && !award,
+      label: "지금 상태",
+      value: tenderStatusLabel(tender.status),
+      detail: dday
+        ? `${dday.label} 기준으로 마감 일정을 먼저 확인하세요.`
+        : tender.status === "RESULT"
+        ? "이미 결과가 공개된 공고입니다."
+        : "현재 상태 기준으로 검토 우선순위를 정할 수 있습니다.",
     },
     {
-      key: "bidding",
-      label: "입찰 진행",
-      date: null,
-      done: tender.status !== "OPEN",
-      active: tender.status === "OPEN",
+      label: "예산 규모",
+      value: formatKRW(tender.budget_amount),
+      detail: "참여 검토 전에 예산 규모와 기관 성격을 함께 보는 것이 좋습니다.",
     },
     {
-      key: "deadline",
-      label: "마감",
-      date: tender.deadline_at,
-      done: tender.status === "CLOSED" || tender.status === "RESULT",
-      active: tender.status === "CLOSED",
-    },
-    {
-      key: "result",
-      label: "결과 발표",
-      date: award?.opened_at ?? null,
-      done: !!award,
-      active: tender.status === "RESULT",
+      label: "판단 근거",
+      value: award ? "결과 데이터 확인 가능" : "추가 확인 필요",
+      detail: award
+        ? "낙찰 결과와 개찰 정보를 바로 확인할 수 있습니다."
+        : "즐겨찾기 또는 추가 수집 이후 더 많은 판단 근거를 볼 수 있습니다.",
     },
   ];
 
+  const nextAction = award
+    ? "결과 데이터와 낙찰률을 먼저 확인하세요."
+    : tender.status === "OPEN"
+    ? tender.is_favorited
+      ? "마감 일정 확인 후 정밀 분석 수집 상태를 확인하세요."
+      : "검토 대상이면 즐겨찾기에 저장해 후속 추적을 시작하세요."
+    : "기본 정보와 결과 공개 여부를 확인한 뒤 필요하면 저장하세요.";
+
   return (
     <div className="space-y-6 animate-fade-up">
+      <UpgradeModal {...limitModalProps} />
       {/* Top Bar */}
       <div className="flex items-center justify-between">
         <Button variant="ghost" size="sm" className="gap-1 rounded-xl hover:bg-primary/5 hover:text-primary" onClick={() => router.back()}>
@@ -173,103 +178,96 @@ export default function TenderDetailPage({
         </Button>
       </div>
 
-      {/* Title + D-day banner */}
-      <div className="relative overflow-hidden rounded-2xl px-6 py-7 sm:px-10" style={{ background: "linear-gradient(135deg, #1e1b4b 0%, #1e2d6b 50%, #2e1065 100%)" }}>
-        <div className="noise-overlay" />
-        <div className="absolute top-[-15%] right-[-5%] h-50 w-50 rounded-full bg-indigo-500/30 blur-[80px] animate-mesh pointer-events-none" />
-        <div className="absolute bottom-[-20%] left-[5%] h-40 w-40 rounded-full bg-violet-500/20 blur-[70px] pointer-events-none" />
-        <div className="absolute top-0 left-0 right-0 h-px" style={{ background: "linear-gradient(90deg, transparent, rgba(129,140,248,0.7) 50%, transparent)" }} />
-        <div className="relative z-10">
-          <div className="flex items-start justify-between gap-4 flex-wrap">
-            <div className="flex-1 min-w-0">
-              <div className="flex items-center gap-2 mb-3 flex-wrap">
-                <Badge
-                  variant={
-                    tender.status === "OPEN" ? "default" : tender.status === "CLOSED" ? "secondary" : "outline"
-                  }
-                  className="text-xs font-semibold"
-                >
-                  {tenderStatusLabel(tender.status)}
-                </Badge>
-                {tender.method_type && (
-                  <Badge variant="outline" className="text-xs border-white/30 text-white/85 bg-white/10">{tender.method_type}</Badge>
-                )}                {/* 분석 레벨 배지 */}
-                {(tender.analysis_level ?? 1) >= 3 ? (
-                  <Badge variant="outline" className="text-xs border-emerald-400/50 text-emerald-200 bg-emerald-500/15">
-                    <Microscope className="h-3 w-3 mr-1" />정밀 분석
+      <div className="grid gap-4 xl:grid-cols-[1.2fr_0.8fr]">
+        <Card className="overflow-hidden border-border/60 bg-linear-to-br from-slate-950 via-indigo-950 to-slate-900 shadow-premium-lg">
+          <CardContent className="px-6 py-6 text-white sm:px-8 sm:py-7">
+            <div className="flex items-start justify-between gap-4 flex-wrap">
+              <div className="min-w-0 flex-1">
+                <div className="flex items-center gap-2 mb-3 flex-wrap">
+                  <Badge
+                    variant={
+                      tender.status === "OPEN" ? "default" : tender.status === "CLOSED" ? "secondary" : "outline"
+                    }
+                    className="text-xs font-semibold"
+                  >
+                    {tenderStatusLabel(tender.status)}
                   </Badge>
-                ) : (tender.analysis_level ?? 1) >= 2 ? (
-                  <Badge variant="outline" className="text-xs border-blue-400/50 text-blue-200 bg-blue-500/15">
-                    <TrendingUp className="h-3 w-3 mr-1" />후보군
-                  </Badge>
-                ) : null}                {dday && (
-                  <span className={`${dday.urgent ? "dday-urgent" : "dday-warning"}`}>{dday.label}</span>
-                )}
+                  {tender.method_type && (
+                    <Badge variant="outline" className="text-xs border-white/25 bg-white/8 text-white/85">{tender.method_type}</Badge>
+                  )}
+                  {(tender.analysis_level ?? 1) >= 3 ? (
+                    <Badge variant="outline" className="text-xs border-emerald-400/40 bg-emerald-500/15 text-emerald-200">
+                      <Microscope className="h-3 w-3 mr-1" />정밀 분석
+                    </Badge>
+                  ) : (tender.analysis_level ?? 1) >= 2 ? (
+                    <Badge variant="outline" className="text-xs border-blue-400/40 bg-blue-500/15 text-blue-200">
+                      <TrendingUp className="h-3 w-3 mr-1" />후보군
+                    </Badge>
+                  ) : null}
+                  {dday && <span className={`${dday.urgent ? "dday-urgent" : "dday-warning"}`}>{dday.label}</span>}
+                </div>
+
+                <h1 className="text-xl font-extrabold tracking-tight leading-snug text-white sm:text-2xl">
+                  {tender.title}
+                </h1>
+                <p className="mt-2 text-xs font-mono text-white/55">공고번호: {tender.source_tender_id}</p>
+
+                <div className="mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                  <div className="rounded-2xl border border-white/10 bg-white/8 px-4 py-3">
+                    <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-white/55">추정가격</p>
+                    <p className="mt-1 text-lg font-extrabold text-emerald-200">{formatKRW(tender.budget_amount)}</p>
+                    <p className="mt-1 text-xs text-white/50">예산 규모를 먼저 보고 검토 우선순위를 정합니다.</p>
+                  </div>
+                  <div className="rounded-2xl border border-white/10 bg-white/8 px-4 py-3">
+                    <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-white/55">발주기관</p>
+                    <p className="mt-1 text-sm font-semibold text-white/90">{agency?.name || tender.demand_agency_name || "-"}</p>
+                    <p className="mt-1 text-xs text-white/50">기관 성격과 기존 경험을 함께 떠올려보면 좋습니다.</p>
+                  </div>
+                  <div className="rounded-2xl border border-white/10 bg-white/8 px-4 py-3 sm:col-span-2 lg:col-span-1">
+                    <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-white/55">다음 행동</p>
+                    <p className="mt-1 text-sm font-semibold text-white/90">{nextAction}</p>
+                    <p className="mt-1 text-xs text-white/50">상세 검토 후 저장 또는 추적으로 이어가면 됩니다.</p>
+                  </div>
+                </div>
               </div>
-              <h1 className="text-xl sm:text-2xl font-extrabold tracking-tight leading-snug text-white">{tender.title}</h1>
-              <p className="text-xs text-white/60 mt-2 font-mono">
-                공고번호: {tender.source_tender_id}
+
+              {dday && (
+                <div className={`shrink-0 rounded-2xl border px-5 py-4 text-center ${dday.urgent ? "border-rose-300/35 bg-rose-500/20" : "border-amber-300/30 bg-amber-500/18"}`}>
+                  <Clock className={`mx-auto h-4 w-4 ${dday.urgent ? "text-rose-200" : "text-amber-200"}`} />
+                  <div className={`mt-2 text-3xl font-extrabold tracking-tight ${dday.urgent ? "text-rose-200" : "text-amber-200"}`}>{dday.label}</div>
+                  <div className="mt-1 text-[11px] text-white/55">마감까지</div>
+                </div>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="premium-card overflow-hidden border-primary/15 bg-primary/4">
+          <CardContent className="px-6 py-6">
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-widest text-primary">참여 판단 요약</p>
+              <p className="mt-2 text-sm text-muted-foreground">
+                이 화면에서는 공고 기본 정보보다 먼저 마감 상태, 예산 규모, 결과 데이터 유무를 확인하는 흐름이 좋습니다.
               </p>
             </div>
-            {/* D-day countdown card */}
-            {dday && (
-              <div className={`shrink-0 flex flex-col items-center justify-center rounded-2xl px-5 py-3 min-w-20 ${dday.urgent ? "bg-rose-500/25 border border-rose-400/40" : "bg-amber-500/20 border border-amber-400/35"}`}>
-                <Clock className={`h-4 w-4 mb-1 ${dday.urgent ? "text-rose-200" : "text-amber-200"}`} />
-                <span className={`text-2xl font-extrabold tracking-tight ${dday.urgent ? "text-rose-200" : "text-amber-200"}`}>{dday.label}</span>
-                <span className="text-[10px] text-white/55 mt-0.5">마감까지</span>
-              </div>
-            )}
-          </div>
-          {/* Budget highlight */}
-          <div className="mt-5 flex items-center gap-3 flex-wrap">
-            <div className="inline-flex items-center gap-2 rounded-xl border px-4 py-2.5" style={{ background: "rgba(255,255,255,0.13)", borderColor: "rgba(255,255,255,0.20)" }}>
-              <Banknote className="h-4 w-4 text-emerald-300" />
-              <span className="text-xs text-white/65 font-medium">추정가격</span>
-              <span className="text-lg font-extrabold text-emerald-200 tabular-nums">{formatKRW(tender.budget_amount)}</span>
-            </div>
-            {agency?.name && (
-              <div className="inline-flex items-center gap-2 rounded-xl border px-4 py-2.5" style={{ background: "rgba(255,255,255,0.10)", borderColor: "rgba(255,255,255,0.18)" }}>
-                <Building className="h-4 w-4 text-indigo-300" />
-                <span className="text-sm text-white/80 font-medium">{agency.name}</span>
-              </div>
-            )}
-          </div>
-        </div>
-      </div>
 
-      {/* Timeline */}
-      <Card className="premium-card overflow-hidden">
-        <CardContent className="py-5 px-6">
-          <p className="text-xs font-semibold text-muted-foreground uppercase tracking-widest mb-5">진행 단계</p>
-          <div className="flex items-start gap-0">
-            {stages.map((stage, i) => (
-              <div key={stage.key} className="flex-1 flex flex-col items-center relative">
-                {/* connector line */}
-                {i < stages.length - 1 && (
-                  <div className={`absolute top-3.5 left-1/2 w-full h-0.5 ${stage.done ? "bg-primary/50" : "bg-border/60"}`} />
-                )}
-                <div className={`timeline-dot ${stage.done ? "done" : stage.active ? "active" : "pending"} relative z-10`}>
-                  {stage.done ? (
-                    <CheckCircle2 className="h-3.5 w-3.5" />
-                  ) : stage.active ? (
-                    <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                  ) : (
-                    <Circle className="h-3.5 w-3.5" />
-                  )}
+            <div className="mt-5 space-y-3">
+              {reviewCards.map((item) => (
+                <div key={item.label} className="rounded-2xl border border-border/50 bg-background/75 px-4 py-3">
+                  <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">{item.label}</p>
+                  <p className="mt-1 text-sm font-semibold">{item.value}</p>
+                  <p className="mt-1 text-xs text-muted-foreground">{item.detail}</p>
                 </div>
-                <p className={`text-[11px] font-semibold mt-2 text-center ${stage.done ? "text-primary" : stage.active ? "text-foreground" : "text-muted-foreground"}`}>
-                  {stage.label}
-                </p>
-                {stage.date && (
-                  <p className="text-[10px] text-muted-foreground/60 mt-0.5 text-center">
-                    {new Date(stage.date).toLocaleDateString("ko-KR")}
-                  </p>
-                )}
-              </div>
-            ))}
-          </div>
-        </CardContent>
-      </Card>
+              ))}
+            </div>
+
+            <div className="mt-5 rounded-2xl border border-border/50 bg-background/75 px-4 py-3">
+              <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">검토 순서</p>
+              <p className="mt-1 text-sm font-semibold">상태 확인 → 예산/기관 확인 → 결과 데이터 또는 후속 추적 결정</p>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
 
       {/* Info Cards */}
       <div className="grid gap-4 md:grid-cols-2 stagger-children">
@@ -373,16 +371,16 @@ export default function TenderDetailPage({
 
       {/* Bid Intelligence Section */}
       {tender.status === "OPEN" && (
-        <Card className="premium-card overflow-hidden border-primary/20">
-          <CardHeader className="pb-4 bg-primary/4">
+        <Card className="premium-card overflow-hidden border-border/60">
+          <CardHeader className="pb-4 bg-muted/20">
             <CardTitle className="text-lg font-bold flex items-center gap-2">
-              <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-primary/15">
+              <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-primary/10">
                 <Lightbulb className="h-5 w-5 text-primary" />
               </div>
-              AI 투찰가 분석
+              보조 참고 정보
             </CardTitle>
             <CardDescription className="text-xs">
-              과거 유사 낙찰 사례를 기반으로 최적의 투찰가를 추천합니다
+              참여 검토를 마친 뒤 추가로 참고할 수 있는 유사 사례 기반 정보입니다
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-6">

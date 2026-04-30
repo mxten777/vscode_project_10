@@ -14,12 +14,17 @@ export async function GET() {
     const ctx = await getAuthContext();
     if ("error" in ctx) return ctx.error;
 
-    const { user } = ctx;
+    const { user, orgId } = ctx;
+    if (!orgId) {
+      return apiResponse.error("조직에 가입되어 있지 않습니다", 400);
+    }
+
     const supabase = createServiceClient();
 
     const { data, error } = await supabase
       .from("company_profiles")
       .select("*")
+      .eq("org_id", orgId)
       .eq("user_id", user.id)
       .single();
 
@@ -45,7 +50,11 @@ export async function PUT(request: NextRequest) {
     const ctx = await getAuthContext();
     if ("error" in ctx) return ctx.error;
 
-    const { user } = ctx;
+    const { user, orgId } = ctx;
+    if (!orgId) {
+      return apiResponse.error("조직에 가입되어 있지 않습니다", 400);
+    }
+
     const body = await request.json();
 
     // 허용 필드만 추출 (입력 검증)
@@ -79,6 +88,7 @@ export async function PUT(request: NextRequest) {
       .upsert(
         {
           user_id: user.id,
+          org_id: orgId,
           ...(company_name !== undefined && { company_name }),
           ...(industry_codes !== undefined && {
             industry_codes: industry_codes ?? [],

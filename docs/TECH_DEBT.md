@@ -1,8 +1,19 @@
 # 기술 부채 및 개선 로드맵
 
-> 작성일: 2026-03-24 / 최종 업데이트: 2026-04-14  
+> 작성일: 2026-03-24 / 최종 업데이트: 2026-04-30  
 > 현재 완성도: 약 88–92%  
 > 스택: Next.js 16 · React 19 · TypeScript · Supabase · Vercel (Hobby) · Tailwind v4 · Vitest
+
+## 현재 활성 우선순위
+
+1. 알림 채널 확장 미구현
+	현재는 이메일만 실동작하며 Kakao/Slack 같은 운영 채널은 provider 구조만 준비됨.
+2. 리포트 내보내기 후속 흐름 부족
+	CSV/PDF 저장은 가능하지만 서버 생성형 export, 공유, 템플릿 고도화는 남아 있음.
+3. 테스트는 넓어졌지만 사용자 체감 API 범위는 더 넓힐 수 있음
+	핵심 회귀는 확보됐지만 tenders 검색, reports summary 같은 사용 빈도 높은 API는 추가 여지 있음.
+4. 운영 환경 실계정 검증 필요
+	`ADMIN_CONSOLE_EMAILS`, Stripe, AI service URL/API key 처럼 런타임 의존성이 있는 항목은 실제 운영 값으로 최종 점검이 필요함.
 
 ---
 
@@ -39,13 +50,14 @@
 - **업그레이드 시**: Upstash Redis + `@upstash/ratelimit` 으로 교체 (다중 인스턴스 대응)
 
 ### 2. plan limit 우회 가능 —즐겨찾기
-- **문제**: `GET /api/favorites` 는 plan limit 검사를 안 함. `POST /api/favorites` 도 직접 호출 시 우회 가능
+- **status**: `POST /api/favorites/[tenderId]` 에서 플랜 한도 검사 적용 완료
+- **남은 과제**: 없음
 - **파일**: `src/app/api/favorites/route.ts`
-- **해결**: POST에서 count 쿼리 후 plan limit 초과 시 403 반환
+- **비고**: `GET /api/favorites` 는 목록 조회이므로 한도 검사 대상 아님
 
-### 3. org_id 격리 누락 — GET 쿼리
-- **문제**: 일부 GET 쿼리에서 `org_id` 필터 없이 전체 데이터를 읽을 수 있음 (RLS로 1차 보호되지만 방어 심화 필요)
-- **해결**: 모든 SELECT에 `.eq("org_id", ctx.orgId)` 명시적으로 추가
+### ~~3. org_id 격리 누락 — GET 쿼리~~ ✅ 완료
+- `favorites`, `alert_rules`, `alert_logs`, `company_profiles` 및 관련 GET 보조 조회에 `org_id` 명시 필터 추가
+- `src/__tests__/api/business-routes.test.ts` 에서 조직 스코프 쿼리 형태 회귀 검증 추가
 
 ### ~~4. 이용약관·개인정보처리방침 페이지 없음~~ ✅ 완료
 - `/terms/page.tsx`, `/privacy/page.tsx` 정적 페이지 생성 완료
@@ -54,23 +66,24 @@
 
 ## 🟠 기능 — 다음 스프린트
 
-### 5. 사용자 설정 페이지 없음
-- **status**: /settings 경로 미구현
-- **필요 기능**: 프로필 편집, 플랜 업그레이드 CTA, 알림 채널 설정, 비밀번호 변경
-- **파일 생성**: `src/app/(app)/settings/page.tsx`
+### ~~5. 사용자 설정 페이지 없음~~ ✅ 완료
+- `/settings` 루트 허브 추가 완료
+- 프로필 편집, 회사 정보, 플랜/결제 화면으로 바로 이동하는 진입점 구성
+- 남은 설정 과제는 알림 채널 통합 고도화 수준으로 축소
 
-### 6. 어드민 대시보드 없음
-- **status**: admin 경로 및 API 미구현
-- **필요 기능**: 전체 사용자 조회, org 플랜 변경, 데이터 수집 수동 트리거, 에러 로그 뷰어
-- **참고**: `/api/jobs/*` 는 cron secret으로 보호됨 — 관리자 UI 필요
+### 6. 어드민 대시보드 확장 필요
+- **status**: `/settings/operations` 운영 콘솔 기능 완료
+- **현재 가능**: 수집 상태 확인, 최근 `collection_logs` 조회, `cron-ingest`/`cron-maintenance` 및 개별 job 수동 실행, 조직 플랜/이름 변경, 전체 사용자 조회, 멤버 권한 변경/제거, 대기 초대 취소
+- **접근 제어**: 조직 `admin` 이면서 `ADMIN_CONSOLE_EMAILS` allowlist 에 포함된 계정만 접근 가능
+- **남은 과제**: 실제 운영 계정으로 최종 접근 검증
 
-### 7. 저장된 검색 기능 없음
-- **status**: 트렌딩 키워드 칩은 하드코딩 (page.tsx L65: `// swap with real analytics later`)
-- **해결**: 실제 alert rule keyword에서 인기 검색어 집계, 또는 saved search DB 테이블 추가
+### 7. 저장된 검색 기능
+- **status**: 홈 화면 저장 검색이 서버 저장(`saved_searches`) 기반으로 동작하며, 생성/수정/삭제/재적용 및 키워드·상태 기반 알림 전환 가능
+- **남은 과제**: 없음
 
-### 8. PDF / CSV 내보내기 없음
-- **status**: 리포트 페이지에 export 버튼 없음
-- **해결**: `/api/reports/export?format=csv|pdf` 엔드포인트 추가 + react-pdf or papaparse
+### 8. 리포트 내보내기
+- **status**: 리포트 페이지에서 PDF / CSV 저장 가능
+- **남은 과제**: 서버 생성형 내보내기, 포맷 템플릿 고도화, 이메일 공유 흐름 연결 여부 검토
 
 ### 9. Kakao 알림톡 / 슬랙 웹훅 없음
 - **status**: Resend(이메일)만 구현됨
@@ -81,16 +94,16 @@
 ## 🟡 테스트 — 지속적 개선
 
 ### 10. API 라우트 테스트 없음
-- **현황**: 56개 유닛 테스트 (3파일), API 엔드포인트 통합 테스트 없음
-- **파일**: `src/__tests__/` 에 api/ 디렉토리 추가
-- **우선**: tenders, favorites, reports/summary 핵심 3개 API부터
+- **status**: 주요 비즈니스/API 라우트 회귀 테스트 확보
+- **현황**: `business-routes`, `process-alerts`, `cron-orchestrators`, `collect-bid-awards`, `backfill-awards` 등 API 테스트 추가 완료
+- **남은 과제**: tenders 검색/리포트 요약 같은 사용자 체감 API를 더 넓히는 것은 선택 확장
 
-### 11. E2E 테스트 없음
-- **현황**: Playwright 미설치
-- **해결**: `npx playwright init` + 로그인 → 검색 → 즐겨찾기 기본 플로우
+### 11. E2E 테스트 초안만 존재
+- **현황**: Playwright로 공개 경로 스모크 5개 + 회원가입 후 검색/상세/즐겨찾기/알림 규칙 생성 1개 + 기존 사용자 로그인 후 분석 화면 진입 1개 + 실패 흐름 2개(검색 결과 없음, 없는 공고 상세 접근) + 알림 규칙 플랜 제한 경고 1개 + 초대 수락 UI 실패 흐름 2개(만료 링크, 다른 이메일 초대) 추가 완료
+- **남은 일**: 핵심 사용자 흐름 기준 E2E 초안 단계는 사실상 해소됨. 추가 확장은 선택 과제.
 
 ### 12. vitest 커버리지 측정 없음
-- **해결**: `package.json`에 `"test:coverage": "vitest run --coverage"` 추가
+- **해결**: `package.json`에 `"test:coverage": "vitest run --coverage"` 추가, `vitest.config.ts`에서 `tests/e2e/**` 제외해 Playwright와 실행 경로 분리
 
 ---
 
@@ -98,7 +111,8 @@
 
 ### 13. 트렌딩 키워드가 하드코딩
 - **파일**: `src/app/(app)/page.tsx` L65
-- **해결**: `/api/tenders/trending` 엔드포인트로 실시간 집계
+- **status**: 실데이터 기반 trending keywords 반영 완료
+- **남은 과제**: 없음
 
 ### 14. 입찰 상세 페이지 완성도 낮음
 - **파일**: `src/app/(app)/tenders/[id]/page.tsx`
@@ -149,7 +163,7 @@ CRON_SECRET                      ✅ 설정됨 (vercel.json cron 보호)
 
 - [x] Rate limiting 적용 (proxy.ts + Upstash Redis)
 - [x] `/terms`, `/privacy` 페이지 생성
-- [ ] plan limit 즐겨찾기 POST 보호
+- [x] plan limit 즐겨찾기 POST 보호
 - [x] 사용자 설정 페이지 (`/settings/profile`, `/settings/billing`)
-- [ ] API 라우트 테스트 10개 이상 (현재 유닛 56개, API 통합 테스트 없음)
-- [ ] E2E smoke test 통과
+- [x] API 라우트 테스트 10개 이상 (현재 유닛 56개, API 라우트 테스트 11개)
+- [x] E2E smoke test 통과 (현재 Playwright smoke 5개)

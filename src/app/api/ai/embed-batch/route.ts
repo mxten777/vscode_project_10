@@ -8,8 +8,9 @@
  *   3. tenders.title_embedding 업데이트
  */
 
-import { NextRequest, NextResponse } from "next/server";
+import { NextRequest } from "next/server";
 import { createServiceClient } from "@/lib/supabase/service";
+import { errorResponse, internalErrorResponse, successResponse } from "@/lib/api-response";
 import { verifyCronSecret } from "@/lib/helpers";
 
 const AI_SERVICE_URL = process.env.AI_SERVICE_URL;
@@ -18,11 +19,11 @@ const BATCH_SIZE = 200;
 
 export async function POST(request: NextRequest) {
   if (!verifyCronSecret(request)) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    return errorResponse("UNAUTHORIZED", "Unauthorized", 401);
   }
 
   if (!AI_SERVICE_URL) {
-    return NextResponse.json({ error: "AI 서비스 미설정" }, { status: 503 });
+    return errorResponse("AI_NOT_CONFIGURED", "AI 서비스 미설정", 503);
   }
 
   const supabase = createServiceClient();
@@ -36,11 +37,11 @@ export async function POST(request: NextRequest) {
     .limit(BATCH_SIZE);
 
   if (fetchError) {
-    return NextResponse.json({ error: fetchError.message }, { status: 500 });
+    return internalErrorResponse(fetchError.message);
   }
 
   if (!tenders || tenders.length === 0) {
-    return NextResponse.json({ success: true, updated: 0, message: "모든 공고 임베딩 완료" });
+    return successResponse({ success: true, updated: 0, message: "모든 공고 임베딩 완료" });
   }
 
   // 배치 임베딩 요청
@@ -55,7 +56,7 @@ export async function POST(request: NextRequest) {
   });
 
   if (!embedRes.ok) {
-    return NextResponse.json({ error: "임베딩 요청 실패" }, { status: 502 });
+    return errorResponse("UPSTREAM_ERROR", "임베딩 요청 실패", 502);
   }
 
   const { embeddings } = await embedRes.json();
@@ -71,5 +72,5 @@ export async function POST(request: NextRequest) {
     if (!updateError) updated++;
   }
 
-  return NextResponse.json({ success: true, updated, total: tenders.length });
+  return successResponse({ success: true, updated, total: tenders.length });
 }

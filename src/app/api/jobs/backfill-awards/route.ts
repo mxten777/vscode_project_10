@@ -7,9 +7,12 @@
  *
  * 사용: 수동 or 초기 배포 시 1회 실행
  */
-import { NextRequest, NextResponse } from "next/server";
+import { NextRequest } from "next/server";
+import { errorResponse, internalErrorResponse, successResponse } from "@/lib/api-response";
 import { createServiceClient } from "@/lib/supabase/service";
 import { verifyCronSecret, parseNaraDate } from "@/lib/helpers";
+import { failCollectionJob, finishCollectionJob, startCollectionJob } from "@/lib/collection-logs";
+import { getErrorMessage } from "@/lib/job-utils";
 
 export const preferredRegion = "icn1";
 // Hobby 플랜 최대 60초 (Pro: 300초)
@@ -32,36 +35,26 @@ interface NaraAwardItem {
 
 export async function POST(request: NextRequest) {
   if (!verifyCronSecret(request)) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    return errorResponse("UNAUTHORIZED", "Unauthorized", 401);
   }
 
   const months = parseInt(request.nextUrl.searchParams.get("months") || "1");
   const startMonthsAgo = parseInt(request.nextUrl.searchParams.get("startMonthsAgo") || "0");
   if (![1, 2, 3, 6, 12].includes(months)) {
-    return NextResponse.json({ error: "months must be 1, 2, 3, 6, or 12" }, { status: 400 });
+    return errorResponse("INVALID_MONTHS", "months must be 1, 2, 3, 6, or 12", 400);
   }
 
   const supabase = createServiceClient();
+  const logId = await startCollectionJob(supabase, "backfill_awards");
   // 낙찰정보서비스는 별도 키 사용 (NARA_AWARD_API_KEY), 없으면 NARA_API_KEY fallback
   const awardKey = (process.env.NARA_AWARD_API_KEY || "").trim();
   const fallbackKey = (process.env.NARA_API_KEY || "").trim();
   const NARA_API_KEY = awardKey || fallbackKey;
   const keySource = awardKey ? "NARA_AWARD_API_KEY" : fallbackKey ? "NARA_API_KEY(fallback)" : "none";
   if (!NARA_API_KEY) {
-    return NextResponse.json({ error: "NARA_AWARD_API_KEY not configured", keySource }, { status: 500 });
+    await failCollectionJob(supabase, logId, "NARA_AWARD_API_KEY not configured");
+    return internalErrorResponse("NARA_AWARD_API_KEY not configured");
   }
-
-  const { data: logRow } = await supabase
-    .from("collection_logs")
-    .insert({
-      job_type: "backfill_awards",
-      status: "running",
-      started_at: new Date().toISOString(),
-      metadata: { months },
-    })
-    .select("id")
-    .single();
-  const logId = logRow?.id ?? null;
 
   let totalProcessed = 0;
   let totalErrors = 0;
@@ -113,17 +106,9 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    await supabase
-      .from("collection_logs")
-      .update({
-        status: "completed",
-        finished_at: new Date().toISOString(),
-        records_collected: totalProcessed,
-        metadata: { months, errors: totalErrors },
-      })
-      .eq("id", logId!);
+    await finishCollectionJob(supabase, logId, totalProcessed);
 
-    return NextResponse.json({
+    return successResponse({
       success: true,
       months,
       fetched: totalFetched,
@@ -134,19 +119,9 @@ export async function POST(request: NextRequest) {
       debug: batchErrors,
     });
   } catch (err) {
-    const message = err instanceof Error ? err.message : "Unknown error";
-    if (logId) {
-      await supabase
-        .from("collection_logs")
-        .update({
-          status: "failed",
-          finished_at: new Date().toISOString(),
-          error_message: message,
-          metadata: { months, processed: totalProcessed },
-        })
-        .eq("id", logId);
-    }
-    return NextResponse.json({ success: false, error: message }, { status: 500 });
+    const message = getErrorMessage(err);
+    await failCollectionJob(supabase, logId, message);
+    return internalErrorResponse(message);
   }
 }
 
