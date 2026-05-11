@@ -1,0 +1,40 @@
+name: Cron Ingest (나라장터 공고 수집)
+
+on:
+  # 평일 KST 09:05 (UTC 00:05) — 정각 혼잡 회피
+  schedule:
+    - cron: "5 0 * * 1-5"
+  # 수동 실행 허용 (GitHub Actions UI에서 즉시 실행 가능)
+  workflow_dispatch:
+
+jobs:
+  ingest:
+    name: Poll Tenders + Collect Awards
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Trigger cron-ingest
+        env:
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
+        run: |
+          echo "Starting cron-ingest at $(date -u '+%Y-%m-%d %H:%M:%S UTC')..."
+
+          RESPONSE=$(curl -s -w "\n%{http_code}" \
+            -X POST \
+            -H "Authorization: Bearer ${CRON_SECRET}" \
+            -H "Content-Type: application/json" \
+            "https://bid-platform.vercel.app/api/jobs/cron-ingest")
+
+          HTTP_CODE=$(echo "$RESPONSE" | tail -n1)
+          BODY=$(echo "$RESPONSE" | head -n -1)
+
+          echo "HTTP Status: $HTTP_CODE"
+          echo "Response: $BODY"
+
+          if [ "$HTTP_CODE" -ne 200 ] && [ "$HTTP_CODE" -ne 207 ]; then
+            echo "cron-ingest failed with HTTP $HTTP_CODE"
+            exit 1
+          fi
+
+          echo "cron-ingest completed successfully"
