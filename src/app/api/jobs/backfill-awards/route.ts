@@ -39,7 +39,11 @@ export async function POST(request: NextRequest) {
 
   const months = parseInt(request.nextUrl.searchParams.get("months") || "1");
   const startMonthsAgo = parseInt(request.nextUrl.searchParams.get("startMonthsAgo") || "0");
-  if (![1, 2, 3, 6, 12].includes(months)) {
+  // fromDate/toDate: 직접 날짜 범위 지정 (YYYYMMDD, Hobby 플랜 주 단위 제어용)
+  const fromDateParam = request.nextUrl.searchParams.get("fromDate");
+  const toDateParam   = request.nextUrl.searchParams.get("toDate");
+
+  if (!fromDateParam && ![1, 2, 3, 6, 12].includes(months)) {
     return errorResponse("INVALID_MONTHS", "months must be 1, 2, 3, 6, or 12", 400);
   }
 
@@ -59,14 +63,23 @@ export async function POST(request: NextRequest) {
   let totalErrors = 0;
 
   try {
-    // 날짜 범위: (오늘 - startMonthsAgo개월) ~ (오늘 - startMonthsAgo개월 - months개월)
-    const endDate = new Date();
-    endDate.setMonth(endDate.getMonth() - startMonthsAgo);
-    const startDate = new Date(endDate);
-    startDate.setMonth(startDate.getMonth() - months);
-
     const fmtFrom = (d: Date) => d.toISOString().slice(0, 10).replace(/-/g, "") + "0000";
     const fmtTo   = (d: Date) => d.toISOString().slice(0, 10).replace(/-/g, "") + "2359";
+
+    // 날짜 범위 결정: fromDate/toDate 직접 지정 or months 계산
+    let startDate: Date;
+    let endDate: Date;
+    if (fromDateParam && toDateParam) {
+      // YYYYMMDD → Date (KST 기준)
+      const p = (s: string) => new Date(`${s.slice(0,4)}-${s.slice(4,6)}-${s.slice(6,8)}T00:00:00+09:00`);
+      startDate = p(fromDateParam);
+      endDate   = p(toDateParam);
+    } else {
+      endDate = new Date();
+      endDate.setMonth(endDate.getMonth() - startMonthsAgo);
+      startDate = new Date(endDate);
+      startDate.setMonth(startDate.getMonth() - months);
+    }
 
     // 월별로 분할 수집 (한 번에 너무 많은 API 호출 방지)
     const batches: Array<{ from: string; to: string }> = [];
