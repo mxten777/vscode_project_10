@@ -1166,7 +1166,7 @@ function NaraHistorySearch() {
   const [inputVal, setInputVal]     = useState("");
   const [industry, setIndustry]     = useState("ALL");
   const [searchBy, setSearchBy]     = useState("both"); // title | agency | both
-  const [startYear, setStartYear]   = useState(String(new Date().getFullYear() - 2));
+  const [startYear, setStartYear]   = useState(String(new Date().getFullYear() - 3));
   const [results, setResults]       = useState<NaraResultItem[]>([]);
   const [totalCount, setTotalCount] = useState<number | null>(null);
   const [isLoading, setIsLoading]   = useState(false);
@@ -1199,7 +1199,7 @@ function NaraHistorySearch() {
   };
 
   const currentYear = new Date().getFullYear();
-  const yearOptions = [currentYear, currentYear - 1, currentYear - 2, currentYear - 3];
+  const yearOptions = [currentYear, currentYear - 1, currentYear - 2, currentYear - 3, currentYear - 4];
 
   return (
     <div className="space-y-3">
@@ -1209,11 +1209,15 @@ function NaraHistorySearch() {
         </div>
         <h2 className="text-base font-bold">나라장터 이력 검색</h2>
         <span className="inline-flex items-center rounded-full bg-blue-500/10 border border-blue-500/20 px-2 py-0.5 text-[10px] font-semibold text-blue-600 dark:text-blue-400">
-          최대 3년
+          최대 5년
         </span>
       </div>
       <p className="text-sm text-muted-foreground">
         나라장터 원본 데이터에서 직접 검색합니다. DB에 수집되지 않은 과거 공고도 조회할 수 있습니다.
+      </p>
+      <p className="text-xs text-muted-foreground/70">
+        💡 <strong>검색 팁:</strong> 공고 <em>제목</em>이나 <em>발주기관명</em>으로 검색하세요.
+        부서명(예: 도시공원팀)은 검색 불가 — 업무 내용(예: 업무용차량 리스)으로 검색하세요.
       </p>
 
       <Card className="premium-card">
@@ -1222,7 +1226,7 @@ function NaraHistorySearch() {
             <div className="relative flex-1">
               <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
               <Input
-                placeholder="예: 고등학교 입시, 강원랜드, AI 플랫폼"
+                placeholder="공고명: 업무용차량 리스 · 기관명: 강원랜드"
                 value={inputVal}
                 onChange={(e) => setInputVal(e.target.value)}
                 onKeyDown={(e) => { if (e.key === "Enter") void handleSearch(); }}

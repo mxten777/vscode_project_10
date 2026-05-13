@@ -37,7 +37,7 @@ export async function GET(request: NextRequest) {
   const pageNo   = parseBoundedInt(searchParams.get("pageNo"), 1, 1, 100);
   const industry = searchParams.get("industry") ?? "ALL";
   const searchBy = searchParams.get("searchBy") ?? "both"; // title | agency | both
-  const startDate = searchParams.get("startDate") ?? getDateStr(3 * 365); // 기본 3년 전
+  const startDate = searchParams.get("startDate") ?? getDateStr(4 * 365); // 기본 4년 전
   const endDate   = searchParams.get("endDate")   ?? getTodayStr();
 
   // 업종 필터 적용
