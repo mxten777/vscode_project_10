@@ -197,6 +197,21 @@ async function bulkUpsertAwards(
     if (t.source_tender_id) tenderMap.set(t.source_tender_id, t.id);
   }
 
+  // 3-b. 미매칭 공고번호를 raw_json JSONB로 2차 조회
+  const unmatchedNos = noticeNos.filter(no => !tenderMap.has(no));
+  if (unmatchedNos.length > 0) {
+    // PostgREST JSONB 필터: raw_json->>'bidNtceNo' = no (IN 불가 → OR 조합)
+    const orFilter = unmatchedNos.map(no => `raw_json->>bidNtceNo.eq.${no}`).join(",");
+    const { data: fallbackTenders } = await supabase
+      .from("tenders")
+      .select("id, raw_json")
+      .or(orFilter);
+    for (const t of fallbackTenders ?? []) {
+      const no = (t.raw_json as Record<string, unknown> | null)?.["bidNtceNo"] as string | undefined;
+      if (no && !tenderMap.has(no)) tenderMap.set(no, t.id);
+    }
+  }
+
   // 4. 매칭된 항목을 award 레코드 배열로 변환
   const rows = [];
   let skipped = items.length - validItems.length;

@@ -250,14 +250,28 @@ async function processAwardResult(supabase: SupabaseClient, item: NaramarketBidR
   if (awardError) throw awardError;
 
   // awards 테이블도 동기화 (tenders 연결, get_ai_insights_v2에서 사용)
-  // source_tender_id로 tenders 찾기 (공고번호 기반 매칭)
-  const { data: tender } = await supabase
-    .from("tenders")
-    .select("id")
-    .or(`source_tender_id.eq.${item.bidNtceNo},source_tender_id.eq.${sourceBidNoticeId}`)
-    .maybeSingle();
+  // 1차: source_tender_id 직접 매칭
+  let tender: { id: string } | null = null;
+  {
+    const { data } = await supabase
+      .from("tenders")
+      .select("id")
+      .or(`source_tender_id.eq.${item.bidNtceNo},source_tender_id.eq.${sourceBidNoticeId}`)
+      .maybeSingle();
+    tender = data;
+  }
 
-  if (tender?.id && item.sucsfbidRate) {
+  // 2차 폴백: raw_json JSONB 내 bidNtceNo 필드로 매칭
+  if (!tender && item.bidNtceNo) {
+    const { data } = await supabase
+      .from("tenders")
+      .select("id")
+      .eq("raw_json->>bidNtceNo", item.bidNtceNo)
+      .maybeSingle();
+    tender = data;
+  }
+
+  if (tender?.id) {
     await supabase.from("awards").upsert(
       {
         tender_id: tender.id,

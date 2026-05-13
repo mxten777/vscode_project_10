@@ -38,6 +38,34 @@ export async function GET(
       return notFoundResponse("공고를 찾을 수 없습니다");
     }
 
+    // awards가 없으면 bid_participants(낙찰자)에서 폴백
+    let award = (data.award as unknown) as {
+      winner_company_name: string | null;
+      awarded_amount: number | null;
+      awarded_rate: number | null;
+      opened_at: string | null;
+    } | null;
+
+    if (!award) {
+      const { data: winner } = await supabase
+        .from("bid_participants")
+        .select("company_name, bid_amount, bid_rate")
+        .eq("tender_id", id)
+        .eq("is_winner", true)
+        .order("bid_rank", { ascending: true })
+        .limit(1)
+        .maybeSingle();
+
+      if (winner) {
+        award = {
+          winner_company_name: winner.company_name ?? null,
+          awarded_amount: winner.bid_amount ?? null,
+          awarded_rate: winner.bid_rate ?? null,
+          opened_at: null, // bid_participants에는 개찰일 없음
+        };
+      }
+    }
+
     // 현재 사용자의 즐겨찾기 여부 확인
     let isFavorited = false;
     if (user && orgId) {
@@ -51,7 +79,7 @@ export async function GET(
       isFavorited = !!fav;
     }
 
-    return successResponse({ ...data, is_favorited: isFavorited });
+    return successResponse({ ...data, award, is_favorited: isFavorited });
   } catch (err) {
     console.error("GET /api/tenders/:id error:", err);
     return internalErrorResponse();
