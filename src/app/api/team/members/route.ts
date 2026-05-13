@@ -19,11 +19,15 @@ export async function GET() {
 
   if (error) return apiResponse.error(error.message, 500);
 
-  // auth.users 이메일 보강
-  const { data: usersData } = await supabase.auth.admin.listUsers();
-  const userMap = new Map(
-    (usersData?.users ?? []).map((u) => [u.id, u.email ?? ""])
-  );
+  // 멤버 user_id 목록으로 사용자 정보 조회 (전체 listUsers 대신 필터링)
+  const userIds = (data ?? []).map((m) => m.user_id);
+  const userMap = new Map<string, string>();
+  if (userIds.length > 0) {
+    const { data: usersData } = await supabase.auth.admin.listUsers({ perPage: 1000 });
+    for (const u of usersData?.users ?? []) {
+      if (userIds.includes(u.id)) userMap.set(u.id, u.email ?? "");
+    }
+  }
 
   const members = (data ?? []).map((m) => ({
     ...m,

@@ -21,17 +21,27 @@ export async function POST(request: NextRequest) {
 
   const body = await request.json();
 
-  const upstream = await fetch(`${AI_SERVICE_URL}/predict/bid-rate`, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      "x-api-key": AI_SERVICE_API_KEY ?? "",
-    },
-    body: JSON.stringify(body),
-    signal: AbortSignal.timeout(30_000),
-  });
+  let upstream: Response;
+  try {
+    upstream = await fetch(`${AI_SERVICE_URL}/predict/bid-rate`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "x-api-key": AI_SERVICE_API_KEY ?? "",
+      },
+      body: JSON.stringify(body),
+      signal: AbortSignal.timeout(30_000),
+    });
+  } catch {
+    return apiResponse.error("AI 서비스 연결 실패", 502);
+  }
 
-  const data = await upstream.json();
+  let data: unknown;
+  try {
+    data = await upstream.json();
+  } catch {
+    return apiResponse.error("AI 서비스 응답 파싱 실패", 502);
+  }
 
   if (!upstream.ok) {
     return NextResponse.json(data, { status: upstream.status });

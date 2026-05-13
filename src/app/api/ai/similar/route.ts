@@ -46,6 +46,10 @@ export async function POST(request: NextRequest) {
 
   const { embedding } = await embedRes.json();
 
+  if (!Array.isArray(embedding) || embedding.length === 0) {
+    return apiResponse.error("임베딩 응답 형식 오류", 502);
+  }
+
   // 2) pgvector 유사 공고 검색
   const supabase = createServiceClient();
   const { data, error } = await supabase.rpc("search_similar_tenders", {

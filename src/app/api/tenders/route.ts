@@ -85,8 +85,8 @@ export async function GET(request: NextRequest) {
 
     const [countResult, dataResult] = await Promise.all([countQuery, dataQuery]);
 
-    if (dataResult.error) {
-      console.error("GET /api/tenders DB error:", dataResult.error);
+    if (dataResult.error || countResult.error) {
+      console.error("GET /api/tenders DB error:", dataResult.error ?? countResult.error);
       return internalErrorResponse();
     }
 

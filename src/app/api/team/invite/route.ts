@@ -37,17 +37,16 @@ export async function POST(request: NextRequest) {
   const { email: inviteeEmail, role } = parsed.data;
   const supabase = createServiceClient();
 
-  // 이미 조직 멤버인지 확인
-  const { data: existing } = await supabase
+  // 이미 조직 멤버인지 확인 — org_invitations email 컬럼 및 기가입 체크
+  // (listUsers() 전체 로드 대신, 초대 이메일로 이미 가입된 사용자 조회)
+  const { data: existingMemberByEmail } = await supabase
     .from("org_members")
-    .select("user_id")
+    .select("user_id, profiles!inner(email)")
     .eq("org_id", ctx.orgId!)
-    .eq("user_id", (
-      await supabase.auth.admin.listUsers()
-    ).data.users.find((u) => u.email === inviteeEmail)?.id ?? "")
+    .eq("profiles.email", inviteeEmail)
     .maybeSingle();
 
-  if (existing) {
+  if (existingMemberByEmail) {
     return apiResponse.error("이미 조직 멤버입니다.", 409);
   }
 
