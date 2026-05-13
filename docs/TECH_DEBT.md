@@ -73,12 +73,29 @@
 | 13 | 🟢 | `src/app/(app)/page.tsx` | 저장 검색 로딩/에러 상태 미처리 | `isLoading`/`isError` 구조 분해 추가, 에러 시 안내 메시지 표시 |
 | 16 | 🟢 | `src/lib/env.ts` (신규) | 환경변수 시작 시점 검증 없음 | Zod 기반 `env.ts` 생성 — 서버 시작 시 누락 env var 즉시 오류 |
 
+### ✅ 2026-05-13 3차 수정 완료 — 낙찰 이력 기능 신규 + 데이터 불일치 개선
+
+| # | 파일 | 내용 |
+|---|------|------|
+| ✅ | `src/app/api/awards/route.ts` (신규) | GET /api/awards — 낙찰업체 검색·정렬·페이지네이션 엔드포인트 |
+| ✅ | `src/hooks/use-api.ts` | `useAwards()` 훅 추가 (`AwardItem`, `AwardsParams` 타입 포함) |
+| ✅ | `src/app/(app)/awards/page.tsx` (신규) | 낙찰 이력 전용 페이지 — 업체명 검색, 개찰일·낙찰금액·낙찰률 정렬, 테이블·페이지네이션 |
+| ✅ | `src/components/header.tsx` | 네비게이션에 "낙찰 이력" 메뉴 추가 |
+| ✅ | `src/app/api/tenders/[id]/route.ts` | awards 없을 때 bid_participants(is_winner=true)에서 폴백 — 낙찰 결과 공란 즉시 해결 |
+| ✅ | `src/app/api/jobs/collect-bid-awards/route.ts` | source_tender_id 1차 매칭 실패 시 raw_json JSONB로 2차 매칭 |
+| ✅ | `src/app/api/jobs/backfill-awards/route.ts` | bulkUpsertAwards에 JSONB 2차 매칭 추가, fromDate/toDate 파라미터 직접 지정 기능 추가 |
+| ✅ | `src/app/api/admin/operations/route.ts` | 운영 콘솔에 backfill-awards-1m/2m/3m 액션 추가 |
+| ✅ | `backfill-awards.ps1` (신규) | Hobby 플랜 60초 제한 대응 로컬 백필 스크립트 (1주 단위 분할 순차 호출) |
+| ✅ | `vercel.json` | backfill-awards maxDuration 300초 설정 추가 |
+| ✅ | 백필 실행 완료 | 6개월치 1주 단위 분할 실행 — processed 1,713건, skipped 4,787건, errors 0 |
+
 ### ⏳ 미해결 — 다음 스프린트
 
 | # | 심각도 | 파일 | 문제 | 해결 방향 |
 |---|--------|------|------|-----------|
 | 14 | 🟢 | `tsconfig.json` | `noUncheckedIndexedAccess` 미적용 (`strict: true`는 이미 있음) | 테스트 파일 89개 에러 발생으로 보류 — 테스트 코드 정비 후 적용 |
 | 15 | 🟢 | 전체 외부 API 호출 | 응답 스키마 런타임 검증 없음 — 나라장터/Stripe API 응답 구조 변경 시 silent failure | Zod 스키마로 외부 응답 파싱 |
+| 17 | 🟡 | `supabase/migrations/` + `poll-tenders/route.ts` | 낙찰 매칭 skipped 건 많음 — `tenders.source_tender_id`와 낙찰 API `bidNtceNo` 형식 불일치 | `tenders` 테이블에 `bid_notice_no` 컬럼 추가(마이그레이션), `poll-tenders`에서 저장, `collect-bid-awards`/`backfill-awards` 조인 로직 교체 |
 
 ### 근본 원인 패턴 요약
 
