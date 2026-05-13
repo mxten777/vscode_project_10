@@ -63,17 +63,22 @@
 | 8 | 🟡 | `api/tenders/route.ts` | 페이지네이션 total 오류 — `countResult.error` 미체크 | count 쿼리 에러 무시 | 69720c5 |
 | 9 | 🟡 | `vercel.json` + 상기 3개 route | icn1 리전 설정 누락 | 설정 파일과 코드 분리 미숙지 | a3199fa, b4d9150 |
 
+### ✅ 2026-05-13 2차 수정 완료 (커밋 23bf8b1)
+
+| # | 심각도 | 파일 | 문제 | 수정 내용 |
+|---|--------|------|------|-----------|
+| 10 | 🟡 | `api/team/invite/route.ts` | 이메일 발송 실패해도 성공 응답 반환 | `email.send()` try/catch 추가, 실패 시 초대 레코드 삭제 후 502 반환 |
+| 11 | 🟡 | `api/billing/webhook/route.ts` | Stripe `current_period_end` 이중 캐스팅, null 체크 없음 | `(sub as any).current_period_end` 안전 접근 + null 시 break |
+| 12 | 🟡 | `api/tenders/[id]/route.ts` | 즐겨찾기 상태 필드 혼재 가능성 | 전수 grep 결과 `is_favorited` 로 통일됨 — 문제 없음 |
+| 13 | 🟢 | `src/app/(app)/page.tsx` | 저장 검색 로딩/에러 상태 미처리 | `isLoading`/`isError` 구조 분해 추가, 에러 시 안내 메시지 표시 |
+| 16 | 🟢 | `src/lib/env.ts` (신규) | 환경변수 시작 시점 검증 없음 | Zod 기반 `env.ts` 생성 — 서버 시작 시 누락 env var 즉시 오류 |
+
 ### ⏳ 미해결 — 다음 스프린트
 
 | # | 심각도 | 파일 | 문제 | 해결 방향 |
 |---|--------|------|------|-----------|
-| 10 | 🟡 | `api/team/invite/route.ts` | 이메일 발송 실패해도 성공 응답 반환 — `email.send()` 에러 미처리 | try/catch 추가, 발송 실패 시 초대 레코드 롤백 또는 경고 응답 |
-| 11 | 🟡 | `api/billing/webhook/route.ts` | Stripe 구독 동기화 필드 누락 가능 — `as unknown as { current_period_end }` 이중 캐스팅 | Stripe SDK 타입 직접 사용, 캐스팅 제거 |
-| 12 | 🟡 | `api/tenders/[id]/route.ts` | 즐겨찾기 상태 필드 혼재 — snake_case/camelCase 불일치로 UI에서 상태 표시 오류 가능 | 응답 필드명 통일 (`is_favorited` or `isFavorited`) |
-| 13 | 🟢 | `src/app/(app)/page.tsx` | 저장 검색 로딩/에러 상태 미처리 — 실패 시 "저장한 검색 없음"과 구분 불가 | `isLoading`/`error` 상태 추가 |
-| 14 | 🟢 | `tsconfig.json` | `strict: true` 미적용 — 타입 관련 버그를 컴파일 시점에 못 잡음 | `strict`, `noUncheckedIndexedAccess` 활성화 |
+| 14 | 🟢 | `tsconfig.json` | `noUncheckedIndexedAccess` 미적용 (`strict: true`는 이미 있음) | 테스트 파일 89개 에러 발생으로 보류 — 테스트 코드 정비 후 적용 |
 | 15 | 🟢 | 전체 외부 API 호출 | 응답 스키마 런타임 검증 없음 — 나라장터/Stripe API 응답 구조 변경 시 silent failure | Zod 스키마로 외부 응답 파싱 |
-| 16 | 🟢 | 없음 (신규) | 환경변수 시작 시점 검증 없음 — 누락된 env var가 런타임에야 발견됨 | `src/lib/env.ts` Zod 기반 env 검증 모듈 추가 |
 
 ### 근본 원인 패턴 요약
 
