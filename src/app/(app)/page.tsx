@@ -973,6 +973,9 @@ function HomeContent() {
         </div>
       )}
 
+      {/* ─── 나라장터 이력 검색 섹션 ─── */}
+      <NaraHistorySearch />
+
       {/* ─── 참고 인사이트 섹션 ─── */}
       <div className="space-y-3">
         <div className="flex items-center justify-between">
@@ -1140,5 +1143,193 @@ function AIInsightCard({
         )}
       </CardContent>
     </Card>
+  );
+}
+
+// ─── NaraHistorySearch 컴포넌트 ────────────────────────────────────────────
+// 나라장터 API 직접 키워드 검색 (DB 미저장, 과거 최대 3년)
+
+interface NaraResultItem {
+  bidNtceNo:     string;
+  bidNtceNm:     string;
+  ntceInsttNm:   string;
+  dminsttNm:     string | null;
+  presmptPrce:   number | null;
+  bidClseDt:     string | null;
+  bidNtceDt:     string | null;
+  industryCode:  string;
+  industryName:  string;
+}
+
+function NaraHistorySearch() {
+  const [keyword, setKeyword]       = useState("");
+  const [inputVal, setInputVal]     = useState("");
+  const [industry, setIndustry]     = useState("ALL");
+  const [startYear, setStartYear]   = useState(String(new Date().getFullYear() - 2));
+  const [results, setResults]       = useState<NaraResultItem[]>([]);
+  const [totalCount, setTotalCount] = useState<number | null>(null);
+  const [isLoading, setIsLoading]   = useState(false);
+  const [errMsg, setErrMsg]         = useState("");
+  const [open, setOpen]             = useState(false);
+
+  const handleSearch = async () => {
+    const kw = inputVal.trim();
+    if (!kw) return;
+    setKeyword(kw);
+    setIsLoading(true);
+    setErrMsg("");
+    setResults([]);
+    setTotalCount(null);
+    setOpen(true);
+
+    const startDate = `${startYear}01010000`;
+    const params = new URLSearchParams({ q: kw, industry, startDate });
+    try {
+      const res = await fetch(`/api/search/nara?${params}`);
+      const json = await res.json();
+      if (!res.ok) throw new Error(json.message ?? "검색 실패");
+      setResults(json.data?.items ?? []);
+      setTotalCount(json.data?.totalCount ?? 0);
+    } catch (e) {
+      setErrMsg(e instanceof Error ? e.message : "검색 중 오류가 발생했습니다");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const currentYear = new Date().getFullYear();
+  const yearOptions = [currentYear, currentYear - 1, currentYear - 2, currentYear - 3];
+
+  return (
+    <div className="space-y-3">
+      <div className="flex items-center gap-2">
+        <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-blue-500/15">
+          <History className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+        </div>
+        <h2 className="text-base font-bold">나라장터 이력 검색</h2>
+        <span className="inline-flex items-center rounded-full bg-blue-500/10 border border-blue-500/20 px-2 py-0.5 text-[10px] font-semibold text-blue-600 dark:text-blue-400">
+          최대 3년
+        </span>
+      </div>
+      <p className="text-sm text-muted-foreground">
+        나라장터 원본 데이터에서 직접 검색합니다. DB에 수집되지 않은 과거 공고도 조회할 수 있습니다.
+      </p>
+
+      <Card className="premium-card">
+        <CardContent className="px-5 py-5">
+          <div className="flex flex-col sm:flex-row gap-3">
+            <div className="relative flex-1">
+              <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
+              <Input
+                placeholder="예: 고등학교 입시, 강원랜드, AI 플랫폼"
+                value={inputVal}
+                onChange={(e) => setInputVal(e.target.value)}
+                onKeyDown={(e) => { if (e.key === "Enter") void handleSearch(); }}
+                className="h-11 rounded-xl pl-10"
+              />
+            </div>
+            <Select value={startYear} onValueChange={setStartYear}>
+              <SelectTrigger className="h-11 w-32 rounded-xl shrink-0">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {yearOptions.map((y) => (
+                  <SelectItem key={y} value={String(y)}>{y}년~</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <Select value={industry} onValueChange={setIndustry}>
+              <SelectTrigger className="h-11 w-28 rounded-xl shrink-0">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="ALL">전체 업종</SelectItem>
+                <SelectItem value="SVC">용역</SelectItem>
+                <SelectItem value="CON">공사</SelectItem>
+                <SelectItem value="GDS">물품</SelectItem>
+                <SelectItem value="FOR">외자</SelectItem>
+              </SelectContent>
+            </Select>
+            <Button
+              className="h-11 rounded-xl btn-premium text-white shrink-0"
+              onClick={() => void handleSearch()}
+              disabled={isLoading || !inputVal.trim()}
+            >
+              {isLoading ? <span className="animate-pulse">검색 중…</span> : "검색"}
+            </Button>
+          </div>
+
+          {/* 결과 */}
+          {open && (
+            <div className="mt-5 space-y-3">
+              {isLoading && (
+                <div className="space-y-2">
+                  {[1, 2, 3].map((i) => <Skeleton key={i} className="h-14 rounded-xl" />)}
+                </div>
+              )}
+              {errMsg && (
+                <p className="text-sm text-destructive rounded-xl border border-destructive/20 bg-destructive/5 px-4 py-3">{errMsg}</p>
+              )}
+              {!isLoading && !errMsg && totalCount !== null && (
+                <>
+                  <p className="text-sm text-muted-foreground px-1">
+                    &ldquo;<span className="font-semibold text-foreground">{keyword}</span>&rdquo; 검색결과 —
+                    나라장터 원본 <span className="font-semibold text-foreground">{totalCount.toLocaleString()}</span>건
+                    (페이지당 최대 100건 표시)
+                  </p>
+                  {results.length === 0 ? (
+                    <p className="text-sm text-muted-foreground px-1">조회된 결과가 없습니다.</p>
+                  ) : (
+                    <div className="rounded-xl border border-border/60 overflow-hidden">
+                      <table className="w-full text-sm">
+                        <thead>
+                          <tr className="border-b border-border/50 bg-muted/30">
+                            <th className="px-4 py-2.5 text-left text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">공고명</th>
+                            <th className="px-4 py-2.5 text-left text-[11px] font-semibold uppercase tracking-wider text-muted-foreground hidden md:table-cell">발주기관</th>
+                            <th className="px-4 py-2.5 text-left text-[11px] font-semibold uppercase tracking-wider text-muted-foreground hidden sm:table-cell">업종</th>
+                            <th className="px-4 py-2.5 text-right text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">예산</th>
+                            <th className="px-4 py-2.5 text-center text-[11px] font-semibold uppercase tracking-wider text-muted-foreground hidden lg:table-cell">공고일</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {results.map((item) => (
+                            <tr key={item.bidNtceNo} className="border-b border-border/40 hover:bg-muted/20 transition-colors">
+                              <td className="px-4 py-3">
+                                <p className="font-medium line-clamp-2 text-sm leading-snug">{item.bidNtceNm}</p>
+                                <p className="text-[11px] text-muted-foreground mt-0.5">{item.bidNtceNo}</p>
+                              </td>
+                              <td className="px-4 py-3 hidden md:table-cell">
+                                <span className="text-xs text-muted-foreground">{item.dminsttNm || item.ntceInsttNm}</span>
+                              </td>
+                              <td className="px-4 py-3 hidden sm:table-cell">
+                                <span className="inline-flex items-center rounded-full bg-muted/60 border border-border/50 px-2 py-0.5 text-[10px] font-medium text-muted-foreground">
+                                  {item.industryName}
+                                </span>
+                              </td>
+                              <td className="px-4 py-3 text-right">
+                                <span className="font-bold text-primary text-sm tabular-nums">
+                                  {item.presmptPrce ? formatKRW(item.presmptPrce) : "-"}
+                                </span>
+                              </td>
+                              <td className="px-4 py-3 text-center hidden lg:table-cell">
+                                <span className="text-xs text-muted-foreground tabular-nums">
+                                  {item.bidNtceDt
+                                    ? `${item.bidNtceDt.slice(0, 4)}-${item.bidNtceDt.slice(4, 6)}-${item.bidNtceDt.slice(6, 8)}`
+                                    : "-"}
+                                </span>
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  )}
+                </>
+              )}
+            </div>
+          )}
+        </CardContent>
+      </Card>
+    </div>
   );
 }

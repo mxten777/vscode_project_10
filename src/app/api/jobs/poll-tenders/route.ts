@@ -37,8 +37,11 @@ export async function POST(request: NextRequest) {
 
   const supabase = createServiceClient();
   const results = { inserted: 0, errors: 0, totalFetched: 0 };
-  const maxPages = parseBoundedInt(request.nextUrl.searchParams.get("maxPages"), 50, 1, 50);
-  const lookbackDays = parseBoundedInt(request.nextUrl.searchParams.get("lookbackDays"), 7, 1, 14);
+  const maxPages = parseBoundedInt(request.nextUrl.searchParams.get("maxPages"), 50, 1, 200);
+  const lookbackDays = parseBoundedInt(request.nextUrl.searchParams.get("lookbackDays"), 7, 1, 365);
+  // 직접 날짜 범위 지정 (소급 수집용): ?startDate=202602010000&endDate=202604300000
+  const startDateParam = request.nextUrl.searchParams.get("startDate") ?? null;
+  const endDateParam   = request.nextUrl.searchParams.get("endDate")   ?? null;
 
   // ── 수집 이력: 시작 기록 ──────────────────────────────────────
   const logId = await startCollectionJob(supabase, "tenders");
@@ -51,7 +54,7 @@ export async function POST(request: NextRequest) {
 
       do {
         const { items, total } = await retryWithBackoff(async () => {
-          const url = buildApiUrl(pageNo, lookbackDays, endpoint.path);
+          const url = buildApiUrl(pageNo, lookbackDays, endpoint.path, startDateParam, endDateParam);
           const res = await fetch(url, { cache: "no-store" });
           if (!res.ok) throw new Error(`나라장터 API 오류 [${endpoint.path}]: ${res.status}`);
 
@@ -178,15 +181,21 @@ export async function POST(request: NextRequest) {
 
 // ─── 유틸 ──────────────────────────────────────────────
 
-function buildApiUrl(pageNo: number, lookbackDays: number, endpointPath: string): string {
+function buildApiUrl(
+  pageNo: number,
+  lookbackDays: number,
+  endpointPath: string,
+  startDate?: string | null,
+  endDate?: string | null
+): string {
   const params = new URLSearchParams({
     serviceKey: NARA_API_KEY,
     pageNo: String(pageNo),
     numOfRows: "100",
     type: "json",
     inqryDiv: "1",
-    inqryBgnDt: getRecentDateStr(lookbackDays),
-    inqryEndDt: getTodayStr(),
+    inqryBgnDt: startDate ?? getRecentDateStr(lookbackDays),
+    inqryEndDt: endDate   ?? getTodayStr(),
   });
   return `${NARA_API_BASE}/ad/BidPublicInfoService/${endpointPath}?${params.toString()}`;
 }
