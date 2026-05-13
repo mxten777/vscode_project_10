@@ -4,6 +4,9 @@ import { createServiceClient } from "@/lib/supabase/service";
 import { errorResponse, successResponse } from "@/lib/api-response";
 import type Stripe from "stripe";
 
+// Stripe SDK v5: current_period_end is present in API responses but missing from types
+type StripeSubWithPeriodEnd = Stripe.Subscription & { current_period_end?: number };
+
 // Stripe Webhook은 raw body가 필요 → body parser 비활성화
 export const runtime = "nodejs";
 
@@ -54,12 +57,10 @@ export async function POST(request: NextRequest) {
 
         if (!orgId || !subId) break;
 
-        const fullSub = await getStripe().subscriptions.retrieve(subId);
+        const fullSub = await getStripe().subscriptions.retrieve(subId) as StripeSubWithPeriodEnd;
         const priceId = fullSub.items.data[0]?.price.id ?? "";
         const plan    = priceIdToPlan(priceId);
-        // Stripe SDK v5: current_period_end는 타입에 없으나 실제 응답에 존재
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const periodEnd = (fullSub as any).current_period_end as number | undefined;
+        const periodEnd = fullSub.current_period_end;
         if (!periodEnd) {
           console.error("checkout.session.completed: current_period_end 누락", subId);
           break;
@@ -79,9 +80,8 @@ export async function POST(request: NextRequest) {
 
       // ── 구독 변경 (플랜 변경 / 갱신) ──────────────────────
       case "customer.subscription.updated": {
-        const sub = event.data.object as Stripe.Subscription;
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        await handleSubscriptionChange(supabase, sub as any);
+        const sub = event.data.object as StripeSubWithPeriodEnd;
+        await handleSubscriptionChange(supabase, sub);
         break;
       }
 
@@ -141,8 +141,7 @@ export async function POST(request: NextRequest) {
 // ── 구독 상태 동기화 헬퍼 ─────────────────────────────────────
 async function handleSubscriptionChange(
   supabase: ReturnType<typeof createServiceClient>,
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  sub: Stripe.Subscription & { current_period_end?: any }
+  sub: StripeSubWithPeriodEnd
 ) {
   const priceId   = sub.items.data[0]?.price.id ?? "";
   const plan      = priceIdToPlan(priceId);

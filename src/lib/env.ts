@@ -41,8 +41,8 @@ const serverEnvSchema = z.object({
 function parseServerEnv() {
   const result = serverEnvSchema.safeParse(process.env);
   if (!result.success) {
-    const missing = result.error.errors
-      .map((e) => `  - ${e.path.join(".")}: ${e.message}`)
+    const missing = result.error.issues
+      .map((issue) => `  - ${issue.path.join(".")}: ${issue.message}`)
       .join("\n");
     throw new Error(`[env] 환경변수 설정 오류:\n${missing}`);
   }

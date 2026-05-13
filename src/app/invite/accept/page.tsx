@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -16,9 +16,9 @@ export default function AcceptInvitePage() {
 
   const [state, setState] = useState<State>("loading");
   const [message, setMessage] = useState("");
+  const supabaseRef = useRef(createClient());
 
-
-  async function acceptInvite(tok: string) {
+  const acceptInvite = useCallback(async (tok: string) => {
     setState("processing");
     const res = await fetch("/api/team/accept", {
       method: "POST",
@@ -34,7 +34,7 @@ export default function AcceptInvitePage() {
       setState("error");
       setMessage(data.message ?? "초대 수락에 실패했습니다.");
     }
-  }
+  }, [router]);
 
   useEffect(() => {
     if (!token) {
@@ -43,16 +43,14 @@ export default function AcceptInvitePage() {
       return;
     }
 
-    const supabase = createClient();
-    supabase.auth.getUser().then(({ data }) => {
+    supabaseRef.current.auth.getUser().then(({ data }) => {
       if (!data.user) {
         setState("login_required");
       } else {
         acceptInvite(token);
       }
     });
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [token]);
+  }, [token, acceptInvite]);
 
   function goLogin() {
     router.push(`/login?redirect=/invite/accept?token=${token}`);
