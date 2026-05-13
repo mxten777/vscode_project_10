@@ -15,8 +15,14 @@ export async function GET(request: NextRequest) {
 
 const NARA_API_BASE = process.env.NARA_API_BASE_URL || "https://apis.data.go.kr/1230000";
 const NARA_API_KEY = (process.env.NARA_API_KEY || "").trim(); // trim(): Vercel env 줄바꿈 방지
-// 운영계정 endpoint (개발계정과 다름)
-const NARA_API_ENDPOINT = `${NARA_API_BASE}/ad/BidPublicInfoService/getBidPblancListInfoServc`;
+
+// 나라장터 4개 업종별 엔드포인트 — 엔드포인트 자체가 업종 분류 기준
+const NARA_ENDPOINTS = [
+  { path: "getBidPblancListInfoServc",  industryCode: "SVC",  industryName: "용역" },
+  { path: "getBidPblancListInfoCnstwk", industryCode: "CON",  industryName: "공사" },
+  { path: "getBidPblancListInfoThng",   industryCode: "GDS",  industryName: "물품" },
+  { path: "getBidPblancListInfoFrgcpt", industryCode: "FOR",  industryName: "외자" },
+] as const;
 
 /**
  * POST /api/jobs/poll-tenders
@@ -38,120 +44,127 @@ export async function POST(request: NextRequest) {
   const logId = await startCollectionJob(supabase, "tenders");
 
   try {
-    let pageNo = 1;
-    let totalCount = 0;
+    // ── 4개 업종 엔드포인트 순차 수집 ────────────────────────────
+    for (const endpoint of NARA_ENDPOINTS) {
+      let pageNo = 1;
+      let totalCount = 0;
 
-    // ── 페이지네이션 루프 ────────────────────────────────────────
-    do {
-      const { items, total } = await retryWithBackoff(async () => {
-        const url = buildApiUrl(pageNo, lookbackDays);
-        const res = await fetch(url, { cache: "no-store" });
-        if (!res.ok) throw new Error(`나라장터 API 오류: ${res.status}`);
+      do {
+        const { items, total } = await retryWithBackoff(async () => {
+          const url = buildApiUrl(pageNo, lookbackDays, endpoint.path);
+          const res = await fetch(url, { cache: "no-store" });
+          if (!res.ok) throw new Error(`나라장터 API 오류 [${endpoint.path}]: ${res.status}`);
 
-        const json = await res.json();
-        const items = json?.response?.body?.items ?? json?.items ?? json?.data ?? [];
-        const total = parseInt(json?.response?.body?.totalCount ?? "0", 10);
-        return { items: Array.isArray(items) ? items : [], total };
-      }, 3);
+          const json = await res.json();
+          const items = json?.response?.body?.items ?? json?.items ?? json?.data ?? [];
+          const total = parseInt(json?.response?.body?.totalCount ?? "0", 10);
+          return { items: Array.isArray(items) ? items : [], total };
+        }, 3);
 
-      totalCount = total;
-      results.totalFetched += items.length;
+        totalCount = total;
+        results.totalFetched += items.length;
 
-      if (items.length === 0) break;
+        if (items.length === 0) break;
 
-      // ─── 기관 배치 upsert ──────────────────────────────────────
-      const agencyMap = new Map<string, string>();
-      const uniqueAgencies = [
-        ...new Map(
-          items
-            .map((item: Record<string, unknown>) => {
-              const code = (item.dminsttCd || item.ntceInsttCd || "") as string;
-              const name = (item.dminsttNm || item.ntceInsttNm || "알수없음") as string;
-              return [code, { code, name }] as [string, { code: string; name: string }];
-            })
-            .filter(([code]: [string, unknown]) => !!code)
-        ).values(),
-      ];
+        // ─── 기관 배치 upsert ────────────────────────────────────
+        const agencyMap = new Map<string, string>();
+        const uniqueAgencies = [
+          ...new Map(
+            items
+              .map((item: Record<string, unknown>) => {
+                const code = (item.dminsttCd || item.ntceInsttCd || "") as string;
+                const name = (item.dminsttNm || item.ntceInsttNm || "알수없음") as string;
+                return [code, { code, name }] as [string, { code: string; name: string }];
+              })
+              .filter(([code]: [string, unknown]) => !!code)
+          ).values(),
+        ];
 
-      if (uniqueAgencies.length) {
-        const { data: agencies } = await supabase
-          .from("agencies")
-          .upsert(uniqueAgencies, { onConflict: "code" })
-          .select("id, code");
-        agencies?.forEach((a: { id: string; code: string }) => agencyMap.set(a.code, a.id));
-      }
+        if (uniqueAgencies.length) {
+          const { data: agencies } = await supabase
+            .from("agencies")
+            .upsert(uniqueAgencies, { onConflict: "code" })
+            .select("id, code");
+          agencies?.forEach((a: { id: string; code: string }) => agencyMap.set(a.code, a.id));
+        }
 
-      // ─── 공고 배치 upsert ──────────────────────────────────────
-      const tenderPayloads = items
-        .map((item: Record<string, unknown>) => {
-          const sourceTenderId = extractSourceId(item);
-          if (!sourceTenderId) return null;
-          const agencyCode = (item.dminsttCd || item.ntceInsttCd || "") as string;
-          return {
-            source_tender_id: sourceTenderId,
-            title: (item.bidNtceNm || item.prdctClsfcNoNm || "제목 없음") as string,
-            agency_id: agencyMap.get(agencyCode) ?? null,
-            demand_agency_name: (item.dminsttNm as string) || null,
-            budget_amount: parseFloat(item.presmptPrce as string) || null,
-            region_code: (item.bidNtceAreaCd as string) || null,
-            region_name: (item.bidNtceAreaNm as string) || null,
-            industry_code: (item.prdctClsfcNo as string) || null,
-            industry_name: (item.prdctClsfcNoNm as string) || null,
-            method_type: (item.cntrctMthdCd as string) || null,
-            published_at: latestDateIso(
-              parseDate(item.bidNtceDt as string),
-              parseDate(item.rgstDt as string)
-            ),
-            deadline_at: parseDate(item.bidClseDt as string),
-            status: determineTenderStatus(item),
-            raw_json: item,
-          };
-        })
-        .filter((p: unknown): p is NonNullable<typeof p> => p !== null);
+        // ─── 공고 배치 upsert ────────────────────────────────────
+        const tenderPayloads = items
+          .map((item: Record<string, unknown>) => {
+            const sourceTenderId = extractSourceId(item);
+            if (!sourceTenderId) return null;
+            const agencyCode = (item.dminsttCd || item.ntceInsttCd || "") as string;
 
-      const uniqueTenderPayloads = [
-        ...new Map(
-          (tenderPayloads as Array<{ source_tender_id: string }>).map((p) => [p.source_tender_id, p])
-        ).values(),
-      ];
+            // 지역: API 제공값 우선, 없으면 기관명에서 추출
+            const regionFromApi = (item.bidNtceAreaCd as string) || null;
+            const regionNameFromApi = (item.bidNtceAreaNm as string) || null;
+            const derivedRegion = regionFromApi
+              ? null
+              : deriveRegion((item.dminsttNm || item.ntceInsttNm || "") as string);
 
-      if (uniqueTenderPayloads.length) {
-        const { data: upserted, error: upsertErr } = await supabase
-          .from("tenders")
-          .upsert(uniqueTenderPayloads, { onConflict: "source_tender_id" })
-          .select("id");
-        if (upsertErr) throw upsertErr;
-        results.inserted += upserted?.length ?? 0;
-      }
+            return {
+              source_tender_id: sourceTenderId,
+              title: (item.bidNtceNm || item.prdctClsfcNoNm || "제목 없음") as string,
+              agency_id: agencyMap.get(agencyCode) ?? null,
+              demand_agency_name: (item.dminsttNm as string) || null,
+              budget_amount: parseFloat(item.presmptPrce as string) || null,
+              // 지역: API값 → 기관명 파싱 순
+              region_code: regionFromApi ?? derivedRegion?.code ?? null,
+              region_name: regionNameFromApi ?? derivedRegion?.name ?? null,
+              // 업종: 엔드포인트 타입으로 확정 (API는 세부 품목코드만 제공)
+              industry_code: endpoint.industryCode,
+              industry_name: endpoint.industryName,
+              method_type: (item.cntrctMthdCd as string) || null,
+              published_at: latestDateIso(
+                parseDate(item.bidNtceDt as string),
+                parseDate(item.rgstDt as string)
+              ),
+              deadline_at: parseDate(item.bidClseDt as string),
+              status: determineTenderStatus(item),
+              raw_json: item,
+            };
+          })
+          .filter((p: unknown): p is NonNullable<typeof p> => p !== null);
 
-      // 진행 상태 업데이트 (페이지마다 체크포인트 저장)
-      await updateCollectionJob(supabase, logId, {
-        last_page_no: pageNo,
-        records_collected: results.inserted,
-        total_pages: Math.ceil(totalCount / 100),
-      });
+        const uniqueTenderPayloads = [
+          ...new Map(
+            (tenderPayloads as Array<{ source_tender_id: string }>).map((p) => [p.source_tender_id, p])
+          ).values(),
+        ];
 
-      pageNo++;
-    } while (results.totalFetched < totalCount && pageNo <= maxPages);
+        if (uniqueTenderPayloads.length) {
+          const { data: upserted, error: upsertErr } = await supabase
+            .from("tenders")
+            .upsert(uniqueTenderPayloads, { onConflict: "source_tender_id" })
+            .select("id");
+          if (upsertErr) throw upsertErr;
+          results.inserted += upserted?.length ?? 0;
+        }
+
+        // 진행 상태 업데이트
+        await updateCollectionJob(supabase, logId, {
+          last_page_no: pageNo,
+          records_collected: results.inserted,
+          total_pages: Math.ceil(totalCount / 100),
+        });
+
+        pageNo++;
+      } while (results.totalFetched < totalCount && pageNo <= maxPages);
+    }
 
     // ── 수집 이력: 완료 기록 ─────────────────────────────────────
-    await finishCollectionJob(supabase, logId, results.inserted, {
-      total_pages: Math.ceil(totalCount / 100),
-    });
+    await finishCollectionJob(supabase, logId, results.inserted, {});
 
     // ── 만료 공고 CLOSED 갱신 ─────────────────────────────────────
-    // 7일 이전 수집 공고 중 deadline_at이 지난 것을 OPEN → CLOSED로 일괄 갱신
     const { data: closedResult } = await supabase.rpc("close_expired_tenders");
     const closedCount = (closedResult as { closed_count?: number }[] | null)?.[0]?.closed_count ?? 0;
 
     return successResponse({
       message: "수집 완료",
       totalFetched: results.totalFetched,
-      totalCount,
-      pagesProcessed: pageNo - 1,
+      inserted: results.inserted,
       maxPages,
       lookbackDays,
-      inserted: results.inserted,
       expiredClosed: closedCount,
     });
   } catch (err) {
@@ -165,7 +178,7 @@ export async function POST(request: NextRequest) {
 
 // ─── 유틸 ──────────────────────────────────────────────
 
-function buildApiUrl(pageNo: number, lookbackDays: number): string {
+function buildApiUrl(pageNo: number, lookbackDays: number, endpointPath: string): string {
   const params = new URLSearchParams({
     serviceKey: NARA_API_KEY,
     pageNo: String(pageNo),
@@ -175,7 +188,38 @@ function buildApiUrl(pageNo: number, lookbackDays: number): string {
     inqryBgnDt: getRecentDateStr(lookbackDays),
     inqryEndDt: getTodayStr(),
   });
-  return `${NARA_API_ENDPOINT}?${params.toString()}`;
+  return `${NARA_API_BASE}/ad/BidPublicInfoService/${endpointPath}?${params.toString()}`;
+}
+
+// 기관명에서 광역시도 추출 — API가 지역코드를 제공하지 않는 엔드포인트 보완용
+const REGION_KEYWORDS: Array<{ keywords: string[]; code: string; name: string }> = [
+  { keywords: ["서울"],              code: "11", name: "서울" },
+  { keywords: ["부산"],              code: "26", name: "부산" },
+  { keywords: ["대구"],              code: "27", name: "대구" },
+  { keywords: ["인천"],              code: "28", name: "인천" },
+  { keywords: ["광주"],              code: "29", name: "광주" },
+  { keywords: ["대전"],              code: "30", name: "대전" },
+  { keywords: ["울산"],              code: "31", name: "울산" },
+  { keywords: ["세종"],              code: "36", name: "세종" },
+  { keywords: ["경기"],              code: "41", name: "경기" },
+  { keywords: ["강원"],              code: "42", name: "강원" },
+  { keywords: ["충북", "충청북도"],  code: "43", name: "충북" },
+  { keywords: ["충남", "충청남도"],  code: "44", name: "충남" },
+  { keywords: ["전북", "전라북도"],  code: "45", name: "전북" },
+  { keywords: ["전남", "전라남도"],  code: "46", name: "전남" },
+  { keywords: ["경북", "경상북도"],  code: "47", name: "경북" },
+  { keywords: ["경남", "경상남도"],  code: "48", name: "경남" },
+  { keywords: ["제주"],              code: "50", name: "제주" },
+];
+
+function deriveRegion(agencyName: string): { code: string; name: string } | null {
+  if (!agencyName) return null;
+  for (const r of REGION_KEYWORDS) {
+    if (r.keywords.some((kw) => agencyName.includes(kw))) {
+      return { code: r.code, name: r.name };
+    }
+  }
+  return null;
 }
 
 function extractSourceId(item: Record<string, unknown>): string | null {
