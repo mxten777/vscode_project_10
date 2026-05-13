@@ -32,7 +32,9 @@ type RunAction =
   | "cron-maintenance"
   | "poll-tenders"
   | "collect-bid-awards"
-  | "backfill-awards"
+  | "backfill-awards-1m"
+  | "backfill-awards-2m"
+  | "backfill-awards-3m"
   | "process-alerts"
   | "rebuild-analysis"
   | "collect-participants"
@@ -193,9 +195,19 @@ const actions: Array<{ action: RunAction; title: string; description: string }> 
     description: "최근 낙찰 결과 수집만 별도로 실행합니다.",
   },
   {
-    action: "backfill-awards",
-    title: "낙찰 백필 (최근 3개월)",
-    description: "기존 누락된 낙찰 데이터를 최근 3개월치 재수집합니다.",
+    action: "backfill-awards-1m",
+    title: "낙찰 백필 (이번 달)",
+    description: "이번 달 누락된 낙찰 데이터를 재수집합니다.",
+  },
+  {
+    action: "backfill-awards-2m",
+    title: "낙찰 백필 (지난달)",
+    description: "지난달 누락된 낙찰 데이터를 재수집합니다.",
+  },
+  {
+    action: "backfill-awards-3m",
+    title: "낙찰 백필 (2달 전)",
+    description: "2달 전 누락된 낙찰 데이터를 재수집합니다.",
   },
   {
     action: "process-alerts",

@@ -9,7 +9,8 @@
       "regions": ["icn1"]
     },
     "src/app/api/jobs/backfill-awards/route.ts": {
-      "regions": ["icn1"]
+      "regions": ["icn1"],
+      "maxDuration": 300
     },
     "src/app/api/jobs/collect-bid-awards/route.ts": {
       "regions": ["icn1"]
