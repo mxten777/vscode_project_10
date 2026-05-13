@@ -172,7 +172,7 @@ function HomeContent() {
     setPage(1);
   };
 
-  const { data: savedSearches = [] } = useSavedSearches();
+  const { data: savedSearches = [], isLoading: savedSearchesLoading, isError: savedSearchesError } = useSavedSearches();
   const createSavedSearch = useCreateSavedSearch();
   const deleteSavedSearch = useDeleteSavedSearch();
   const updateSavedSearch = useUpdateSavedSearch();
@@ -499,7 +499,10 @@ function HomeContent() {
             </div>
 
             <div className="flex flex-col gap-3">
-              {savedSearches.length > 0 && (
+              {savedSearchesError && (
+                <p className="text-xs text-destructive px-1">저장한 검색을 불러오지 못했습니다.</p>
+              )}
+              {!savedSearchesError && !savedSearchesLoading && savedSearches.length > 0 && (
                 <div className="rounded-2xl border border-border/60 bg-background/80 px-4 py-3">
                   <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.16em] text-muted-foreground">
                     <History className="h-3.5 w-3.5" />

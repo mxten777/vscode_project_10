@@ -89,10 +89,11 @@ export async function POST(request: NextRequest) {
     .eq("id", ctx.orgId!)
     .single();
 
-  await email.send({
-    to: inviteeEmail,
-    subject: `[Smart Bid Radar] ${org?.name ?? "팀"}에 초대되었습니다`,
-    body: `
+  try {
+    await email.send({
+      to: inviteeEmail,
+      subject: `[Smart Bid Radar] ${org?.name ?? "팀"}에 초대되었습니다`,
+      body: `
       <div style="font-family: sans-serif; max-width: 480px; margin: 0 auto;">
         <h2 style="color: #4f46e5;">팀 초대</h2>
         <p><strong>${ctx.user.email}</strong>님이 <strong>${org?.name ?? "조직"}</strong>에 초대합니다.</p>
@@ -105,7 +106,13 @@ export async function POST(request: NextRequest) {
         <p style="color:#888; font-size:12px;">링크가 작동하지 않으면 아래 URL을 복사하세요:<br/>${inviteUrl}</p>
       </div>
     `,
-  });
+    });
+  } catch (emailErr) {
+    // 이메일 발송 실패 시 — 초대 레코드는 이미 생성됨. 삭제 후 에러 반환.
+    console.error("초대 이메일 발송 실패:", emailErr);
+    await supabase.from("org_invitations").delete().eq("token", token);
+    return apiResponse.error("초대 이메일 발송에 실패했습니다. 잠시 후 다시 시도해주세요.", 502);
+  }
 
   return successResponse({ message: "초대 이메일을 발송했습니다." }, 201);
 }

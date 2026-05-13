@@ -57,6 +57,13 @@ export async function POST(request: NextRequest) {
         const fullSub = await getStripe().subscriptions.retrieve(subId);
         const priceId = fullSub.items.data[0]?.price.id ?? "";
         const plan    = priceIdToPlan(priceId);
+        // Stripe SDK v5: current_period_end는 타입에 없으나 실제 응답에 존재
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const periodEnd = (fullSub as any).current_period_end as number | undefined;
+        if (!periodEnd) {
+          console.error("checkout.session.completed: current_period_end 누락", subId);
+          break;
+        }
 
         await supabase.from("subscriptions").upsert({
           org_id:              orgId,
@@ -64,7 +71,7 @@ export async function POST(request: NextRequest) {
           stripe_cust_id:      customerId,
           plan,
           status:              "active",
-          current_period_end:  new Date(((fullSub as unknown as { current_period_end: number }).current_period_end) * 1000).toISOString(),
+          current_period_end:  new Date(periodEnd * 1000).toISOString(),
           cancel_at_period_end: false,
         }, { onConflict: "org_id" });
         break;
@@ -72,8 +79,9 @@ export async function POST(request: NextRequest) {
 
       // ── 구독 변경 (플랜 변경 / 갱신) ──────────────────────
       case "customer.subscription.updated": {
-        const sub = event.data.object as Stripe.Subscription & { current_period_end: number };
-        await handleSubscriptionChange(supabase, sub);
+        const sub = event.data.object as Stripe.Subscription;
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        await handleSubscriptionChange(supabase, sub as any);
         break;
       }
 
@@ -133,15 +141,22 @@ export async function POST(request: NextRequest) {
 // ── 구독 상태 동기화 헬퍼 ─────────────────────────────────────
 async function handleSubscriptionChange(
   supabase: ReturnType<typeof createServiceClient>,
-  sub: Stripe.Subscription & { current_period_end: number }
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  sub: Stripe.Subscription & { current_period_end?: any }
 ) {
-  const priceId = sub.items.data[0]?.price.id ?? "";
-  const plan    = priceIdToPlan(priceId);
+  const priceId   = sub.items.data[0]?.price.id ?? "";
+  const plan      = priceIdToPlan(priceId);
+  const periodEnd = typeof sub.current_period_end === "number" ? sub.current_period_end : null;
+
+  if (!periodEnd) {
+    console.error("handleSubscriptionChange: current_period_end 누락", sub.id);
+    return;
+  }
 
   await supabase.from("subscriptions").update({
     plan,
     status:              sub.status as string,
-    current_period_end:  new Date(sub.current_period_end * 1000).toISOString(),
+    current_period_end:  new Date(periodEnd * 1000).toISOString(),
     cancel_at_period_end: sub.cancel_at_period_end,
   }).eq("stripe_sub_id", sub.id);
 }
