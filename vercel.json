@@ -4,6 +4,9 @@
   "functions": {
     "src/app/api/jobs/poll-tenders/route.ts": {
       "regions": ["icn1"]
+    },
+    "src/app/api/search/nara/route.ts": {
+      "regions": ["icn1"]
     }
   },
   "crons": [
