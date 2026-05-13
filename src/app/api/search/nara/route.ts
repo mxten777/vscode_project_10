@@ -3,8 +3,7 @@ import { errorResponse, successResponse, internalErrorResponse } from "@/lib/api
 import { parseBoundedInt } from "@/lib/job-utils";
 import { retryWithBackoff } from "@/lib/helpers";
 
-// 나라장터 API는 한국 IP만 허용 → 서울 리전에서 실행
-export const preferredRegion = "icn1";
+// 나라장터 API는 한국 IP만 허용 → vercel.json functions 블록에서 icn1 리전 지정
 
 const NARA_API_BASE = process.env.NARA_API_BASE_URL || "https://apis.data.go.kr/1230000";
 const NARA_API_KEY = (process.env.NARA_API_KEY || "").trim();

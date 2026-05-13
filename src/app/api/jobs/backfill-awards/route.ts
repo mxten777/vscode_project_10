@@ -14,7 +14,6 @@ import { verifyCronSecret, parseNaraDate } from "@/lib/helpers";
 import { failCollectionJob, finishCollectionJob, startCollectionJob } from "@/lib/collection-logs";
 import { getErrorMessage } from "@/lib/job-utils";
 
-export const preferredRegion = "icn1";
 // Hobby 플랜 최대 60초 (Pro: 300초)
 export const maxDuration = 60;
 

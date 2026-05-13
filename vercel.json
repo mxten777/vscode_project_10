@@ -7,6 +7,12 @@
     },
     "src/app/api/search/nara/route.ts": {
       "regions": ["icn1"]
+    },
+    "src/app/api/jobs/backfill-awards/route.ts": {
+      "regions": ["icn1"]
+    },
+    "src/app/api/jobs/collect-bid-awards/route.ts": {
+      "regions": ["icn1"]
     }
   },
   "crons": [
