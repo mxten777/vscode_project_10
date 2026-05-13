@@ -12,6 +12,7 @@ const ADMIN_ACTIONS = {
   "cron-maintenance": { path: "/api/jobs/cron-maintenance", method: "POST" },
   "poll-tenders": { path: "/api/jobs/poll-tenders?maxPages=3&lookbackDays=2", method: "POST" },
   "collect-bid-awards": { path: "/api/jobs/collect-bid-awards?lookbackDays=2&maxPages=1&maxItems=25", method: "GET" },
+  "backfill-awards": { path: "/api/jobs/backfill-awards?months=3", method: "POST" },
   "process-alerts": { path: "/api/jobs/process-alerts", method: "POST" },
   "rebuild-analysis": { path: "/api/jobs/rebuild-analysis", method: "POST" },
   "collect-participants": { path: "/api/jobs/collect-participants?limit=200", method: "GET" },

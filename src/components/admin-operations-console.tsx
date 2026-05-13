@@ -32,6 +32,7 @@ type RunAction =
   | "cron-maintenance"
   | "poll-tenders"
   | "collect-bid-awards"
+  | "backfill-awards"
   | "process-alerts"
   | "rebuild-analysis"
   | "collect-participants"
@@ -190,6 +191,11 @@ const actions: Array<{ action: RunAction; title: string; description: string }> 
     action: "collect-bid-awards",
     title: "낙찰 수집만 실행",
     description: "최근 낙찰 결과 수집만 별도로 실행합니다.",
+  },
+  {
+    action: "backfill-awards",
+    title: "낙찰 백필 (최근 3개월)",
+    description: "기존 누락된 낙찰 데이터를 최근 3개월치 재수집합니다.",
   },
   {
     action: "process-alerts",
