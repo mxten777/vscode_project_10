@@ -26,6 +26,7 @@ const NARA_ENDPOINTS = [
  *   endDate    - 조회 종료일 YYYYMMDDHHMM (기본: 오늘)
  *   pageNo     - 페이지 번호 (기본: 1)
  *   industry   - 업종 필터: SVC|CON|GDS|FOR|ALL (기본: ALL)
+ *   searchBy   - 검색 방식: title(공고명) | agency(기관명) | both (기본: both)
  */
 export async function GET(request: NextRequest) {
   const { searchParams } = request.nextUrl;
@@ -35,6 +36,7 @@ export async function GET(request: NextRequest) {
 
   const pageNo   = parseBoundedInt(searchParams.get("pageNo"), 1, 1, 100);
   const industry = searchParams.get("industry") ?? "ALL";
+  const searchBy = searchParams.get("searchBy") ?? "both"; // title | agency | both
   const startDate = searchParams.get("startDate") ?? getDateStr(3 * 365); // 기본 3년 전
   const endDate   = searchParams.get("endDate")   ?? getTodayStr();
 
@@ -51,22 +53,38 @@ export async function GET(request: NextRequest) {
     const allItems: NaraItem[] = [];
     let totalCount = 0;
 
+    // searchBy: title=bidNtceNm, agency=ntceInsttNm, both=두 방식 병행
+    const searchModes: Array<{ paramName: string; label: string }> = [];
+    if (searchBy === "title")  searchModes.push({ paramName: "bidNtceNm",   label: "공고명" });
+    else if (searchBy === "agency") searchModes.push({ paramName: "ntceInsttNm", label: "기관명" });
+    else { // both
+      searchModes.push({ paramName: "bidNtceNm",   label: "공고명" });
+      searchModes.push({ paramName: "ntceInsttNm", label: "기관명" });
+    }
+
+    const seenIds = new Set<string>();
+
     for (const endpoint of endpoints) {
-      const { items, total } = await retryWithBackoff(async () => {
-        const url = buildUrl(endpoint.path, keyword, pageNo, startDate, endDate);
-        const res = await fetch(url, { cache: "no-store" });
-        if (!res.ok) throw new Error(`나라장터 API 오류 [${endpoint.path}]: ${res.status}`);
+      for (const mode of searchModes) {
+        const { items, total } = await retryWithBackoff(async () => {
+          const url = buildUrl(endpoint.path, keyword, pageNo, startDate, endDate, mode.paramName);
+          const res = await fetch(url, { cache: "no-store" });
+          if (!res.ok) throw new Error(`나라장터 API 오류 [${endpoint.path}/${mode.label}]: ${res.status}`);
 
-        const json = await res.json();
-        const items = json?.response?.body?.items ?? json?.items ?? json?.data ?? [];
-        const total = parseInt(json?.response?.body?.totalCount ?? "0", 10);
-        return { items: Array.isArray(items) ? items : [], total };
-      }, 3);
+          const json = await res.json();
+          const items = json?.response?.body?.items ?? json?.items ?? json?.data ?? [];
+          const total = parseInt(json?.response?.body?.totalCount ?? "0", 10);
+          return { items: Array.isArray(items) ? items : [], total };
+        }, 3);
 
-      totalCount += total;
-      allItems.push(
-        ...items.map((item: Record<string, unknown>) => normalizeItem(item, endpoint.industryCode, endpoint.industryName))
-      );
+        totalCount += total;
+        for (const item of items as Record<string, unknown>[]) {
+          const id = (item.bidNtceNo as string) ?? "";
+          if (!id || seenIds.has(id)) continue; // 중복 제거
+          seenIds.add(id);
+          allItems.push(normalizeItem(item, endpoint.industryCode, endpoint.industryName));
+        }
+      }
     }
 
     return successResponse({
@@ -74,6 +92,7 @@ export async function GET(request: NextRequest) {
       startDate,
       endDate,
       industry,
+      searchBy,
       pageNo,
       totalCount,
       items: allItems,
@@ -123,17 +142,18 @@ function buildUrl(
   keyword: string,
   pageNo: number,
   startDate: string,
-  endDate: string
+  endDate: string,
+  searchParamName: string = "bidNtceNm"
 ): string {
   const params = new URLSearchParams({
-    serviceKey:  NARA_API_KEY,
-    pageNo:      String(pageNo),
-    numOfRows:   "100",
-    type:        "json",
-    inqryDiv:    "1",
-    inqryBgnDt:  startDate,
-    inqryEndDt:  endDate,
-    bidNtceNm:   keyword,   // 공고명 키워드 필터
+    serviceKey:          NARA_API_KEY,
+    pageNo:              String(pageNo),
+    numOfRows:           "100",
+    type:                "json",
+    inqryDiv:            "1",
+    inqryBgnDt:          startDate,
+    inqryEndDt:          endDate,
+    [searchParamName]:   keyword,   // 공고명(bidNtceNm) 또는 기관명(ntceInsttNm)
   });
   return `${NARA_API_BASE}/ad/BidPublicInfoService/${endpointPath}?${params.toString()}`;
 }

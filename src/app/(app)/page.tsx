@@ -1165,6 +1165,7 @@ function NaraHistorySearch() {
   const [keyword, setKeyword]       = useState("");
   const [inputVal, setInputVal]     = useState("");
   const [industry, setIndustry]     = useState("ALL");
+  const [searchBy, setSearchBy]     = useState("both"); // title | agency | both
   const [startYear, setStartYear]   = useState(String(new Date().getFullYear() - 2));
   const [results, setResults]       = useState<NaraResultItem[]>([]);
   const [totalCount, setTotalCount] = useState<number | null>(null);
@@ -1183,7 +1184,7 @@ function NaraHistorySearch() {
     setOpen(true);
 
     const startDate = `${startYear}01010000`;
-    const params = new URLSearchParams({ q: kw, industry, startDate });
+    const params = new URLSearchParams({ q: kw, industry, startDate, searchBy });
     try {
       const res = await fetch(`/api/search/nara?${params}`);
       const json = await res.json();
@@ -1236,6 +1237,16 @@ function NaraHistorySearch() {
                 {yearOptions.map((y) => (
                   <SelectItem key={y} value={String(y)}>{y}년~</SelectItem>
                 ))}
+              </SelectContent>
+            </Select>
+            <Select value={searchBy} onValueChange={setSearchBy}>
+              <SelectTrigger className="h-11 w-32 rounded-xl shrink-0">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="both">공고명+기관명</SelectItem>
+                <SelectItem value="title">공고명만</SelectItem>
+                <SelectItem value="agency">기관명만</SelectItem>
               </SelectContent>
             </Select>
             <Select value={industry} onValueChange={setIndustry}>
