@@ -43,6 +43,7 @@ import {
   Users,
   CreditCard,
   Building2,
+  Trophy,
 } from "lucide-react";
 import { toast } from "sonner";
 import { BaikalLogo } from "@/components/baikal-logo";
@@ -51,6 +52,7 @@ const navItems = [
   { href: "/", label: "공고 검색", icon: Search },
   { href: "/favorites", label: "다시 볼 공고", icon: Star },
   { href: "/alerts", label: "알림 추적", icon: Bell },
+  { href: "/awards", label: "낙찰 이력", icon: Trophy },
   { href: "/analytics", label: "분석 요약", icon: TrendingUp },
   { href: "/reports", label: "리포트", icon: BarChart3 },
   { href: "/team", label: "팀 관리", icon: Users },

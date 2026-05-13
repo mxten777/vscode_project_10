@@ -403,3 +403,48 @@ export function useTrendingKeywords(days = 7, limit = 10) {
     retry: false,
   });
 }
+
+// ─── 낙찰 이력 ─────────────────────────────────────────
+
+export interface AwardItem {
+  id: string;
+  winner_company_name: string | null;
+  awarded_amount: number | null;
+  awarded_rate: number | null;
+  opened_at: string | null;
+  bid_notice_no: string | null;
+  participant_count: number | null;
+  tender: {
+    id: string;
+    title: string;
+    demand_agency_name: string | null;
+    budget_amount: number | null;
+    industry_name: string | null;
+    region_name: string | null;
+    status: string;
+  } | null;
+}
+
+export interface AwardsParams {
+  q?: string;
+  sortBy?: "opened_at" | "awarded_amount" | "awarded_rate";
+  sortOrder?: "asc" | "desc";
+  page?: number;
+  pageSize?: number;
+}
+
+function buildAwardsQS(params: AwardsParams) {
+  return Object.entries(params)
+    .filter(([, v]) => v !== undefined && v !== "")
+    .map(([k, v]) => `${k}=${encodeURIComponent(String(v))}`)
+    .join("&");
+}
+
+export function useAwards(params: AwardsParams = {}) {
+  const qs = buildAwardsQS(params);
+  return useQuery<{ data: AwardItem[]; total: number; page: number; pageSize: number }>({
+    queryKey: ["awards", qs],
+    queryFn: () => fetcher(`/api/awards?${qs}`),
+    staleTime: 1000 * 60 * 5,
+  });
+}
