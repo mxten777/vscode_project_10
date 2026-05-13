@@ -1,12 +1,13 @@
 # 기술 부채 및 개선 로드맵
 
-> 작성일: 2026-03-24 / 최종 업데이트: 2026-04-30  
+> 작성일: 2026-03-24 / 최종 업데이트: 2026-05-13  
 > 현재 완성도: 약 88–92%  
 > 스택: Next.js 16 · React 19 · TypeScript · Supabase · Vercel (Hobby) · Tailwind v4 · Vitest
 
 ## 현재 활성 우선순위
 
-1. 알림 채널 확장 미구현
+1. **[2026-05-13 점검] 인프라/런타임 버그 수정** — 아래 섹션 참고
+2. 알림 채널 확장 미구현
 	현재는 이메일만 실동작하며 Kakao/Slack 같은 운영 채널은 provider 구조만 준비됨.
 2. 리포트 내보내기 후속 흐름 부족
 	CSV/PDF 저장은 가능하지만 서버 생성형 export, 공유, 템플릿 고도화는 남아 있음.
@@ -43,7 +44,51 @@
 
 ---
 
-## 🔴 보안 — 즉시 조치 필요
+## � 2026-05-13 전수 점검 결과 (48개 API route 대상)
+
+> 고객이 실제로 기능을 못 쓰거나 잘못된 결과를 받는 버그를 모두 기록.  
+> 수정 완료 여부와 근본 원인 패턴을 함께 기재.
+
+### ✅ 수정 완료
+
+| # | 심각도 | 파일 | 문제 | 원인 패턴 | 커밋 |
+|---|--------|------|------|-----------|------|
+| 1 | 🔴 | `api/search/nara/route.ts` | 나라장터 이력 검색 0건 — 미국 리전에서 실행, 한국 IP 차단 | `preferredRegion` Node.js에서 무효 (Edge Runtime 전용) | a3199fa |
+| 2 | 🔴 | `api/jobs/backfill-awards/route.ts` | 동일 — `preferredRegion` 무효 | 동일 | b4d9150 |
+| 3 | 🔴 | `api/jobs/collect-bid-awards/route.ts` | 동일 — 리전 설정 자체 없음 | 동일 | b4d9150 |
+| 4 | 🔴 | `api/ai/predict/route.ts` | AI 서비스 에러 응답 시 크래시 — `upstream.json()` 호출이 `ok` 체크 전에 위치 | happy path만 작성, 에러 응답이 JSON 아닐 때 미고려 | 69720c5 |
+| 5 | 🔴 | `api/ai/similar/route.ts` | 유사 공고 검색 무음 실패 — `embedding` undefined 시 pgvector에 null 전달 | 외부 API 응답 필드 존재 확인 없음 | 69720c5 |
+| 6 | 🔴 | `api/team/invite/route.ts` | 팀 초대 기능 느림·불안정 — `listUsers()` 전체 사용자 로드 후 이메일로 검색 | 운영 볼륨 미고려 (사용자 수천명 시 타임아웃) | 69720c5 |
+| 7 | 🔴 | `api/team/members/route.ts` | 팀 멤버 목록 느림 — 동일 문제 | 동일 | 69720c5 |
+| 8 | 🟡 | `api/tenders/route.ts` | 페이지네이션 total 오류 — `countResult.error` 미체크 | count 쿼리 에러 무시 | 69720c5 |
+| 9 | 🟡 | `vercel.json` + 상기 3개 route | icn1 리전 설정 누락 | 설정 파일과 코드 분리 미숙지 | a3199fa, b4d9150 |
+
+### ⏳ 미해결 — 다음 스프린트
+
+| # | 심각도 | 파일 | 문제 | 해결 방향 |
+|---|--------|------|------|-----------|
+| 10 | 🟡 | `api/team/invite/route.ts` | 이메일 발송 실패해도 성공 응답 반환 — `email.send()` 에러 미처리 | try/catch 추가, 발송 실패 시 초대 레코드 롤백 또는 경고 응답 |
+| 11 | 🟡 | `api/billing/webhook/route.ts` | Stripe 구독 동기화 필드 누락 가능 — `as unknown as { current_period_end }` 이중 캐스팅 | Stripe SDK 타입 직접 사용, 캐스팅 제거 |
+| 12 | 🟡 | `api/tenders/[id]/route.ts` | 즐겨찾기 상태 필드 혼재 — snake_case/camelCase 불일치로 UI에서 상태 표시 오류 가능 | 응답 필드명 통일 (`is_favorited` or `isFavorited`) |
+| 13 | 🟢 | `src/app/(app)/page.tsx` | 저장 검색 로딩/에러 상태 미처리 — 실패 시 "저장한 검색 없음"과 구분 불가 | `isLoading`/`error` 상태 추가 |
+| 14 | 🟢 | `tsconfig.json` | `strict: true` 미적용 — 타입 관련 버그를 컴파일 시점에 못 잡음 | `strict`, `noUncheckedIndexedAccess` 활성화 |
+| 15 | 🟢 | 전체 외부 API 호출 | 응답 스키마 런타임 검증 없음 — 나라장터/Stripe API 응답 구조 변경 시 silent failure | Zod 스키마로 외부 응답 파싱 |
+| 16 | 🟢 | 없음 (신규) | 환경변수 시작 시점 검증 없음 — 누락된 env var가 런타임에야 발견됨 | `src/lib/env.ts` Zod 기반 env 검증 모듈 추가 |
+
+### 근본 원인 패턴 요약
+
+AI 코딩 도구가 반복적으로 만들어내는 버그 유형:
+
+| 패턴 | 발생 빈도 | 대응책 |
+|------|-----------|--------|
+| **인프라 설정 오해** (`preferredRegion` Edge-only) | 3건 | 공식 문서 확인 + CI에서 `vercel.json` 검증 |
+| **에러 핸들링 누락** (json before ok, missing .error check) | 3건 | 에러 케이스 단위 테스트 의무화 |
+| **운영 볼륨 미고려** (`listUsers()` 전체 로드) | 2건 | 코드 리뷰 체크리스트에 "대용량 쿼리 여부" 항목 추가 |
+| **외부 응답 무검증** (undefined embedding, null items) | 2건 | Zod 파싱 도입 |
+
+---
+
+## �🔴 보안 — 즉시 조치 필요
 
 ### ~~1. API Rate Limiting 없음~~ ✅ 완료
 - 인증 엔드포인트: 5분 10회, 일반 API: 1분 60회 (middleware + `lib/rate-limit.ts`)
